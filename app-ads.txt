@@ -152,3 +152,4 @@ smartclip.net, 15458, RESELLER
 triplelift.com, 14594, RESELLER, 6c33edb13117fd86
 loopme.com, 9621, RESELLER, 6c8d5f95897a5a3b
 pubmatic.com, 167130, RESELLER, 5d62403b186f2ace
+google.com, pub-3842660272527261, DIRECT, f08c47fec0942fa0
