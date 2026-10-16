@@ -1,23 +1,23 @@
 <!DOCTYPE html>
-<html lang="vi" class="scroll-smooth">
+<html lang="vi" class="scroll-smooth antialiased">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ASTVN Studios — Trải Nghiệm Di Động & Cryo GFX Tool</title>
-  <meta name="description" content="Trang chủ chính thức của ASTVN Studios. Khám phá Cryo: Game Booster & GFX Tool - Đỉnh cao tối ưu hiệu năng game di động trên nền tảng Android với Shader Hào Quang độc quyền." />
+  <title>Cryo: Game Booster & GFX Tool — ASTVN Studios</title>
+  <meta name="description" content="Cryo: Game Booster & GFX Tool - Tối ưu độ phân giải bộ đệm render 49%, đóng băng tiến trình ngầm Task Manager và đo FPS thời gian thực qua Shizuku cho Android." />
   
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="ASTVN Studios — Cryo: Game Booster & GFX Tool" />
-  <meta property="og:description" content="Hiệu năng thuần khiết cho game di động. Mở khóa 120 FPS, Shader Hào Quang Aurora và tối ưu bộ đệm qua Shizuku cùng ASTVN Studios." />
+  <meta property="og:title" content="Cryo: Game Booster & GFX Tool — ASTVN Studios" />
+  <meta property="og:description" content="Tối ưu độ phân giải bộ đệm render 49%, giải phóng RAM với Task Manager và đo FPS thời gian thực không cần Root." />
   <meta property="og:image" content="assets/banner.png" />
   <meta property="og:url" content="https://sangbodoi2007.github.io/" />
 
-  <!-- Fonts -->
+  <!-- Fonts: Inter & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   
-  <!-- Tailwind CSS & Icons -->
+  <!-- Tailwind CSS & Lucide Icons -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -26,15 +26,18 @@
       theme: {
         extend: {
           fontFamily: {
-            sans: ['"Plus Jakarta Sans"', '-apple-system', 'sans-serif'],
+            sans: ['"Inter"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
             mono: ['"JetBrains Mono"', 'monospace'],
           },
           colors: {
-            surface: {
-              DEFAULT: '#050608',
-              100: '#0c0e14',
-              200: '#131722',
-              300: '#1b2030',
+            app: {
+              black: '#07080a',
+              card: '#0f1015',
+              cardborder: '#1f2128',
+              muted: '#8b8f9e',
+              accent: '#3b82f6',
+              emerald: '#10b981',
+              cyan: '#06b6d4'
             }
           }
         }
@@ -43,392 +46,233 @@
   </script>
 
   <style>
-    :root {
-      --aura-c1: #10b981;
-      --aura-c2: #06b6d4;
-      --aura-c3: #6366f1;
-      --aura-c4: #a855f7;
-      --aura-angle: 0deg;
+    /* Strict Raycast/Linear Surface Gradients */
+    body {
+      background-color: #07080a;
+      color: #e2e4ea;
     }
 
-    @property --aura-angle {
-      syntax: '<angle>';
-      initial-value: 0deg;
-      inherits: false;
-    }
-
-    @keyframes rotateAura {
-      0% { --aura-angle: 0deg; }
-      100% { --aura-angle: 360deg; }
-    }
-
-    /* Noise texture */
-    .bg-noise {
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.035'/%3E%3C/svg%3E");
-    }
-
-    /* Glass elements */
-    .glass-panel {
-      background: rgba(14, 18, 28, 0.75);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+    .hairline-border {
       border: 1px solid rgba(255, 255, 255, 0.08);
     }
-
-    .glass-card {
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.07);
-      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .glass-card:hover {
-      border-color: rgba(255, 255, 255, 0.2);
-      transform: translateY(-3px);
-      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.8), 0 0 35px -10px var(--aura-c2);
+    .hairline-border:hover {
+      border-color: rgba(255, 255, 255, 0.16);
     }
 
-    /* Titanium Bezel Phone Frame with Aura Rim */
-    .phone-mockup {
-      box-shadow: 0 35px 80px -20px rgba(0, 0, 0, 0.95);
-      border: 6px solid #1a1e28;
-      border-radius: 46px;
-      position: relative;
-      background: #000;
-      transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+    .card-surface {
+      background: #0f1015;
+      border: 1px solid #1c1e26;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .card-surface:hover {
+      border-color: #2e323e;
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.8);
     }
 
-    /* Aurora Glow Rim Effects */
-    .aura-glow-outer {
+    /* Ambient Spotlight */
+    .hero-glow {
       position: absolute;
-      inset: -16px;
-      border-radius: 58px;
-      background: conic-gradient(from var(--aura-angle, 0deg), var(--aura-c1), var(--aura-c2), var(--aura-c3), var(--aura-c4), var(--aura-c1));
-      filter: blur(32px);
-      opacity: 0.75;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 1000px;
+      height: 550px;
+      background: radial-gradient(circle at 50% 20%, rgba(59, 130, 246, 0.12) 0%, rgba(16, 185, 129, 0.06) 35%, transparent 70%);
+      pointer-events: none;
       z-index: 0;
-      animation: rotateAura 12s linear infinite;
-      transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .aura-glow-inner {
-      position: absolute;
-      inset: -3px;
-      border-radius: 49px;
-      background: conic-gradient(from var(--aura-angle, 0deg), var(--aura-c1), var(--aura-c2), var(--aura-c3), var(--aura-c4), var(--aura-c1));
-      filter: blur(7px);
-      opacity: 0.9;
-      z-index: 0;
-      animation: rotateAura 12s linear infinite;
-      transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Smooth Range Slider */
+    input[type=range] {
+      -webkit-appearance: none;
+      background: #1c1e26;
+      height: 6px;
+      border-radius: 9999px;
     }
-
-    .logo-aura {
-      box-shadow: 0 0 20px -2px var(--aura-c2);
-      transition: box-shadow 0.6s ease;
-    }
-
-    /* Subtle animation */
-    @keyframes floatSlow {
-      0%, 100% { transform: translateY(0px); }
-      50% { transform: translateY(-8px); }
-    }
-    .animate-float {
-      animation: floatSlow 6s ease-in-out infinite;
-    }
-    .animate-float-delayed {
-      animation: floatSlow 7s ease-in-out 1.5s infinite;
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 20px;
+      width: 20px;
+      border-radius: 50%;
+      background: #3b82f6;
+      cursor: pointer;
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.6);
     }
   </style>
 </head>
-<body class="bg-surface text-slate-300 font-sans antialiased selection:bg-teal-500/30 selection:text-white relative overflow-x-hidden min-h-screen">
+<body class="selection:bg-blue-600 selection:text-white">
 
-  <!-- Interactive Aurora Mesh Canvas -->
-  <canvas id="ambient-canvas" class="fixed inset-0 pointer-events-none z-0 opacity-50"></canvas>
-  <div class="fixed inset-0 bg-noise pointer-events-none z-[1]"></div>
+  <!-- Ambient Glow -->
+  <div class="hero-glow"></div>
 
-  <!-- FLOATING CAPSULE NAVIGATION -->
-  <div class="fixed top-5 inset-x-0 z-50 flex justify-center px-4">
-    <header class="glass-panel rounded-full px-5 py-2.5 flex items-center justify-between gap-6 sm:gap-10 shadow-2xl border border-white/10 max-w-4xl w-full">
+  <!-- NAVIGATION -->
+  <header class="sticky top-0 z-50 backdrop-blur-xl bg-[#07080a]/80 border-b border-white/[0.06]">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
       
-      <!-- Brand Logo with Aura Ring -->
-      <a href="#hero" class="flex items-center gap-2.5 group">
-        <img src="assets/icon.png" alt="Cryo Logo" class="w-8 h-8 rounded-full border border-white/20 logo-aura group-hover:scale-105 transition-transform" />
-        <div class="flex items-center">
-          <span class="font-extrabold tracking-tight text-white text-base">ASTVN</span>
-          <span class="text-xs font-semibold text-teal-400 ml-1.5 px-2 py-0.5 rounded-full bg-teal-950/60 border border-teal-800/40 hidden sm:inline-block">STUDIOS</span>
+      <!-- Brand -->
+      <a href="#" class="flex items-center gap-3 group">
+        <img src="assets/icon.png" alt="Cryo Logo" class="w-8 h-8 rounded-xl border border-white/10 group-hover:scale-105 transition-transform" />
+        <div class="flex items-center gap-2">
+          <span class="font-bold text-white text-base tracking-tight">Cryo</span>
+          <span class="text-[11px] font-mono text-zinc-500 uppercase tracking-widest px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 hidden sm:inline-block">ASTVN Studios</span>
         </div>
       </a>
 
-      <!-- Nav Links -->
-      <nav class="hidden md:flex items-center gap-6 text-xs font-medium text-slate-400">
-        <a href="#hero" class="hover:text-white transition-colors">Tổng quan</a>
-        <a href="#showcase" class="hover:text-white transition-colors">Hào quang & Trải nghiệm</a>
-        <a href="#features" class="hover:text-white transition-colors">Công nghệ</a>
-        <a href="#portfolio" class="hover:text-white transition-colors">Hệ sinh thái</a>
-        <a href="privacy.html" class="hover:text-white transition-colors">Bảo mật</a>
+      <!-- Menu -->
+      <nav class="hidden md:flex items-center gap-8 text-xs font-medium text-zinc-400">
+        <a href="#resolution" class="hover:text-white transition-colors">Tối Ưu Độ Phân Giải</a>
+        <a href="#taskmanager" class="hover:text-white transition-colors">Task Manager & Đóng Băng</a>
+        <a href="#fpshud" class="hover:text-white transition-colors">Đo FPS Thực</a>
+        <a href="#ecosystem" class="hover:text-white transition-colors">Hệ Sinh Thái</a>
+        <a href="privacy.html" class="hover:text-white transition-colors">Quyền Riêng Tư</a>
       </nav>
 
-      <!-- Primary Action -->
-      <a href="https://play.google.com/store/apps/details?id=com.astvn.cryo" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-black font-semibold text-xs hover:bg-slate-200 transition-all shadow-lg shadow-white/5 active:scale-95">
-        <i data-lucide="play" class="w-3.5 h-3.5 fill-black"></i>
+      <!-- CTA -->
+      <a href="https://play.google.com/store/apps/details?id=com.astvn.cryo" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-black font-semibold text-xs hover:bg-zinc-200 transition-all shadow-sm">
+        <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
         <span>Google Play</span>
       </a>
-    </header>
-  </div>
+    </div>
+  </header>
 
-  <main class="relative z-10 pt-32 sm:pt-40 pb-28">
+  <main class="relative z-10">
 
     <!-- HERO SECTION -->
-    <section id="hero" class="max-w-6xl mx-auto px-6 text-center">
+    <section class="pt-20 sm:pt-28 pb-20 px-6 max-w-5xl mx-auto text-center">
       
-      <!-- Top Pill -->
-      <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass-panel border border-white/10 text-xs font-medium text-slate-300 mb-8 shadow-inner">
-        <span class="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
-        <span>ASTVN Studios · Công nghệ Shader Hào Quang Thế Hệ Mới</span>
+      <!-- Announcement Pill -->
+      <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-zinc-900/90 border border-white/10 text-xs font-mono text-zinc-300 mb-8">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>Cryo v2.x · Độc quyền công nghệ Shizuku Buffer Scaler</span>
       </div>
 
       <!-- Main Headline -->
-      <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-[1.12]">
-        Hiệu năng thuần khiết. <br />
-        <span class="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 via-cyan-300 to-indigo-400">
-          Tuyệt tác Hào Quang viền chuyển động.
+      <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.1] max-w-4xl mx-auto">
+        Tối ưu độ phân giải.<br />
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-emerald-400">
+          Đóng băng tác vụ ngầm.
         </span>
       </h1>
 
-      <!-- Subtitle -->
-      <p class="mt-6 text-base sm:text-lg text-slate-400 max-w-2xl mx-auto font-normal leading-relaxed">
-        <strong>Cryo: Game Booster & GFX Tool</strong> tích hợp công nghệ <strong>Aurora Shader</strong> độc quyền tôn vinh biểu tượng game, kết hợp mở khóa 120 FPS, tối ưu bộ đệm render và giảm nhiệt độ máy qua Shizuku.
+      <!-- Subheadline -->
+      <p class="mt-6 text-base sm:text-lg text-zinc-400 max-w-2xl mx-auto leading-relaxed">
+        Công cụ tối ưu phần cứng chuyên sâu cho Android. Giảm tải tới <strong>51% diện tích render GPU</strong> với Chế độ Bộ đệm và giải phóng toàn bộ RAM nhàn rỗi thông qua <strong>Task Manager</strong> không cần Root.
       </p>
 
-      <!-- CTA Buttons -->
-      <div class="mt-9 flex flex-wrap justify-center items-center gap-4">
-        <a href="https://play.google.com/store/apps/details?id=com.astvn.cryo" target="_blank" class="px-7 py-3.5 rounded-full bg-white text-black font-bold text-sm hover:bg-slate-100 hover:shadow-xl hover:shadow-white/10 transition-all flex items-center gap-2.5 group">
-          <i data-lucide="play" class="w-4 h-4 fill-black"></i>
+      <!-- Action Buttons -->
+      <div class="mt-10 flex flex-wrap justify-center gap-4">
+        <a href="https://play.google.com/store/apps/details?id=com.astvn.cryo" target="_blank" class="px-7 py-3.5 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-500 shadow-lg shadow-blue-600/25 transition-all flex items-center gap-2.5">
+          <i data-lucide="play" class="w-4 h-4 fill-current"></i>
           <span>Cài đặt trên Google Play</span>
-          <i data-lucide="arrow-right" class="w-4 h-4 text-black/60 group-hover:translate-x-0.5 transition-transform"></i>
         </a>
 
-        <a href="#showcase" class="px-6 py-3.5 rounded-full glass-panel border border-white/10 text-slate-300 font-semibold text-sm hover:text-white hover:border-white/20 transition-all flex items-center gap-2">
-          <i data-lucide="sparkles" class="w-4 h-4 text-teal-400"></i>
-          <span>Thử nghiệm Hào Quang</span>
+        <a href="#resolution" class="px-7 py-3.5 rounded-xl bg-zinc-900 border border-white/10 text-zinc-300 font-semibold text-sm hover:text-white hover:bg-zinc-800 transition-all flex items-center gap-2">
+          <span>Xem cơ chế hoạt động</span>
+          <i data-lucide="arrow-down" class="w-4 h-4 text-zinc-500"></i>
         </a>
       </div>
 
-      <!-- Stats Bar -->
-      <div class="mt-14 inline-grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-12 px-8 py-4 rounded-2xl glass-panel border border-white/5 text-center">
-        <div>
-          <div class="text-2xl font-extrabold text-white font-mono">4.4<span class="text-amber-400 text-lg">★</span></div>
-          <div class="text-[11px] text-slate-400 uppercase tracking-wider mt-0.5 font-medium">Đánh giá Play Store</div>
-        </div>
-        <div>
-          <div class="text-2xl font-extrabold text-white font-mono">1.000+</div>
-          <div class="text-[11px] text-slate-400 uppercase tracking-wider mt-0.5 font-medium">Lượt tải trải nghiệm</div>
-        </div>
-        <div>
-          <div class="text-2xl font-extrabold text-teal-400 font-mono">120 Hz</div>
-          <div class="text-[11px] text-slate-400 uppercase tracking-wider mt-0.5 font-medium">Khung hình cực hạn</div>
-        </div>
-        <div>
-          <div class="text-2xl font-extrabold text-indigo-400 font-mono">Aurora FX</div>
-          <div class="text-[11px] text-slate-400 uppercase tracking-wider mt-0.5 font-medium">Shader tiệm cận 0ms</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- INTERACTIVE SHOWCASE STAGE (AURORA SHADER RIM & PRESET STUDIO) -->
-    <section id="showcase" class="pt-28 pb-20 relative">
-      <div class="max-w-6xl mx-auto px-6 relative z-10">
+      <!-- Verified Metric Badges -->
+      <div class="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto text-left">
         
-        <!-- Showcase Heading -->
-        <div class="text-center max-w-xl mx-auto mb-10">
-          <div class="inline-flex items-center gap-2 text-xs font-mono font-semibold text-teal-400 uppercase tracking-widest mb-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20">
-            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-            Xưởng Hào Quang · Aura Studio Web
-          </div>
-          <p class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Chiêm ngưỡng hiệu ứng Hào quang Aurora sống động</p>
-          <p class="text-slate-400 text-xs sm:text-sm mt-2">Bấm chọn các bảng màu hào quang bên dưới để đổi luồng ánh sáng viền thiết bị theo thời gian thực.</p>
+        <div class="p-5 rounded-2xl bg-[#0c0d12] border border-white/[0.06]">
+          <div class="text-2xl font-bold font-mono text-white">49% – 70%</div>
+          <div class="text-xs text-blue-400 font-medium mt-1">Diện tích render đồ họa</div>
+          <p class="text-[11px] text-zinc-500 mt-2">Cắt giảm hơn 50% gánh nặng render cho chip đồ họa.</p>
         </div>
 
-        <!-- AURA PRESETS SELECTOR (Mô phỏng các mẫu hào quang trong Xưởng Cryo) -->
-        <div class="flex flex-wrap justify-center items-center gap-2.5 mb-10">
-          <button onclick="setAuraTheme('h3')" id="btn-aura-h3" class="aura-theme-btn px-4 py-2 rounded-full text-xs font-semibold glass-panel border border-teal-400 text-white flex items-center gap-2 shadow-lg shadow-teal-500/20">
-            <span class="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-teal-400 to-indigo-500"></span>
-            Aurora H3 (Chuẩn Cryo)
-          </button>
-          <button onclick="setAuraTheme('ice')" id="btn-aura-ice" class="aura-theme-btn px-4 py-2 rounded-full text-xs font-semibold glass-panel border border-white/10 text-slate-400 hover:text-white flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-600"></span>
-            Cryo Frost (Băng Tuyết)
-          </button>
-          <button onclick="setAuraTheme('nebula')" id="btn-aura-nebula" class="aura-theme-btn px-4 py-2 rounded-full text-xs font-semibold glass-panel border border-white/10 text-slate-400 hover:text-white flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500"></span>
-            Cosmic Velvet (Tím Huyền Bí)
-          </button>
-          <button onclick="setAuraTheme('solar')" id="btn-aura-solar" class="aura-theme-btn px-4 py-2 rounded-full text-xs font-semibold glass-panel border border-white/10 text-slate-400 hover:text-white flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-amber-400 to-rose-500"></span>
-            Solar Flare (Hoàng Hôn)
-          </button>
+        <div class="p-5 rounded-2xl bg-[#0c0d12] border border-white/[0.06]">
+          <div class="text-2xl font-bold font-mono text-white">Deep Freeze</div>
+          <div class="text-xs text-emerald-400 font-medium mt-1">Task Manager đa cấp độ</div>
+          <p class="text-[11px] text-zinc-500 mt-2">Đóng băng tiến trình ngầm, tự động khôi phục khi thoát game.</p>
         </div>
 
-        <!-- Screen Switcher Tabs -->
-        <div class="flex flex-wrap justify-center gap-2 mb-12">
-          <button onclick="switchScreen('hub')" id="tab-hub" class="tab-btn px-4 py-2 rounded-full text-xs font-medium transition-all glass-panel border border-teal-500/50 text-white bg-teal-500/10">
-            Gaming Space Hub
-          </button>
-          <button onclick="switchScreen('fps')" id="tab-fps" class="tab-btn px-4 py-2 rounded-full text-xs font-medium transition-all glass-panel border border-white/5 text-slate-400 hover:text-slate-200">
-            Đồng Hồ Đo FPS Nổi
-          </button>
-          <button onclick="switchScreen('resolution')" id="tab-resolution" class="tab-btn px-4 py-2 rounded-full text-xs font-medium transition-all glass-panel border border-white/5 text-slate-400 hover:text-slate-200">
-            Tinh Chỉnh Bộ Đệm 49%
-          </button>
-          <button onclick="switchScreen('manager')" id="tab-manager" class="tab-btn px-4 py-2 rounded-full text-xs font-medium transition-all glass-panel border border-white/5 text-slate-400 hover:text-slate-200">
-            Quản Lý & Đóng Băng App
-          </button>
+        <div class="p-5 rounded-2xl bg-[#0c0d12] border border-white/[0.06]">
+          <div class="text-2xl font-bold font-mono text-white">120.0 FPS</div>
+          <div class="text-xs text-indigo-400 font-medium mt-1">HUD đo đạc không trễ</div>
+          <p class="text-[11px] text-zinc-500 mt-2">Giám sát FPS, nhiệt độ và GPU với chi phí CPU dưới 0.5%.</p>
         </div>
 
-        <!-- Stage Container -->
-        <div class="relative flex justify-center items-center py-6">
-          
-          <!-- Floating Badge Left -->
-          <div class="hidden lg:block absolute left-8 top-1/3 glass-panel p-4 rounded-2xl border border-white/10 shadow-2xl animate-float max-w-[210px] text-left z-20">
-            <div class="flex items-center gap-2 text-xs font-mono text-teal-400 font-semibold mb-1">
-              <span class="w-2 h-2 rounded-full bg-teal-400 animate-ping"></span>
-              REALTIME FPS
-            </div>
-            <div class="text-3xl font-mono font-bold text-white tracking-tight" id="live-fps">120.0</div>
-            <div class="text-[11px] text-slate-400 mt-1">Đồng bộ chuẩn xác từng mili-giây, chống xé hình.</div>
-          </div>
-
-          <!-- Floating Badge Right -->
-          <div class="hidden lg:block absolute right-8 bottom-1/4 glass-panel p-4 rounded-2xl border border-white/10 shadow-2xl animate-float-delayed max-w-[220px] text-left z-20">
-            <div class="flex items-center gap-2 text-xs font-mono text-indigo-400 font-semibold mb-1">
-              <i data-lucide="shield-check" class="w-4 h-4"></i>
-              SHIZUKU ACTIVE
-            </div>
-            <div class="text-sm font-bold text-white">Can Thiệp Độ Phân Giải</div>
-            <div class="text-[11px] text-slate-400 mt-1">Giảm tải render 51% cho GPU mà không mờ UI.</div>
-          </div>
-
-          <!-- Phone Mockup Container With Aura Rim Shader -->
-          <div class="relative group">
-            
-            <!-- DYNAMIC AURORA GLOW LAYERS -->
-            <div id="phone-aura-outer" class="aura-glow-outer"></div>
-            <div id="phone-aura-inner" class="aura-glow-inner"></div>
-
-            <!-- Phone Frame -->
-            <div class="phone-mockup w-[310px] sm:w-[350px] aspect-[9/19.5] overflow-hidden p-2 z-10">
-              
-              <!-- Dynamic Island Notch -->
-              <div class="absolute top-3 left-1/2 -translate-x-1/2 w-28 h-4 bg-black rounded-full z-30 flex items-center justify-center">
-                <div class="w-2.5 h-2.5 rounded-full bg-[#181a20] mr-2"></div>
-                <div class="w-8 h-1 bg-[#20242e] rounded-full"></div>
-              </div>
-
-              <!-- Screen Viewport -->
-              <div class="w-full h-full rounded-[38px] overflow-hidden bg-[#0d1017] relative">
-                <img id="mockup-img" src="assets/shot_hub.png" alt="Cryo Screen" class="w-full h-full object-cover transition-opacity duration-300" />
-              </div>
-            </div>
-
-          </div>
-
-        </div>
-
-        <!-- Screen Description Text -->
-        <div class="mt-8 text-center max-w-lg mx-auto">
-          <p id="screen-desc" class="text-sm text-slate-400 font-medium leading-relaxed">
-            <strong class="text-white">Gaming Space Hub:</strong> Giao diện tối giản mang tông xanh ngọc thanh lịch, quy tụ mọi tựa game yêu thích và đồng bộ trạng thái Shizuku ngay khi khởi chạy.
-          </p>
+        <div class="p-5 rounded-2xl bg-[#0c0d12] border border-white/[0.06]">
+          <div class="text-2xl font-bold font-mono text-white">Shizuku API</div>
+          <div class="text-xs text-amber-400 font-medium mt-1">Hoàn toàn không cần Root</div>
+          <p class="text-[11px] text-zinc-500 mt-2">Can thiệp hệ thống qua ADB Binder an toàn và bảo mật.</p>
         </div>
 
       </div>
+
     </section>
 
-    <!-- BENTO GRID FEATURES (CÔNG NGHỆ CỐT LÕI) -->
-    <section id="features" class="py-24 border-t border-white/5">
+    <!-- CORE FEATURE 1: TỐI ƯU ĐỘ PHÂN GIẢI & BỘ ĐỆM (RESOLUTION SCALER) -->
+    <section id="resolution" class="py-24 border-t border-white/[0.06] bg-[#090a0f]">
       <div class="max-w-6xl mx-auto px-6">
         
-        <div class="text-center max-w-2xl mx-auto mb-16">
-          <span class="text-xs font-mono font-semibold text-teal-400 uppercase tracking-widest">Kỹ Thuật Đỉnh Cao</span>
-          <h2 class="text-3xl sm:text-4xl font-extrabold text-white mt-2">Được thiết kế cho độ mượt hoàn hảo</h2>
-          <p class="text-slate-400 mt-3 text-sm sm:text-base">Mọi dòng mã trong Cryo đều tuân thủ nguyên tắc tôn trọng pin và tối ưu chi phí GPU.</p>
-        </div>
-
-        <!-- Bento Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           
-          <!-- Bento 1: Large card (2 cols) -->
-          <div class="md:col-span-2 glass-card rounded-3xl p-8 relative overflow-hidden flex flex-col justify-between">
-            <div class="relative z-10 max-w-md">
-              <div class="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 mb-6">
-                <i data-lucide="layers" class="w-5 h-5"></i>
-              </div>
-              <h3 class="text-2xl font-bold text-white mb-3">Tối Ưu Bộ Đệm Màn Hình 49%</h3>
-              <p class="text-slate-400 text-sm leading-relaxed mb-6">
-                Bằng cách điều chỉnh tỷ lệ render 0.7x0.7 (49% diện tích điểm ảnh đồ họa) trong khi giữ nguyên mật độ hiển thị giao diện hệ thống, Cryo giải phóng gần một nửa tải lượng tính toán cho chip đồ họa. Game nặng chạy mượt mà không lo tụt khung hình.
-              </p>
+          <!-- Explanation Column (7 cols) -->
+          <div class="lg:col-span-7">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-mono font-medium text-blue-400 bg-blue-950/60 border border-blue-800/40 mb-4">
+              <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+              TÍNH NĂNG CỐT LÕI #1
             </div>
             
-            <div class="relative z-10 flex items-center gap-3 text-xs font-mono text-teal-400">
-              <span class="px-2.5 py-1 rounded-md bg-teal-950/80 border border-teal-800/40">Tối ưu GPU: +30% Khung hình</span>
-              <span class="px-2.5 py-1 rounded-md bg-white/5 border border-white/10 text-slate-300">Không mờ UI</span>
+            <h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
+              Chế Độ Bộ Đệm Màn Hình.<br />
+              <span class="text-blue-400">Giảm tải 51% render GPU, giữ trọn vẹn 120 FPS.</span>
+            </h2>
+
+            <p class="mt-4 text-zinc-400 text-sm sm:text-base leading-relaxed">
+              Các tựa game 3D đồ họa nặng như <em>Roblox, Genshin Impact, PUBG hay Liên Quân</em> thường làm GPU quá tải dẫn đến hiện tượng bóp xung nhịp (thermal throttling) và tụt khung hình thảm hại.
+            </p>
+
+            <p class="mt-3 text-zinc-400 text-sm sm:text-base leading-relaxed">
+              Cryo giải quyết triệt để vấn đề này từ gốc rễ: <strong>Hạ tỷ lệ pixel render xuống 70% (0.7x0.7 = 49% diện tích điểm ảnh)</strong>. GPU chỉ cần dựng một nửa số điểm ảnh, giải phóng tài nguyên tức thì, trong khi thuật toán hiển thị của máy vẫn giữ nguyên độ nét cho các nút bấm và thanh điều hướng hệ thống.
+            </p>
+
+            <!-- Technical Keypoints -->
+            <div class="mt-8 space-y-3 font-mono text-xs text-zinc-300">
+              <div class="flex items-center gap-3 p-3 rounded-xl bg-[#0f1015] border border-white/[0.06]">
+                <i data-lucide="check" class="w-4 h-4 text-blue-400 flex-shrink-0"></i>
+                <span>Giảm nhiệt độ máy từ 3°C – 6°C trong các trận combat kéo dài</span>
+              </div>
+              <div class="flex items-center gap-3 p-3 rounded-xl bg-[#0f1015] border border-white/[0.06]">
+                <i data-lucide="check" class="w-4 h-4 text-blue-400 flex-shrink-0"></i>
+                <span>Tăng độ ổn định khung hình (Frametime consistency) lên đến 98%</span>
+              </div>
+              <div class="flex items-center gap-3 p-3 rounded-xl bg-[#0f1015] border border-white/[0.06]">
+                <i data-lucide="check" class="w-4 h-4 text-blue-400 flex-shrink-0"></i>
+                <span>Tự động trả lại độ phân giải gốc ngay khi đóng game</span>
+              </div>
             </div>
 
-            <!-- Background preview -->
-            <div class="hidden sm:block absolute right-[-20px] bottom-[-20px] w-64 h-64 opacity-20 pointer-events-none">
-              <img src="assets/shot_resolution.png" alt="Resolution" class="rounded-2xl" />
+            <!-- Interactive Benchmark Widget -->
+            <div class="mt-8 p-6 rounded-2xl bg-[#0c0d12] border border-white/[0.08]">
+              <div class="flex items-center justify-between text-xs font-mono mb-2">
+                <span class="text-zinc-400">Thử nghiệm mức tinh chỉnh:</span>
+                <span id="slider-scale-text" class="text-blue-400 font-bold">70% (Tỷ lệ khuyến nghị)</span>
+              </div>
+              <input type="range" id="res-slider" min="50" max="100" value="70" step="5" class="w-full my-2" oninput="updateResCalc(this.value)" />
+              <div class="grid grid-cols-2 gap-4 mt-4 text-center">
+                <div class="p-3 rounded-xl bg-zinc-900 border border-white/[0.04]">
+                  <div class="text-[11px] text-zinc-500 font-mono">Diện tích Render</div>
+                  <div id="calc-area" class="text-xl font-bold font-mono text-white mt-0.5">49%</div>
+                </div>
+                <div class="p-3 rounded-xl bg-zinc-900 border border-white/[0.04]">
+                  <div class="text-[11px] text-zinc-500 font-mono">Tải GPU Giảm Thiểu</div>
+                  <div id="calc-gpu" class="text-xl font-bold font-mono text-emerald-400 mt-0.5">-51%</div>
+                </div>
+              </div>
             </div>
+
           </div>
 
-          <!-- Bento 2: Fast monitor -->
-          <div class="glass-card rounded-3xl p-8 flex flex-col justify-between">
-            <div>
-              <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-6">
-                <i data-lucide="activity" class="w-5 h-5"></i>
+          <!-- Product Image Column (5 cols) -->
+          <div class="lg:col-span-5 flex justify-center">
+            <div class="relative group max-w-[340px]">
+              <div class="absolute -inset-2 bg-gradient-to-tr from-blue-600/30 to-emerald-500/20 rounded-[44px] blur-xl opacity-60 group-hover:opacity-100 transition-opacity"></div>
+              <div class="relative rounded-[38px] overflow-hidden border border-white/10 shadow-2xl bg-black">
+                <img src="assets/shot_resolution.png" alt="Cryo Resolution Tuner 49%" class="w-full h-auto object-cover" />
               </div>
-              <h3 class="text-xl font-bold text-white mb-2.5">Đo FPS Không Chi Phí</h3>
-              <p class="text-slate-400 text-sm leading-relaxed">
-                Đồng hồ nổi được viết bằng Jetpack Compose và SurfaceView chuyên dụng, đọc trực tiếp số liệu từ hệ thống qua Shizuku mà không gây micro-stutter cho trò chơi.
-              </p>
-            </div>
-            <div class="mt-6 pt-4 border-t border-white/5 text-xs font-mono text-indigo-400">
-              Chi phí CPU: &lt; 0.5%
-            </div>
-          </div>
-
-          <!-- Bento 3: Aurora Shader -->
-          <div class="glass-card rounded-3xl p-8 flex flex-col justify-between relative overflow-hidden">
-            <div>
-              <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 mb-6">
-                <i data-lucide="sparkles" class="w-5 h-5"></i>
-              </div>
-              <h3 class="text-xl font-bold text-white mb-2.5">Shader Hào Quang Aurora</h3>
-              <p class="text-slate-400 text-sm leading-relaxed">
-                Hiệu ứng ánh sáng động tinh xảo viền theo icon game. Được lập trình bằng thuật toán flow-field mượt mà với 54 tham số vi chỉnh, chi phí xung nhịp GPU tiệm cận 0ms.
-              </p>
-            </div>
-            <div class="mt-6 pt-4 border-t border-white/5 text-xs font-mono text-cyan-400 flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
-              Thuật toán Aura độc quyền Cryo
-            </div>
-          </div>
-
-          <!-- Bento 4: App Freeze (2 cols) -->
-          <div class="md:col-span-2 glass-card rounded-3xl p-8 flex flex-col justify-between">
-            <div>
-              <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-6">
-                <i data-lucide="snowflake" class="w-5 h-5"></i>
-              </div>
-              <h3 class="text-2xl font-bold text-white mb-3">Hệ Thống Đóng Băng & Quản Lý Ứng Dụng</h3>
-              <p class="text-slate-400 text-sm leading-relaxed">
-                Tạm dừng triệt để các ứng dụng rác chạy ngầm chỉ với 1 chạm trước khi vào game. Tự động phục hồi nguyên trạng thái sau khi bạn kết thúc phiên chơi, trả lại bộ nhớ RAM dồi dào nhất cho hệ điều hành.
-              </p>
-            </div>
-            <div class="mt-6 pt-4 border-t border-white/5 flex flex-wrap gap-3 text-xs font-mono text-slate-400">
-              <span>✓ Tắt app ngầm thông minh</span>
-              <span>✓ Khôi phục tự động khi thoát game</span>
-              <span>✓ Giảm nhiệt độ pin</span>
             </div>
           </div>
 
@@ -437,85 +281,231 @@
       </div>
     </section>
 
-    <!-- ECOSYSTEM (APPS & GAMES BY ASTVN STUDIOS) -->
-    <section id="portfolio" class="py-24 border-t border-white/5">
+    <!-- CORE FEATURE 2: TASK MANAGER & APP FREEZE ENGINE -->
+    <section id="taskmanager" class="py-24 border-t border-white/[0.06]">
+      <div class="max-w-6xl mx-auto px-6">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          
+          <!-- Image Column (5 cols) -->
+          <div class="lg:col-span-5 flex justify-center order-2 lg:order-1">
+            <div class="relative group max-w-[340px]">
+              <div class="absolute -inset-2 bg-gradient-to-tr from-emerald-600/30 to-indigo-500/20 rounded-[44px] blur-xl opacity-60 group-hover:opacity-100 transition-opacity"></div>
+              <div class="relative rounded-[38px] overflow-hidden border border-white/10 shadow-2xl bg-black">
+                <img src="assets/shot_manager.png" alt="Cryo Task Manager & App Freeze" class="w-full h-auto object-cover" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Explanation Column (7 cols) -->
+          <div class="lg:col-span-7 order-1 lg:order-2">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-mono font-medium text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 mb-4">
+              <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+              TÍNH NĂNG CỐT LÕI #2
+            </div>
+
+            <h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
+              Task Manager Chuyên Sâu.<br />
+              <span class="text-emerald-400">Đóng băng tiến trình ngầm, dồn 100% RAM cho game.</span>
+            </h2>
+
+            <p class="mt-4 text-zinc-400 text-sm sm:text-base leading-relaxed">
+              Các ứng dụng mạng xã hội, nhắn tin hay tác vụ hệ thống liên tục chạy ngầm, âm thầm tiêu thụ bộ nhớ RAM và đánh thức CPU ngay trong lúc bạn đang combat.
+            </p>
+
+            <p class="mt-3 text-zinc-400 text-sm sm:text-base leading-relaxed">
+              <strong>Cryo Task Manager</strong> cung cấp cơ chế đóng băng sâu (Freeze Engine) với nhiều cấp độ:
+            </p>
+
+            <div class="mt-6 space-y-4">
+              <div class="p-4 rounded-xl card-surface">
+                <div class="flex items-center justify-between font-mono text-xs font-bold text-white mb-1">
+                  <span>Cấp 1: Rã đông trả app về đúng trạng thái</span>
+                  <span class="text-emerald-400">Tự động</span>
+                </div>
+                <p class="text-xs text-zinc-400">Không làm mất dữ liệu phiên làm việc, app khôi phục ngay khi bạn tắt game.</p>
+              </div>
+
+              <div class="p-4 rounded-xl card-surface">
+                <div class="flex items-center justify-between font-mono text-xs font-bold text-white mb-1">
+                  <span>Cấp 2: Đóng băng ứng dụng hệ thống an toàn</span>
+                  <span class="text-blue-400">Shizuku Powered</span>
+                </div>
+                <p class="text-xs text-zinc-400">Tạm tắt các app cài sẵn ngốn tài nguyên mà không lo gỡ nhầm file hệ thống gây lỗi máy.</p>
+              </div>
+
+              <div class="p-4 rounded-xl card-surface">
+                <div class="flex items-center justify-between font-mono text-xs font-bold text-white mb-1">
+                  <span>Cấp 3: Ổ "Treo Game AFK"</span>
+                  <span class="text-indigo-400">Tiện ích đặc quyền</span>
+                </div>
+                <p class="text-xs text-zinc-400">Treo game ngầm với mức tiêu thụ điện năng tối thiểu mà không bị Android tự động kill app.</p>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- CORE FEATURE 3: REALTIME FPS HUD -->
+    <section id="fpshud" class="py-24 border-t border-white/[0.06] bg-[#090a0f]">
+      <div class="max-w-6xl mx-auto px-6">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          
+          <div class="lg:col-span-7">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-mono font-medium text-indigo-400 bg-indigo-950/60 border border-indigo-800/40 mb-4">
+              <i data-lucide="gauge" class="w-3.5 h-3.5"></i>
+              TÍNH NĂNG CỐT LÕI #3
+            </div>
+
+            <h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
+              Đo Khung Hình HUD Chuẩn Xác.<br />
+              <span class="text-indigo-400">Giám sát FPS, CPU, GPU & Nhiệt độ tức thì.</span>
+            </h2>
+
+            <p class="mt-4 text-zinc-400 text-sm sm:text-base leading-relaxed">
+              Cửa sổ nổi Floating HUD của Cryo được tối ưu hóa đặc biệt bằng <em>SurfaceView</em> và đọc trực tiếp từ subsystem của Android:
+            </p>
+
+            <ul class="mt-6 space-y-3 text-xs sm:text-sm text-zinc-300 font-mono">
+              <li class="flex items-center gap-3">
+                <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+                <span><strong>Độ trễ tiệm cận 0ms:</strong> Tần số GPU không còn hiện giá trị cũ khi game đối xung.</span>
+              </li>
+              <li class="flex items-center gap-3">
+                <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+                <span><strong>Thiết kế siêu nhỏ gọn:</strong> Không che khuất tầm nhìn, không cản trở thao tác ngón tay.</span>
+              </li>
+              <li class="flex items-center gap-3">
+                <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+                <span><strong>Cảnh báo nhiệt độ pin:</strong> Tự động đổi màu cảnh báo khi thiết bị vượt ngưỡng an toàn.</span>
+              </li>
+            </ul>
+
+            <div class="mt-8 flex gap-4">
+              <a href="https://play.google.com/store/apps/details?id=com.astvn.cryo" target="_blank" class="px-6 py-3 rounded-xl bg-white text-black font-semibold text-xs hover:bg-zinc-200 transition-all">
+                Trải nghiệm ngay trên thiết bị
+              </a>
+            </div>
+          </div>
+
+          <div class="lg:col-span-5 flex justify-center">
+            <div class="relative group max-w-[340px]">
+              <div class="absolute -inset-2 bg-gradient-to-tr from-indigo-600/30 to-blue-500/20 rounded-[44px] blur-xl opacity-60 group-hover:opacity-100 transition-opacity"></div>
+              <div class="relative rounded-[38px] overflow-hidden border border-white/10 shadow-2xl bg-black">
+                <img src="assets/shot_fps.png" alt="Cryo Realtime Ingame FPS HUD" class="w-full h-auto object-cover" />
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ADDITIONAL CRAFTSMANSHIP (AURA SHADER & GAMING HUB) -->
+    <section class="py-20 border-t border-white/[0.06]">
+      <div class="max-w-6xl mx-auto px-6">
+        
+        <div class="text-center max-w-2xl mx-auto mb-14">
+          <span class="text-xs font-mono font-semibold text-zinc-500 uppercase tracking-widest">Chi Tiết Tinh Tế</span>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-white mt-2">Trải nghiệm thị giác xứng tầm</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <div class="p-8 rounded-3xl card-surface">
+            <div class="w-10 h-10 rounded-xl bg-cyan-950/70 border border-cyan-800/40 flex items-center justify-center text-cyan-400 mb-6">
+              <i data-lucide="sparkles" class="w-5 h-5"></i>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-2">Shader Hào Quang Aurora (Aura Studio)</h3>
+            <p class="text-zinc-400 text-sm leading-relaxed mb-4">
+              Điểm nhấn thị giác độc quyền: Hiệu ứng ánh sáng hào quang viền game chuyển động theo thuật toán flow-field, tùy biến với 54 tham số vi chỉnh màu sắc mà không tốn xung nhịp GPU.
+            </p>
+            <div class="text-xs font-mono text-cyan-400">Chi phí GPU đo kiểm: ≤ +0.1ms</div>
+          </div>
+
+          <div class="p-8 rounded-3xl card-surface">
+            <div class="w-10 h-10 rounded-xl bg-blue-950/70 border border-blue-800/40 flex items-center justify-center text-blue-400 mb-6">
+              <i data-lucide="gamepad-2" class="w-5 h-5"></i>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-2">Gaming Space Hub</h3>
+            <p class="text-zinc-400 text-sm leading-relaxed mb-4">
+              Không gian quản lý game tập trung, tự động nhận diện game đã cài đặt và cấu hình sẵn mức tăng tốc chuyên biệt cho từng tựa game riêng lẻ.
+            </p>
+            <div class="text-xs font-mono text-blue-400">Khởi chạy tức thì 1 chạm</div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ECOSYSTEM & FUTURE PORTFOLIO -->
+    <section id="ecosystem" class="py-24 border-t border-white/[0.06] bg-[#090a0f]">
       <div class="max-w-6xl mx-auto px-6">
         
         <div class="flex flex-col md:flex-row md:items-end justify-between mb-16">
           <div>
-            <span class="text-xs font-mono font-semibold text-teal-400 uppercase tracking-widest">Tương Lai & Tầm Nhìn</span>
-            <h2 class="text-3xl sm:text-4xl font-extrabold text-white mt-2">Hệ Sinh Thái ASTVN Studios</h2>
+            <span class="text-xs font-mono font-semibold text-blue-400 uppercase tracking-widest">Hệ Sinh Thái Phần Mềm</span>
+            <h2 class="text-3xl font-extrabold text-white mt-2">Dự Án Của ASTVN Studios</h2>
           </div>
-          <p class="text-slate-400 text-sm sm:text-base max-w-md mt-4 md:mt-0 font-normal">
-            Không dừng lại ở công cụ tăng tốc, chúng tôi đang nghiên cứu và phát triển các sản phẩm phần mềm cùng những tựa game di động độc lập giàu cảm xúc.
+          <p class="text-zinc-400 text-sm max-w-md mt-4 md:mt-0 font-normal">
+            Bên cạnh công cụ tăng tốc Cryo, ASTVN Studios liên tục nghiên cứu phát triển các ứng dụng di động hiệu năng cao và các tựa game độc lập mới.
           </p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           
-          <!-- Card 1: Cryo (Live) -->
-          <div class="glass-card rounded-3xl p-7 flex flex-col justify-between border-teal-500/30 hover:border-teal-400/60 transition-all">
+          <!-- Cryo Card -->
+          <div class="p-7 rounded-3xl card-surface flex flex-col justify-between border-blue-500/30">
             <div>
-              <div class="flex items-center justify-between mb-5">
-                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-teal-500/10 text-teal-400 border border-teal-500/20">CÔNG CỤ HỆ THỐNG</span>
-                <span class="inline-flex items-center gap-1.5 text-xs text-teal-400 font-mono font-medium">
-                  <span class="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"></span> Google Play
-                </span>
+              <div class="flex items-center justify-between mb-4">
+                <span class="px-2.5 py-1 rounded text-[11px] font-mono font-bold bg-blue-950 text-blue-400 border border-blue-800/40">TIỆN ÍCH / TỐI ƯU</span>
+                <span class="text-xs text-emerald-400 font-mono font-semibold">● Đang hoạt động</span>
               </div>
-              <div class="flex items-center gap-3.5 mb-4">
-                <img src="assets/icon.png" alt="Cryo Icon" class="w-12 h-12 rounded-2xl shadow-md border border-white/10 logo-aura" />
-                <div>
-                  <h3 class="text-lg font-bold text-white">Cryo: Game Booster</h3>
-                  <p class="text-xs font-mono text-slate-400">com.astvn.cryo</p>
-                </div>
-              </div>
-              <p class="text-slate-400 text-sm leading-relaxed">
-                Bộ công cụ tinh chỉnh hiệu năng di động hàng đầu, giám sát phần cứng và mở khóa tiềm năng đồ họa.
+              <h3 class="text-lg font-bold text-white mb-2">Cryo: Game Booster & GFX Tool</h3>
+              <p class="text-zinc-400 text-sm leading-relaxed">
+                Tối ưu độ phân giải 49%, đóng băng app Task Manager và đo FPS 120Hz chuyên sâu.
               </p>
             </div>
-            <div class="mt-8 pt-4 border-t border-white/5 flex items-center justify-between">
-              <span class="text-xs text-slate-500 font-mono">Phiên bản hiện tại: v2.x</span>
-              <a href="https://play.google.com/store/apps/details?id=com.astvn.cryo" target="_blank" class="text-xs font-bold text-white hover:text-teal-400 transition-colors flex items-center gap-1">
-                Xem trên CH Play <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
+            <div class="mt-8 pt-4 border-t border-white/[0.06] flex items-center justify-between">
+              <span class="text-xs text-zinc-500 font-mono">com.astvn.cryo</span>
+              <a href="https://play.google.com/store/apps/details?id=com.astvn.cryo" target="_blank" class="text-xs font-bold text-blue-400 hover:underline flex items-center gap-1">
+                Google Play <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
               </a>
             </div>
           </div>
 
-          <!-- Card 2: Upcoming Indie Game -->
-          <div class="glass-card rounded-3xl p-7 flex flex-col justify-between">
+          <!-- Project Glitch Card -->
+          <div class="p-7 rounded-3xl card-surface flex flex-col justify-between">
             <div>
-              <div class="flex items-center justify-between mb-5">
-                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">TRÒ CHƠI DI ĐỘNG</span>
-                <span class="text-xs text-amber-400/90 font-mono font-medium">Đang phát triển</span>
+              <div class="flex items-center justify-between mb-4">
+                <span class="px-2.5 py-1 rounded text-[11px] font-mono font-bold bg-zinc-900 text-zinc-400 border border-zinc-800">TRÒ CHƠI DI ĐỘNG</span>
+                <span class="text-xs text-amber-400 font-mono font-semibold">● Đang phát triển</span>
               </div>
-              <div class="flex items-center gap-3.5 mb-4">
-                <div class="w-12 h-12 rounded-2xl bg-indigo-950/60 border border-indigo-700/40 flex items-center justify-center text-indigo-300 font-bold text-lg">
-                  🎮
-                </div>
-                <div>
-                  <h3 class="text-lg font-bold text-white">Project: Glitch</h3>
-                  <p class="text-xs font-mono text-slate-400">ASTVN Games Studio</p>
-                </div>
-              </div>
-              <p class="text-slate-400 text-sm leading-relaxed">
-                Tựa game indie di động mang phong cách giải đố logic độc đáo, tối ưu hóa khung hình mượt mà tuyệt đối cho hệ máy Android.
+              <h3 class="text-lg font-bold text-white mb-2">Project: Glitch</h3>
+              <p class="text-zinc-400 text-sm leading-relaxed">
+                Tựa game indie di động mang cơ chế gameplay giải đố sáng tạo, tối ưu khung hình mượt mà cho mọi thiết bị Android.
               </p>
             </div>
-            <div class="mt-8 pt-4 border-t border-white/5 flex items-center justify-between">
-              <span class="text-xs text-slate-500 font-mono">Trạng thái: Prototype</span>
-              <span class="text-xs text-slate-500 font-medium italic">Sắp công bố</span>
+            <div class="mt-8 pt-4 border-t border-white/[0.06] flex items-center justify-between">
+              <span class="text-xs text-zinc-500 font-mono">ASTVN Games</span>
+              <span class="text-xs text-zinc-500 italic">Sắp công bố</span>
             </div>
           </div>
 
-          <!-- Card 3: Next Studio Project -->
-          <div class="glass-card rounded-3xl p-7 flex flex-col items-center justify-center text-center border-dashed border-white/10 min-h-[260px]">
-            <div class="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 mb-4">
-              <i data-lucide="sparkles" class="w-5 h-5 text-teal-400/80"></i>
+          <!-- Future Card -->
+          <div class="p-7 rounded-3xl card-surface border-dashed border-zinc-800 flex flex-col items-center justify-center text-center">
+            <div class="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 mb-3">
+              <i data-lucide="plus" class="w-5 h-5"></i>
             </div>
-            <h4 class="font-bold text-white text-base">Không Gian Sáng Tạo Tiếp Theo</h4>
-            <p class="text-xs text-slate-400 mt-2 max-w-[220px] leading-relaxed">
-              Các dự án ứng dụng và tiện ích mới đang được nghiên cứu tại ASTVN Studios.
-            </p>
+            <h4 class="font-bold text-zinc-300 text-sm">Dự Án Kế Tiếp</h4>
+            <p class="text-xs text-zinc-500 mt-1 max-w-[200px]">Sẵn sàng bổ sung các sản phẩm phần mềm tiếp theo vào danh mục.</p>
           </div>
 
         </div>
@@ -523,36 +513,35 @@
       </div>
     </section>
 
-    <!-- DEVELOPER IDENTITY & COMPLIANCE (XÁC MINH CH PLAY & APP-ADS.TXT) -->
-    <section class="py-20 border-t border-white/5">
+    <!-- DEVELOPER IDENTITY & COMPLIANCE (XÁC MINH PLAY STORE & ADMOB) -->
+    <section class="py-20 border-t border-white/[0.06]">
       <div class="max-w-6xl mx-auto px-6">
-        <div class="glass-panel rounded-3xl p-8 sm:p-10 border border-white/10 relative overflow-hidden">
+        <div class="p-8 sm:p-10 rounded-3xl bg-[#0c0d12] border border-white/[0.08]">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
             
             <div>
-              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-mono font-medium bg-white/5 text-slate-300 border border-white/10 mb-4">
-                <i data-lucide="badge-check" class="w-4 h-4 text-teal-400"></i>
-                Hồ Sơ Nhà Phát Triển Chính Thức
+              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-mono font-medium text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 mb-3">
+                <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                Hồ Sơ Nhà Phát Triển Đã Xác Minh
               </div>
-              <h3 class="text-2xl font-extrabold text-white mb-2">ASTVN Studios</h3>
-              <p class="text-slate-400 text-sm leading-relaxed mb-6">
-                Trang web này phục vụ mục đích công bố sản phẩm, cung cấp chính sách bảo mật theo yêu cầu của Google Play và xác thực minh bạch hồ sơ phân phối quảng cáo số.
+              <h3 class="text-2xl font-bold text-white mb-2">ASTVN Studios</h3>
+              <p class="text-zinc-400 text-sm leading-relaxed mb-6">
+                Trang web này phục vụ mục đích công bố sản phẩm, cung cấp chính sách bảo mật theo tiêu chuẩn của Google Play và xác thực minh bạch hồ sơ phân phối quảng cáo số.
               </p>
-              
-              <div class="space-y-1.5 text-xs font-mono text-slate-400">
-                <div><span class="text-slate-500">Đại diện:</span> <strong class="text-slate-300">TRẦN MINH SANG</strong></div>
-                <div><span class="text-slate-500">Địa chỉ:</span> Đà Giang, Tà Hine, Lâm Đồng, Việt Nam</div>
-                <div><span class="text-slate-500">Email:</span> <a href="mailto:astvncryo.support@gmail.com" class="text-teal-400 hover:underline">astvncryo.support@gmail.com</a></div>
+              <div class="space-y-1.5 text-xs font-mono text-zinc-400">
+                <div><span class="text-zinc-500">Đại diện:</span> <strong class="text-zinc-300">TRẦN MINH SANG</strong></div>
+                <div><span class="text-zinc-500">Địa chỉ:</span> Đà Giang, Tà Hine, Lâm Đồng, Việt Nam</div>
+                <div><span class="text-zinc-500">Hỗ trợ:</span> <a href="mailto:astvncryo.support@gmail.com" class="text-blue-400 hover:underline">astvncryo.support@gmail.com</a></div>
               </div>
             </div>
 
             <div class="flex flex-col sm:flex-row gap-4 md:justify-end">
-              <a href="privacy.html" class="px-5 py-3.5 rounded-2xl glass-card border border-white/10 text-white text-xs font-semibold hover:border-teal-400/50 transition-all flex items-center justify-center gap-2">
-                <i data-lucide="shield" class="w-4 h-4 text-teal-400"></i>
+              <a href="privacy.html" class="px-5 py-3.5 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs font-semibold hover:border-white/20 transition-all flex items-center justify-center gap-2">
+                <i data-lucide="shield" class="w-4 h-4 text-emerald-400"></i>
                 <span>Chính sách quyền riêng tư</span>
               </a>
-              <a href="app-ads.txt" target="_blank" class="px-5 py-3.5 rounded-2xl glass-card border border-white/10 text-white text-xs font-semibold hover:border-teal-400/50 transition-all flex items-center justify-center gap-2">
-                <i data-lucide="file-code" class="w-4 h-4 text-indigo-400"></i>
+              <a href="app-ads.txt" target="_blank" class="px-5 py-3.5 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs font-semibold hover:border-white/20 transition-all flex items-center justify-center gap-2">
+                <i data-lucide="file-code" class="w-4 h-4 text-blue-400"></i>
                 <span>Hồ sơ app-ads.txt</span>
               </a>
             </div>
@@ -565,20 +554,20 @@
   </main>
 
   <!-- FOOTER -->
-  <footer class="border-t border-white/5 py-10 bg-black/40 text-slate-500 text-xs relative z-10">
+  <footer class="border-t border-white/[0.06] py-10 bg-black text-zinc-500 text-xs">
     <div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-6">
       
       <div class="flex items-center gap-3">
-        <span class="font-extrabold text-white tracking-wider">ASTVN STUDIOS</span>
+        <span class="font-bold text-white tracking-wider">ASTVN STUDIOS</span>
         <span>·</span>
         <span>© 2026 ASTVN Studios. Đã đăng ký bản quyền.</span>
       </div>
 
-      <div class="flex items-center gap-6">
-        <a href="https://play.google.com/store/apps/details?id=com.astvn.cryo" target="_blank" class="hover:text-slate-300 transition-colors">Google Play</a>
-        <a href="privacy.html" class="hover:text-slate-300 transition-colors">Privacy Policy</a>
-        <a href="app-ads.txt" class="hover:text-slate-300 transition-colors font-mono">app-ads.txt</a>
-        <a href="https://github.com/SangBoDoi2007" target="_blank" class="hover:text-slate-300 transition-colors flex items-center gap-1.5">
+      <div class="flex items-center gap-6 font-medium">
+        <a href="https://play.google.com/store/apps/details?id=com.astvn.cryo" target="_blank" class="hover:text-zinc-300 transition-colors">Google Play</a>
+        <a href="privacy.html" class="hover:text-zinc-300 transition-colors">Privacy Policy</a>
+        <a href="app-ads.txt" class="hover:text-zinc-300 transition-colors font-mono">app-ads.txt</a>
+        <a href="https://github.com/SangBoDoi2007" target="_blank" class="hover:text-zinc-300 transition-colors flex items-center gap-1.5">
           <i data-lucide="github" class="w-3.5 h-3.5"></i> GitHub
         </a>
       </div>
@@ -586,163 +575,19 @@
     </div>
   </footer>
 
-  <!-- INTERACTIVE SCRIPTS -->
   <script>
     lucide.createIcons();
 
-    // AURA THEME PALETTES (Mô phỏng Xưởng Hào Quang của Cryo)
-    const auraThemes = {
-      h3: {
-        c1: '#10b981', // Emerald
-        c2: '#06b6d4', // Cyan
-        c3: '#6366f1', // Indigo
-        c4: '#a855f7', // Violet
-      },
-      ice: {
-        c1: '#38bdf8', // Sky
-        c2: '#0284c7', // Deep Blue
-        c3: '#67e8f9', // Ice Cyan
-        c4: '#2563eb', // Royal Blue
-      },
-      nebula: {
-        c1: '#ec4899', // Pink
-        c2: '#8b5cf6', // Violet
-        c3: '#d946ef', // Fuchsia
-        c4: '#3b82f6', // Indigo Blue
-      },
-      solar: {
-        c1: '#f59e0b', // Amber
-        c2: '#ef4444', // Red
-        c3: '#fbbf24', // Yellow Gold
-        c4: '#f97316', // Orange
-      }
-    };
+    // INTERACTIVE RESOLUTION BENCHMARK CALCULATOR
+    function updateResCalc(val) {
+      const scale = parseInt(val) / 100;
+      const area = Math.round(scale * scale * 100);
+      const gpuSaved = 100 - area;
 
-    function setAuraTheme(themeKey) {
-      const theme = auraThemes[themeKey];
-      if (!theme) return;
-
-      const root = document.documentElement;
-      root.style.setProperty('--aura-c1', theme.c1);
-      root.style.setProperty('--aura-c2', theme.c2);
-      root.style.setProperty('--aura-c3', theme.c3);
-      root.style.setProperty('--aura-c4', theme.c4);
-
-      // Update button active state
-      document.querySelectorAll('.aura-theme-btn').forEach(btn => {
-        btn.classList.remove('border-teal-400', 'text-white', 'shadow-lg');
-        btn.classList.add('border-white/10', 'text-slate-400');
-      });
-      const activeBtn = document.getElementById('btn-aura-' + themeKey);
-      if (activeBtn) {
-        activeBtn.classList.remove('border-white/10', 'text-slate-400');
-        activeBtn.classList.add('border-teal-400', 'text-white', 'shadow-lg');
-      }
-
-      // Update canvas particle colors
-      if (particles.length >= 3) {
-        particles[0].color = theme.c1;
-        particles[1].color = theme.c3;
-        particles[2].color = theme.c2;
-      }
+      document.getElementById('slider-scale-text').innerText = val + '% ' + (val == '70' ? '(Tỷ lệ khuyến nghị)' : '');
+      document.getElementById('calc-area').innerText = area + '%';
+      document.getElementById('calc-gpu').innerText = '-' + gpuSaved + '%';
     }
-
-    // SCREEN SWITCHER LOGIC
-    const screenData = {
-      hub: {
-        img: 'assets/shot_hub.png',
-        desc: '<strong class="text-white">Gaming Space Hub:</strong> Giao diện tối giản mang tông xanh ngọc thanh lịch, quy tụ mọi tựa game yêu thích và đồng bộ trạng thái Shizuku ngay khi khởi chạy.'
-      },
-      fps: {
-        img: 'assets/shot_fps.png',
-        desc: '<strong class="text-white">Đồng Hồ Đo FPS Nổi:</strong> Cửa sổ HUD tinh gọn đo đạc FPS thời gian thực, tải CPU, GPU và nhiệt độ pin với độ trễ tiệm cận 0ms.'
-      },
-      resolution: {
-        img: 'assets/shot_resolution.png',
-        desc: '<strong class="text-white">Tinh Chỉnh Bộ Đệm 49%:</strong> Giảm diện tích render đồ họa xuống 49% - 70% giúp GPU mát hơn 5°C, giải phóng tài nguyên cho game mượt mà.'
-      },
-      manager: {
-        img: 'assets/shot_manager.png',
-        desc: '<strong class="text-white">Đóng Băng Ứng Dụng Nền:</strong> Tạm ngắt các tiến trình rác ngầm để dồn toàn bộ dung lượng RAM cho game thủ, tự động hồi phục khi thoát.'
-      }
-    };
-
-    function switchScreen(key) {
-      const data = screenData[key];
-      if (!data) return;
-
-      const mockupImg = document.getElementById('mockup-img');
-      const screenDesc = document.getElementById('screen-desc');
-
-      // Fade out
-      mockupImg.style.opacity = '0';
-      
-      setTimeout(() => {
-        mockupImg.src = data.img;
-        screenDesc.innerHTML = data.desc;
-        mockupImg.style.opacity = '1';
-      }, 200);
-
-      // Update active tabs
-      document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('border-teal-500/50', 'text-white', 'bg-teal-500/10');
-        btn.classList.add('border-white/5', 'text-slate-400');
-      });
-      const activeBtn = document.getElementById('tab-' + key);
-      if (activeBtn) {
-        activeBtn.classList.remove('border-white/5', 'text-slate-400');
-        activeBtn.classList.add('border-teal-500/50', 'text-white', 'bg-teal-500/10');
-      }
-    }
-
-    // LIVE FPS MICRO FLUCTUATION
-    setInterval(() => {
-      const fpsEl = document.getElementById('live-fps');
-      if (fpsEl) {
-        const jitter = (Math.random() * 0.3).toFixed(1);
-        const val = (120.0 - jitter).toFixed(1);
-        fpsEl.innerText = val;
-      }
-    }, 1800);
-
-    // DYNAMIC AURORA CURTAIN CANVAS
-    const canvas = document.getElementById('ambient-canvas');
-    const ctx = canvas.getContext('2d');
-    let width, height;
-
-    function resize() {
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resize);
-    resize();
-
-    const particles = [
-      { x: width * 0.25, y: height * 0.35, r: 350, color: '#10b981', vx: 0.12, vy: 0.15 },
-      { x: width * 0.75, y: height * 0.45, r: 420, color: '#6366f1', vx: -0.15, vy: 0.1 },
-      { x: width * 0.5, y: height * 0.75, r: 380, color: '#06b6d4', vx: 0.08, vy: -0.15 }
-    ];
-
-    function drawAmbient() {
-      ctx.clearRect(0, 0, width, height);
-      particles.forEach(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.x < -150 || p.x > width + 150) p.vx *= -1;
-        if (p.y < -150 || p.y > height + 150) p.vy *= -1;
-
-        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-        g.addColorStop(0, p.color + '22');
-        g.addColorStop(0.5, p.color + '0a');
-        g.addColorStop(1, 'transparent');
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fill();
-      });
-      requestAnimationFrame(drawAmbient);
-    }
-    drawAmbient();
   </script>
 </body>
 </html>
