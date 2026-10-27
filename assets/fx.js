@@ -52,6 +52,7 @@
   }
   function lock(k) {
     if (!shown(k.vis)) return false;
+    unpin(k);
     unlock(k);
     const rows = []; let top = null;
     k.words.forEach((w) => {
@@ -79,37 +80,106 @@
     return true;
   }
 
-  /* Mỗi chữ cái có hai lò xo: a = đã "nở" (0 hẹp-mảnh → 1 dáng gốc), u = độ phình khi con trỏ tới gần.
+  /* Mỗi chữ cái có hai lò xo: a = đã "nở" (0 hẹp-mảnh → 1 dáng gốc), u = độ phình khi con trỏ tới gần. Cả khối chữ chung
+     một chủ: mỗi khung tính trục cho từng chữ rồi xếp vị trí cả khối một lượt (place).
      Giá trị trục làm tròn theo bậc (wght 10, wdth 1): mỗi tổ hợp trục là một bản phông riêng phải dựng và shape lại —
      để liên tục thì khung nào cũng dựng phông mới (đo được ~15 ms/khung); theo bậc thì bản phông được dùng lại từ bộ đệm. */
-  function letterKit(letters, opt) {
-    return letters.map((c) => {
-      const L = { c, a: null, u: null, x: 0, y: 0, fv: '', col: '', w: 0, wd: 0 };
-      const sw = opt.sw || 10, sd = opt.sd || 1;
-      const o = owner(() => {
+  function letterKit(k, opt) {
+    const sw = opt.sw || 10, sd = opt.sd || 1;
+    const kit = k.letters.map((c) => ({ c, a: null, u: null, x: 0, y: 0, fv: '', col: '', w: 0, wd: 0, rw: 0, rd: 0, tx: 0 }));
+    const o = owner(() => {
+      kit.forEach((L) => {
         const a = L.a.x, u = Math.max(0, L.u.x);
         let fv = '', col = '';
+        L.rw = opt.w0; L.rd = opt.d0;
         if (!(L.a.t === 1 && L.u.t === 0 && Math.abs(a - 1) < 0.003 && u < 0.003)) {
           /* Trễ bậc: chỉ nhảy sang bậc mới khi giá trị đã đi quá ¾ bậc — không thì dao động nhỏ quanh ranh giới hai bậc
              làm chữ nhảy qua lại mỗi khung (user #301: "Cryo" di quanh mà không vào chữ thì rung giật). */
-          const rw = clamp(lerp(opt.w0a, opt.w0, a) + (opt.w1 - opt.w0) * u, 300, 800);
-          const rd = clamp(lerp(opt.d0a, opt.d0, a) + (opt.d1 - opt.d0) * u, 75, 125);
+          const rw = L.rw = clamp(lerp(opt.w0a, opt.w0, a) + (opt.w1 - opt.w0) * u, 300, 800);
+          const rd = L.rd = clamp(lerp(opt.d0a, opt.d0, a) + (opt.d1 - opt.d0) * u, 75, 125);
           if (!L.w || Math.abs(rw - L.w) >= sw * 0.75) L.w = Math.round(rw / sw) * sw;
           if (!L.wd || Math.abs(rd - L.wd) >= sd * 0.75) L.wd = Math.round(rd / sd) * sd;
           fv = "'wght' " + L.w + ", 'wdth' " + L.wd + ", 'ROND' 100";
           if (opt.tint && u > 0.03) col = 'color-mix(in oklab, var(--primary) ' + Math.round(clamp(u, 0, 1) * 20) * 5 + '%, var(--on-surface))';
         }
         if (!fv) L.w = L.wd = 0;
-        if (fv !== L.fv) { L.fv = fv; c.style.fontVariationSettings = fv; }
-        if (col !== L.col) { L.col = col; c.style.color = col; }
+        if (fv !== L.fv) { L.fv = fv; L.c.style.fontVariationSettings = fv; }
+        if (col !== L.col) { L.col = col; L.c.style.color = col; }
       });
-      L.a = new Spring(1, 0.002, o); L.u = new Spring(0, 0.002, o);
-      return L;
+      if (k.slot) slotPlace(k, kit, opt);
+    });
+    kit.forEach((L) => { L.a = new Spring(1, 0.002, o); L.u = new Spring(0, 0.002, o); });
+    kit.o = o; k.kit = kit;
+    return kit;
+  }
+
+  /* Ô chữ cố định (#302). Chữ phình mà vẫn để trình duyệt xếp theo dòng thì mỗi bậc trục của MỘT chữ đẩy cả phần dòng phía
+     sau nó nhảy một bậc; nhiều chữ đổi bậc so le nhau là cả dòng run qua lại (user #301, #302: "rê chuột chậm qua tiêu đề,
+     chữ co giãn vẫn rung"; "Cryo" căn giữa thì run cả hai đầu). Nở xong, mỗi chữ cái thành một ô inline-block rộng đúng
+     bằng lúc đứng yên (đo từ bố cục thật nên giữ nguyên khoảng chữ + kerning); vị trí khi phình tính bằng transform từ bề
+     rộng LIÊN TỤC — chữ trôi êm từng phần điểm ảnh, còn bậc trục chỉ đổi nét chữ, căn giữa trong ô của nó. Dòng không còn
+     bố cục lại mỗi khung.
+     Bề rộng KHÔNG tuyến tính theo trục (đo #302: "Cryo" 480 px lệch tới 19 px so với nội suy hai đầu) → đo SLOT_N + 1 mốc
+     dọc đường phình (wght và wdth cùng tăng theo u) rồi nội suy từng đoạn; độ lệch nhỏ khỏi đường do làm tròn bậc thì tính
+     bằng độ dốc riêng của từng trục. Đo một lần mỗi lần ghim (vài lượt bố cục của riêng dòng chữ). */
+  const fvOf = (w, dd) => "'wght' " + w + ", 'wdth' " + dd + ", 'ROND' 100";
+  const SLOT_N = 8;
+  function pin(k, opt) {
+    if (k.slot) return true;
+    if (k.busy || !k.kit || !shown(k.vis)) return false;
+    const kit = k.kit, cs = kit.map((L) => L.c);
+    const rects = (fv) => { cs.forEach((c) => { c.style.fontVariationSettings = fv; }); return cs.map((c) => c.getBoundingClientRect()); };
+    cs.forEach((c) => { c.style.transform = ''; });
+    const path = [];
+    for (let j = 1; j <= SLOT_N; j++) path.push(rects(fvOf(+lerp(opt.w0, opt.w1, j / SLOT_N).toFixed(2), +lerp(opt.d0, opt.d1, j / SLOT_N).toFixed(2))));
+    const r1 = rects(fvOf(opt.w1, opt.d0)), r2 = rects(fvOf(opt.w0, opt.d1)), r0 = rects('');
+    const box = k.el.getBoundingClientRect(), ta = getComputedStyle(k.el).textAlign;
+    k.slot = {
+      align: ta === 'center' ? 0.5 : (ta === 'right' || ta === 'end') ? 1 : 0,
+      m: cs.map((c, i) => ({
+        line: c.closest('.kl') || k.vis, w: r0[i].width, g: [r0[i].width].concat(path.map((r) => r[i].width)),
+        pw: r1[i].width - r0[i].width, pd: r2[i].width - r0[i].width,
+      })),
+    };
+    kit.forEach((L, i) => {
+      L.x = r0[i].left + r0[i].width / 2 - box.left; L.y = r0[i].top + r0[i].height / 2 - box.top;
+      L.fv = '\u0000'; L.tx = 0;
+      L.c.style.width = r0[i].width + 'px'; L.c.classList.add('kc-pin');
+    });
+    kit.o.apply();
+    return true;
+  }
+  function unpin(k) {
+    if (!k.slot) return;
+    k.slot = null;
+    k.kit.forEach((L) => { L.c.classList.remove('kc-pin'); L.c.style.width = ''; L.c.style.transform = ''; L.tx = 0; });
+  }
+  function slotPlace(k, kit, opt) {
+    const S = k.slot, sx = new Array(kit.length);
+    const width = (m, w, dd) => {
+      const uw = (w - opt.w0) / (opt.w1 - opt.w0), ud = (dd - opt.d0) / (opt.d1 - opt.d0), u = (uw + ud) / 2;
+      const f = clamp(u, 0, 1) * SLOT_N, j = Math.min(SLOT_N - 1, Math.floor(f));
+      return m.g[j] + (m.g[j + 1] - m.g[j]) * (f - j) + (uw - u) * m.pw + (ud - u) * m.pd;
+    };
+    let line = null, acc = 0, from = 0;
+    const close = (to) => { if (S.align) for (let j = from; j < to; j++) sx[j] -= acc * S.align; };
+    for (let i = 0; i < kit.length; i++) {
+      const L = kit[i], m = S.m[i];
+      if (m.line !== line) { close(i); line = m.line; acc = 0; from = i; }
+      const V = width(m, L.rw, L.rd), A = L.fv ? width(m, L.w, L.wd) : m.w;
+      sx[i] = acc + (V - A) / 2;
+      acc += V - m.w;
+    }
+    close(kit.length);
+    kit.forEach((L, i) => {
+      const t = Math.abs(sx[i]) < 0.05 ? 0 : Math.round(sx[i] * 20) / 20;
+      if (t !== L.tx) { L.tx = t; L.c.style.transform = t ? 'translateX(' + t + 'px)' : ''; }
     });
   }
-  /* Chữ "nở" lần lượt: từ bay lên, chữ cái từ hẹp-mảnh sang dáng gốc. */
-  function bloom(k, kit, delay, gap) {
+  /* Chữ "nở" lần lượt: từ bay lên, chữ cái từ hẹp-mảnh sang dáng gốc. Nở thì về bố cục dòng thường (bề rộng đổi nhiều). */
+  function bloom(k, kit, delay, gap, done) {
     if (reduced) return;
+    unpin(k);
     k.busy++;
     kit.forEach((L) => L.a.set(0));
     k.words.forEach((w) => put(w, { y: 28, o: 0 }));
@@ -119,7 +189,7 @@
       setTimeout(() => go(w, { y: 0, o: 1 }, SPEC.stage, SPEC.fade), t0);
       w.querySelectorAll('.kc').forEach(() => { const L = kit[i]; setTimeout(() => L.a.to(1, SPEC.m3SlowSpatial), delay + i * gap); i++; });
     });
-    setTimeout(() => { k.busy--; if (!k.busy && relockPending) { relockPending = false; relock(); } }, delay + i * gap + 900);
+    setTimeout(() => { k.busy--; if (!k.busy && relockPending) { relockPending = false; relock(); } if (done) done(); }, delay + i * gap + 900);
     /* Xong thì bỏ transform của từng từ: transform 3D giữ lại biến mỗi từ thành một lớp compositor, làm mọi khung sau
        đó tốn thêm công xếp lớp. */
     setTimeout(function clear() {
@@ -139,16 +209,10 @@
     ? new IntersectionObserver((es) => es.forEach((e) => { const s = swells.find((x) => x.k.vis === e.target); if (s) s.inView = e.isIntersecting; }), { rootMargin: '25% 0px' })
     : null;
   function swell(k, kit, opt) {
-    const s = { k, kit, opt, stale: true, inView: !seen };
+    const s = { k, kit, opt, inView: !seen };
     swells.push(s);
     if (seen && fine && !reduced) seen.observe(k.vis);
     return s;
-  }
-  function measureSwell(s) {
-    const r = s.k.el.getBoundingClientRect();
-    s.kit.forEach((L) => { const b = L.c.getBoundingClientRect(); L.x = b.left + b.width / 2 - r.left; L.y = b.top + b.height / 2 - r.top; });
-    s.fs = parseFloat(getComputedStyle(s.k.el).fontSize) || 60;
-    s.stale = false;
   }
   if (fine && !reduced) {
     addEventListener('pointermove', (e) => {
@@ -160,7 +224,8 @@
         const r = s.k.el.getBoundingClientRect(), R = s.fs * s.opt.reach, pad = R * 1.6;
         const near = e.clientX > r.left - pad && e.clientX < r.right + pad && e.clientY > r.top - pad && e.clientY < r.bottom + pad;
         if (!near && !s.hot) return;
-        if (s.stale) measureSwell(s);
+        /* Ô chữ + toạ độ tâm từng chữ đo một lần lúc đứng yên (pin); đổi cỡ/ngôn ngữ thì gỡ ra và đo lại lần sau. */
+        if (!pin(s.k, s.opt)) return;
         s.hot = near;
         s.kit.forEach((L) => {
           const dx = e.clientX - (r.left + L.x), dy = (e.clientY - (r.top + L.y)) * 1.25;
@@ -171,14 +236,14 @@
     }, { passive: true });
     d.addEventListener('mouseout', (e) => { if (!e.relatedTarget) swells.forEach((s) => { s.hot = false; s.kit.forEach((L) => L.u.to(0, SWELL)); }); });
   }
-  const restale = () => swells.forEach((s) => { s.stale = true; s.fs = 0; });
+  const restale = () => swells.forEach((s) => { unpin(s.k); s.fs = 0; });
 
   /* Tiêu đề mở đầu: nở khi tải trang, phình theo con trỏ. */
   const HERO = { w0a: 300, w0: 640, w1: 800, d0a: 75, d0: 100, d1: 112, reach: 1.35, tint: true };
   const heroKs = [];
   d.addEventListener('cryo:intro', () => {
     $$('.hero-h .hl').forEach((el) => {
-      const k = split(el), kit = letterKit(k.letters, HERO);
+      const k = split(el), kit = letterKit(k, HERO);
       heroKs.push({ k, kit });
       swell(k, kit, HERO);
     });
@@ -192,7 +257,7 @@
   $$('.h2').forEach((h) => {
     const parts = $$('[lang]', h);
     (parts.length ? parts : [h]).forEach((p) => {
-      const k = split(p), kit = letterKit(k.letters, H2);
+      const k = split(p), kit = letterKit(k, H2);
       headKs.push({ h, k, kit, done: false });
       swell(k, kit, H2);
     });
@@ -214,19 +279,41 @@
   const FIN = { w0a: 300, w0: 330, w1: 800, d0a: 75, d0: 92, d1: 125, reach: 0.55, tint: false, sw: 4, sd: 0.5 };
   const finEl = $('.fin-word');
   if (finEl) {
-    const k = split(finEl, false), kit = letterKit(k.letters, FIN);
+    const k = split(finEl, false), kit = letterKit(k, FIN);
     swell(k, kit, FIN);
+    /* Dải màu tô TỪNG chữ cái (CSS .fin-word.split .kc), kéo dài bằng cả từ và dời theo chỗ của chữ đó, nên nhìn vẫn là
+       một dải liền. Trước đây cả khối chữ lẫn từ cùng tô background-clip:text: lúc từ đang bay lên (có transform), Chrome
+       vẽ thêm một bản chữ của khối cha lệch hẳn sang trái — user #302 thấy "CryoCryo" mỗi lần chữ hiện ra. */
+    const grad = () => {
+      const w = k.words[0], wr = w.getBoundingClientRect();
+      if (!wr.width) return;
+      kit.forEach((L) => {
+        const r = L.c.getBoundingClientRect();
+        L.c.style.backgroundSize = wr.width.toFixed(1) + 'px 100%';
+        L.c.style.backgroundPosition = (wr.left - r.left - L.tx).toFixed(1) + 'px 0';
+      });
+    };
+    finEl.classList.add('split');
     /* Như dòng tiêu đề: khung cố định + contain để chữ phình chỉ bố cục lại bên trong. */
-    const fitFin = () => { finEl.classList.remove('kl-c'); finEl.style.height = ''; finEl.style.height = finEl.offsetHeight + 'px'; finEl.classList.add('kl-c'); };
+    const fitFin = () => {
+      if (k.busy) return;
+      unpin(k);
+      finEl.classList.remove('kl-c'); finEl.style.height = ''; finEl.style.height = finEl.offsetHeight + 'px'; finEl.classList.add('kl-c');
+      grad();
+    };
     fitFin();
     addEventListener('resize', later(fitFin, 200));
+    (d.fonts && d.fonts.ready ? d.fonts.ready : Promise.resolve()).then(fitFin);
     if (!reduced) {
       k.words.forEach((w) => put(w, { o: 0 }));
       io([finEl], { threshold: 0.4 }, (el, on, o) => {
         if (!on) return;
         if (o) o.unobserve(el);
-        bloom(k, kit, 0, 90);
-        if (!fine) setTimeout(() => kit.forEach((L, i) => setTimeout(() => { L.u.to(0.55, SPEC.m3SlowSpatial); }, i * 110)), 700);
+        /* Điện thoại: không có con trỏ để rê → nở xong thì tự phình một nhịp (trên ô chữ cố định, không xô dòng). */
+        bloom(k, kit, 0, 90, () => {
+          fitFin();
+          if (!fine && pin(k, FIN)) kit.forEach((L, i) => setTimeout(() => { L.u.to(0.55, SPEC.m3SlowSpatial); }, i * 110));
+        });
       });
     }
   }
@@ -242,6 +329,8 @@
     restale();
   };
   M.refreshers.push(() => requestAnimationFrame(relock));
+  /* Phông web tải xong sau lần ghim đầu: bề rộng ô chữ đo bằng phông dự phòng là sai → gỡ ghim, đo lại. */
+  if (d.fonts && d.fonts.ready) d.fonts.ready.then(() => requestAnimationFrame(relock));
   addEventListener('resize', later(relock, 220));
 
   /* Liên kết đầu trang: rê vào thì chữ giãn rộng, đậm lên, đổi màu. Giữ sẵn chỗ bằng bề rộng lúc giãn để hàng không xô. */
@@ -261,26 +350,56 @@
   /* Hai lớp, cùng hoà trộn "difference" để thấy được trên cả nền tối lẫn khu nền sáng:
      - khối âm bản (chấm trắng): nút trong suốt / chữ → khối bay vào phủ đúng viên thuốc của nút, chữ bên dưới đảo màu;
      - vòng sáng: nút TÔ MÀU, nút có ảnh (logo, huy hiệu Google Play) → đảo màu lên chúng ra tông xỉn/bẩn (user #301 chê
-       "Open game bị tối đi", và huy hiệu Google Play không được đổi màu) → chấm thu nhỏ biến mất, vòng bay ra ôm quanh nút.
+       "Open game bị tối đi", và huy hiệu Google Play không được đổi màu) → vòng bung ra từ chính cái chấm, ôm quanh nút.
      Rời nút: hình thu về chấm theo hướng chuột, KHÔNG xoay (bản trước kéo giãn theo vận tốc bằng phép xoay cả hình → viên
-     thuốc rời theo chiều dọc bị "nằm ngang rồi xoay dọc"). */
+     thuốc rời theo chiều dọc bị "nằm ngang rồi xoay dọc").
+     Điện thoại (#302, user muốn có con trỏ cả trên điện thoại): không có chuột để bám, nên con trỏ chỉ hiện khi CHẠM —
+     bung ra dưới ngón tay, bay vào ôm nút vừa chạm (cùng khối / vòng như máy tính), thả tay thì giữ thêm một nhịp rồi thu
+     về và tan. Vuốt cuộn trang thì tan ngay: bám theo ngón tay suốt lúc cuộn chỉ che nội dung và rối mắt. */
   (function cursor() {
-    if (reduced || !fine) return;
+    if (reduced) return;
     const mk = (cls) => { const e = d.createElement('div'); e.className = cls; e.setAttribute('aria-hidden', 'true'); const i = d.createElement('i'); e.appendChild(i); d.body.appendChild(e); return [e, i]; };
     const [el, blob] = mk('m3-cursor'), [hel, ring] = mk('m3-cursor m3-halo');
-    root.classList.add('cur-on');
+    if (fine) root.classList.add('cur-on');
     const HIT = 'a[href], button, summary, [role="switch"], [role="radio"], .ov, input[type="range"]';
     const MAG = '.btn, .top-nav a, .brand, .seg button, .swatches button, .play-badge, .foot-links a, .more summary, .rp-close';
     /* Chữ "Cryo" cuối trang không dùng thấu kính: để hiệu ứng phình chữ tự nói. */
     const LENS = '.hero-h, .h2, .kin-row';
     const FOLLOW = { z: 0.82, k: 1100 }, SHRINK = { z: 0.92, k: 760 };
+    /* Chạm vào chỗ không phải nút: khối cỡ đầu ngón tay (lộ ra quanh ngón), không phải chấm 12 px nằm khuất dưới ngón. */
+    const TOUCH_FREE = 44;
     /* Vùng có màu thật của ảnh huy hiệu Google Play (ảnh có lề trong suốt): [lề ngang, lề dọc, bán kính góc] theo tỉ lệ. */
     const BADGE = { vi: [0, 0.116, 0.13], en: [0.0635, 0.164, 0.137] };
     let px = -200, py = -200, tgt = null, lens = null, kind = 'free', inside = false, shownR = 6, follow = 0;
+    let touch = !fine, ringOut = false, ringBw = -1, liftT = 0;
     const o = owner(paint);
-    const X = new Spring(px, 0.05, o), Y = new Spring(py, 0.05, o), W = new Spring(12, 0.05, o), H = new Spring(12, 0.05, o);
+    /* Cỡ (rộng/cao) của con trỏ: phình ra tính theo điểm ảnh, co lại tính theo LOG của cỡ. Độ nảy khi co nhờ thế tỉ lệ với
+       cỡ đích: từ khung nút 200 px về chấm 12 px vẫn nảy mềm quanh 12 px (xuống ~9 px rồi về) mà không lộn qua 0 — vòng #301
+       phải bỏ hẳn nảy lúc co vì lộn qua 0, và user #302 chê "thu lại mất mềm mại, mất nảy như trước". Đổi miền giữa chừng giữ
+       nguyên vận tốc nên không khựng. */
+    function dim(v0) {
+      const s = new Spring(v0, 0.05, o);
+      let log = false;
+      const val = () => (log ? Math.exp(s.x) : s.x);
+      return {
+        get x() { return val(); },
+        get v() { return log ? s.v * val() : s.v; },
+        set(v) { log = false; s.eps = 0.05; s.set(v); },
+        to(v, spec) {
+          if (Math.abs(v - (log ? Math.exp(s.t) : s.t)) < 0.01) return;
+          const x = val(), down = v < x;
+          if (down !== log) {
+            const vel = log ? s.v * x : s.v / Math.max(1, x);
+            log = down; s.eps = log ? 0.002 : 0.05;
+            s.x = log ? Math.log(Math.max(1, x)) : x; s.v = vel;
+          }
+          s.to(log ? Math.log(Math.max(1, v)) : v, spec);
+        },
+      };
+    }
+    const X = new Spring(px, 0.05, o), Y = new Spring(py, 0.05, o), W = dim(12), H = dim(12);
     const R = new Spring(6, 0.05, o), S = new Spring(1, 0.001, o), O = new Spring(0, 0.002, o);
-    const hX = new Spring(px, 0.05, o), hY = new Spring(py, 0.05, o), hW = new Spring(12, 0.05, o), hH = new Spring(12, 0.05, o);
+    const hX = new Spring(px, 0.05, o), hY = new Spring(py, 0.05, o), hW = dim(12), hH = dim(12);
     const hR = new Spring(6, 0.05, o), hO = new Spring(0, 0.002, o);
     /* Nền đặc (màu có độ phủ) hay có ảnh → vòng sáng. Màu tính ra có thể ở dạng color()/oklab() (do color-mix) → vẽ thử
        1 điểm ảnh để đọc độ phủ; nhớ theo chuỗi màu. */
@@ -295,10 +414,12 @@
       }
       return t.cryoSolid;
     };
-    const box = (b, i, x, y, w, h, r, k, sc) => {
+    /* Độ giãn theo vận tốc — chỉ khi hình gần tròn (viên thuốc dài mà giãn thêm thì méo). */
+    const stretch = (sx, sy, w, h) => { const round = Math.min(w, h) / Math.max(1, w, h); return Math.min(0.38, Math.hypot(sx.v, sy.v) / 4400) * round * round; };
+    const box = (b, i, sx, sy, w, h, r, k, sc) => {
       /* Kéo giãn theo hướng chuột mà không xoay hình: xoay vào hướng, giãn, xoay trả lại. */
-      const a = Math.atan2(Y.v, X.v) * 57.2958;
-      b.style.transform = 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0)' +
+      const a = Math.atan2(sy.v, sx.v) * 57.2958;
+      b.style.transform = 'translate3d(' + sx.x.toFixed(1) + 'px,' + sy.x.toFixed(1) + 'px,0)' +
         (k > 0.004 ? ' rotate(' + a.toFixed(1) + 'deg) scale(' + (1 + k).toFixed(3) + ',' + (1 - k * 0.45).toFixed(3) + ') rotate(' + (-a).toFixed(1) + 'deg)' : '') +
         (sc !== 1 ? ' scale(' + sc.toFixed(3) + ')' : '');
       i.style.width = w.toFixed(1) + 'px'; i.style.height = h.toFixed(1) + 'px';
@@ -306,16 +427,24 @@
       i.style.borderRadius = r.toFixed(1) + 'px';
     };
     function paint() {
+      const hw = Math.max(0, hW.x), hh = Math.max(0, hH.x), m = Math.min(hw, hh);
+      /* Vòng và chấm là MỘT khối: vòng càng nhỏ viền càng dày, tới cỡ chấm thì đặc hẳn. Vòng bung ra từ chính cái chấm;
+         rời nút thì thu lại (nảy) thành đúng cái chấm rồi mới trao chỗ cho khối âm bản — cùng cỡ, cùng chỗ nên không thấy
+         chỗ nối. Bản #301 cho vòng mờ đi khi còn to, trong lúc một cái chấm khác hiện ra ở chỗ con trỏ: hai vật khác nhau
+         (user #302: "mất liền mạch"). Trao chỗ TRƯỚC khi ghi kiểu của cả hai: không có khung nào cả hai cùng ẩn. */
+      if (ringOut && Math.abs(hw - 12) < 0.8 && Math.abs(hh - 12) < 0.8 && Math.abs(hW.v) < 30 && Math.abs(hH.v) < 30) {
+        ringOut = false; hO.set(0);
+        if (inside) { W.set(hw); H.set(hh); X.set(hX.x); Y.set(hY.x); O.set(1); W.to(12, SPEC.m3FastSpatial); H.to(12, SPEC.m3FastSpatial); }
+      }
       const w = Math.max(0, W.x), h = Math.max(0, H.x);
       /* Ngoài lúc phủ nút, khối luôn là viên thuốc/chấm tròn (bán kính = nửa cạnh ngắn) — không bao giờ ra chữ nhật góc
-         vuông lúc đang co về. Độ giãn theo vận tốc chỉ áp khi khối gần tròn. */
+         vuông lúc đang co về. */
       shownR = kind === 'shape' ? clamp(R.x, 0, Math.min(w, h) / 2) : Math.min(w, h) / 2;
-      const round = Math.min(w, h) / Math.max(1, w, h);
-      const k = kind === 'shape' ? 0 : Math.min(0.38, Math.hypot(X.v, Y.v) / 4400) * round * round;
-      box(el, blob, X.x, Y.x, w, h, shownR, k, S.x);
+      box(el, blob, X, Y, w, h, shownR, kind === 'shape' ? 0 : stretch(X, Y, w, h), S.x);
       el.style.opacity = clamp(O.x, 0, 1).toFixed(3);
-      const hw = Math.max(0, hW.x), hh = Math.max(0, hH.x);
-      box(hel, ring, hX.x, hY.x, hw, hh, clamp(hR.x, 0, Math.min(hw, hh) / 2), 0, S.x);
+      const f = clamp((28 - m) / 14, 0, 1), bw = Math.round(lerp(2, m / 2, f * f * (3 - 2 * f)) * 10) / 10;
+      if (bw !== ringBw) { ringBw = bw; ring.style.boxShadow = 'inset 0 0 0 ' + bw + 'px #fff'; }
+      box(hel, ring, hX, hY, hw, hh, clamp(hR.x, 0, m / 2), ringOut ? stretch(hX, hY, hw, hh) : 0, S.x);
       hel.style.opacity = clamp(hO.x, 0, 1).toFixed(3);
     }
     /* Nút nhích theo con trỏ một chút (thuộc tính translate, cộng dồn được với transform sẵn có của nút). */
@@ -338,7 +467,7 @@
         if (tgt && mags.has(tgt)) magnet(tgt, 0, 0);
         tgt = t;
       }
-      lens = !t && node && node.closest ? node.closest(LENS) : null;
+      lens = !t && !touch && node && node.closest ? node.closest(LENS) : null;
     }
     /* Khung + bán kính THẬT của nút, đọc lại mỗi lần (nút bấm vuông góc lại, nút bật/tắt đổi dáng → con trỏ bám theo).
        Huy hiệu Google Play: lấy đúng vùng có màu của ảnh. Chữ/logo không viền: chừa lề và bo tối thiểu như một viên thuốc. */
@@ -358,38 +487,41 @@
       let halo = null;
       if (tgt) {
         const r = tgt.getBoundingClientRect();
-        if (tgt.matches('input[type="range"]')) { kind = 'free'; size(8); chase(); }
+        if (tgt.matches('input[type="range"]')) { kind = 'free'; size(touch ? 20 : 8); chase(); }
         else if (!r.width || r.height > 78 || r.width > 460) { kind = 'soft'; size(44); chase(); }
         else {
           const f = frame(tgt), m = mags.get(tgt);
           const cx = f.l + f.w / 2 - (m ? m.x.x : 0), cy = f.t + f.h / 2 - (m ? m.y.x : 0), dx = px - cx, dy = py - cy;
           let mx = 0, my = 0;
-          if (tgt.matches(MAG)) { mx = clamp(dx * 0.16, -7, 7); my = clamp(dy * 0.22, -5, 5); magnet(tgt, mx, my); }
+          /* Nam châm chỉ cho chuột: dưới ngón tay thì nút nhích theo chỉ làm lệch chỗ vừa chạm. */
+          if (!touch && tgt.matches(MAG)) { mx = clamp(dx * 0.16, -7, 7); my = clamp(dy * 0.22, -5, 5); magnet(tgt, mx, my); }
           const g = { x: cx + mx + dx * 0.05, y: cy + my + dy * 0.05, w: f.w, h: f.h, r: f.r };
           if (solid(tgt)) { halo = g; kind = 'halo'; size(6); chase(); }
           else {
             if (kind !== 'shape') R.set(shownR);
             kind = 'shape';
             X.to(g.x, SPEC.m3FastSpatial); Y.to(g.y, SPEC.m3FastSpatial);
-            grow(W, g.w); grow(H, g.h); R.to(g.r, SPEC.m3FastSpatial);
+            W.to(g.w, SPEC.m3FastSpatial); H.to(g.h, SPEC.m3FastSpatial); R.to(g.r, SPEC.m3FastSpatial);
           }
         }
       } else if (lens) { kind = 'lens'; size(92); chase(); }
-      else { kind = 'free'; size(12); chase(); }
-      /* Vòng sáng: bay ra từ vị trí chuột tới ôm nút (cách mép 5px), rời nút thì co về chuột và tan. */
+      else { kind = 'free'; size(touch ? TOUCH_FREE : 12); chase(); }
+      /* Vòng sáng: bung ra từ chấm tại vị trí con trỏ tới ôm nút (cách mép 5px). Rời nút về con trỏ trần (chuột): thu về
+         thành chấm rồi trao chỗ (xem paint). Rời sang thứ khác (thấu kính, nút trong suốt) hoặc trên điện thoại: tan dần. */
       if (halo) {
+        ringOut = false;
         if (hO.t === 0) { hX.set(px); hY.set(py); hW.set(12); hH.set(12); hR.set(6); }
         hX.to(halo.x, SPEC.m3FastSpatial); hY.to(halo.y, SPEC.m3FastSpatial);
-        grow(hW, halo.w + 10); grow(hH, halo.h + 10); hR.to(halo.r + 5, SPEC.m3FastSpatial); hO.to(1, SPEC.m3FastEffects);
-        O.to(0, SPEC.m3FastEffects);
+        hW.to(halo.w + 10, SPEC.m3FastSpatial); hH.to(halo.h + 10, SPEC.m3FastSpatial); hR.to(halo.r + 5, SPEC.m3FastSpatial);
+        hO.to(1, SPEC.m3FastEffects); O.to(0, SPEC.m3FastEffects);
       } else {
-        hX.to(px, FOLLOW); hY.to(py, FOLLOW); grow(hW, 12); grow(hH, 12); hR.to(6, SHRINK); hO.to(0, SPEC.m3Effects);
-        if (inside) O.to(1, SPEC.m3FastEffects);
+        hX.to(px, FOLLOW); hY.to(py, FOLLOW); hW.to(12, SPEC.m3FastSpatial); hH.to(12, SPEC.m3FastSpatial); hR.to(6, SHRINK);
+        if (hO.t > 0 && kind === 'free' && inside && !touch) ringOut = true;
+        else if (hO.t > 0 || ringOut) { ringOut = false; hO.to(0, SPEC.m3Effects); }
+        if (inside && !ringOut) O.to(1, SPEC.m3FastEffects);
       }
     }
-    /* Phình ra thì nảy (M3 nhanh), co lại thì êm (không nảy ngược qua cỡ chấm). */
-    function grow(s, v) { s.to(v, v >= s.x ? SPEC.m3FastSpatial : SHRINK); }
-    function size(s) { grow(W, s); grow(H, s); R.to(s / 2, SHRINK); }
+    function size(s) { W.to(s, SPEC.m3FastSpatial); H.to(s, SPEC.m3FastSpatial); R.to(s / 2, SHRINK); }
     function chase() { X.to(px, FOLLOW); Y.to(py, FOLLOW); }
     /* Bấm / thả: nút đổi dáng và đổi màu trong ~0,3 s — bám theo từng khung trong lúc đó. */
     function track(ms) {
@@ -397,10 +529,16 @@
       const loop = () => { if (!on || !inside) return; update(); requestAnimationFrame(loop); };
       requestAnimationFrame(loop);
     }
+    const toMouse = () => { if (touch) { touch = false; clearTimeout(liftT); } root.classList.add('cur-on'); };
     addEventListener('pointermove', (e) => {
-      /* Bút/cảm ứng trên máy có chuột: trả con trỏ gốc của hệ thống (không thì không còn con trỏ nào hiện). */
-      if (e.pointerType !== 'mouse') { O.to(0, SPEC.m3FastEffects); hO.to(0, SPEC.m3FastEffects); inside = false; root.classList.remove('cur-on'); return; }
-      root.classList.add('cur-on');
+      if (e.pointerType === 'touch') {
+        /* Ngón tay đang đặt (chưa thành cú cuộn): bám theo, dò lại thứ dưới ngón (sự kiện chạm luôn gắn với chỗ đặt tay). */
+        if (touch && inside && e.isPrimary) { px = e.clientX; py = e.clientY; pick(d.elementFromPoint(px, py)); update(); }
+        return;
+      }
+      /* Bút trên máy có chuột: trả con trỏ gốc của hệ thống (không thì không còn con trỏ nào hiện). */
+      if (e.pointerType !== 'mouse') { O.to(0, SPEC.m3FastEffects); hO.to(0, SPEC.m3FastEffects); inside = false; ringOut = false; root.classList.remove('cur-on'); return; }
+      toMouse();
       px = e.clientX; py = e.clientY;
       if (!inside) { inside = true; X.set(px); Y.set(py); O.to(1, SPEC.m3FastEffects); }
       pick(e.target); update();
@@ -408,14 +546,40 @@
     /* Lúc cuộn, phần tử dưới con trỏ đổi theo: dò lại (hit-test, ép bố cục) tối đa ~8 lần/giây, không phải mỗi sự kiện. */
     let probeT = 0;
     addEventListener('scroll', () => {
-      if (!inside || probeT) return;
-      probeT = setTimeout(() => { probeT = 0; if (inside) { pick(d.elementFromPoint(px, py)); update(); } }, 120);
+      if (!inside || probeT || touch) return;
+      probeT = setTimeout(() => { probeT = 0; if (inside && !touch) { pick(d.elementFromPoint(px, py)); update(); } }, 120);
     }, { passive: true });
-    const leave = () => { inside = false; O.to(0, SPEC.m3FastEffects); hO.to(0, SPEC.m3FastEffects); };
+    const leave = () => { if (touch) return; inside = false; ringOut = false; O.to(0, SPEC.m3FastEffects); hO.to(0, SPEC.m3FastEffects); };
     d.addEventListener('mouseout', (e) => { if (!e.relatedTarget) leave(); });
     addEventListener('blur', leave);
-    addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse') { S.to(kind === 'shape' || kind === 'halo' ? 0.95 : 0.75, SPEC.m3FastSpatial); track(400); } });
-    addEventListener('pointerup', () => { S.to(1, SPEC.m3FastSpatial); if (inside) track(450); });
+    addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse') { toMouse(); S.to(kind === 'shape' || kind === 'halo' ? 0.95 : 0.75, SPEC.m3FastSpatial); track(400); return; }
+      if (e.pointerType !== 'touch' || !e.isPrimary) return;
+      touch = true; root.classList.remove('cur-on'); clearTimeout(liftT);
+      px = e.clientX; py = e.clientY;
+      /* Chạm mới (con trỏ đã tan): bung ra từ đúng đầu ngón tay. */
+      if (O.x < 0.05 && hO.x < 0.05) { X.set(px); Y.set(py); W.set(6); H.set(6); hX.set(px); hY.set(py); hO.set(0); }
+      inside = true; ringOut = false; O.to(1, SPEC.m3FastEffects);
+      pick(e.target); update(); S.to(0.92, SPEC.m3FastSpatial); track(400);
+    }, { passive: true });
+    const lift = (e) => {
+      if (e.pointerType === 'mouse') { S.to(1, SPEC.m3FastSpatial); if (inside) track(450); return; }
+      if (!touch || e.pointerType !== 'touch' || !e.isPrimary) return;
+      const up = e.type === 'pointerup';
+      S.to(1, SPEC.m3FastSpatial);
+      if (up) track(320);
+      /* Thả tay: giữ hình trên nút thêm một nhịp (thấy nút đã nhận cú chạm; nút đổi màu/dáng thì con trỏ bám theo), rồi thu
+         về và tan. Vuốt cuộn (pointercancel) thì tan ngay. */
+      clearTimeout(liftT);
+      liftT = setTimeout(() => {
+        inside = false; tgt = null; lens = null; kind = 'free'; ringOut = false;
+        size(8); chase(); O.to(0, SPEC.m3Effects);
+        hX.to(px, FOLLOW); hY.to(py, FOLLOW); hW.to(12, SPEC.m3FastSpatial); hH.to(12, SPEC.m3FastSpatial); hR.to(6, SHRINK);
+        hO.to(0, SPEC.m3SlowEffects);
+      }, up ? 340 : 0);
+    };
+    addEventListener('pointerup', lift, { passive: true });
+    addEventListener('pointercancel', lift, { passive: true });
   })();
 
   /* ================= Khối 3D theo màu chủ đề ================= */

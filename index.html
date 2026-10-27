@@ -43,7 +43,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wdth,wght,ROND@6..144,75..125,300..800,0..100&display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&icon_names=ac_unit,account_balance,add,alarm,all_inclusive,battery_charging_full,battery_full,bedtime,block,bolt,calendar_month,chat,check,chevron_right,close,dashboard,expand_more,flight,forum,group,keep,layers,light_mode,lock,mail,map,memory,monitoring,music_note,newspaper,notifications_off,open_in_new,photo,picture_in_picture,play_arrow,restart_alt,settings,shopping_bag,signal_cellular_alt,smart_display,sports_esports,sync,thermometer,thermostat,touch_app,translate,tune,undo,verified_user,wifi&display=block">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&icon_names=ac_unit,account_balance,add,alarm,all_inclusive,battery_charging_full,battery_full,bedtime,block,bolt,calendar_month,call,chat,check,chevron_right,close,dashboard,expand_more,flight,forum,group,keep,layers,light_mode,lock,mail,map,memory,monitoring,music_note,newspaper,notifications_active,notifications_off,open_in_new,photo,picture_in_picture,play_arrow,restart_alt,settings,shopping_bag,signal_cellular_alt,smart_display,speed,sports_esports,sync,thermometer,thermostat,touch_app,translate,tune,undo,verified_user,wifi&display=block">
 <link rel="stylesheet" href="assets/site.css">
 </head>
 <body>
@@ -192,9 +192,14 @@
       <!-- 1. Độ phân giải -->
       <article class="chap" data-screen="res">
         <div class="chap-in">
-          <h3 class="h3"><span lang="vi">Độ phân giải kết xuất</span><span lang="en">Render resolution</span></h3>
-          <p lang="vi">Chọn một tỉ lệ từ 100% xuống 30%, mỗi bước 5%, cho những game bạn tích chọn. Game vẽ ít điểm ảnh hơn mỗi khung hình.</p>
-          <p lang="en">Pick one scale from 100% down to 30%, in 5% steps, for the games you tick. The game draws fewer pixels each frame.</p>
+          <h3 class="h3"><span lang="vi">Độ phân giải game</span><span lang="en">Game resolution</span></h3>
+          <p lang="vi">Cho game vẽ ít điểm ảnh hơn mỗi khung hình rồi phóng đầy màn hình. GPU bớt việc; đổi lại hình mềm hơn một chút. Khác biệt bao nhiêu là tuỳ game và tuỳ máy.</p>
+          <p lang="en">Let a game draw fewer pixels each frame, then scale it up to fill the screen. The GPU has less to do; in return the picture gets a little softer. How much that changes depends on the game and the phone.</p>
+          <ul class="facts">
+            <li><span class="ms" aria-hidden="true">group</span><b><span lang="vi">Dành cho</span><span lang="en">Good for</span></b><span><span lang="vi">Game đồ hoạ nặng, máy chạy GPU hết sức hay nóng lên sau một lúc chơi.</span><span lang="en">Graphics-heavy games, and phones that run the GPU flat out or warm up after a while.</span></span></li>
+            <li><span class="ms" aria-hidden="true">tune</span><b><span lang="vi">Cách dùng</span><span lang="en">How</span></b><span><span lang="vi">Chỉ áp cho game bạn chọn, mức 30–100%. Nên bắt đầu ở 70%, đổi xong thì mở lại game.</span><span lang="en">Only for the games you pick, 30–100%. Start at 70%, then reopen the game after a change.</span></span></li>
+            <li><span class="ms" aria-hidden="true">verified_user</span><b><span lang="vi">Cần</span><span lang="en">Needs</span></b><span><span lang="vi">Shizuku. Bộ đệm game hợp nhất từ Android 13.</span><span lang="en">Shizuku. Game buffer works best on Android 13 and newer.</span></span></li>
+          </ul>
           <p class="try"><span class="ms" aria-hidden="true">touch_app</span><span lang="vi">Kéo thanh trượt, rồi đổi giữa Bộ đệm game và Toàn màn hình để xem phần nào của màn hình thay đổi.</span><span lang="en">Drag the slider, then switch between Game buffer and Fullscreen to see which part of the screen changes.</span></p>
           <details class="more">
             <summary><span lang="vi">Cách hoạt động</span><span lang="en">How it works</span><span class="ms" aria-hidden="true">expand_more</span></summary>
@@ -203,11 +208,15 @@
                 <li><b>Bộ đệm game</b> (nên dùng trên Android 13 trở lên) dùng tính năng hạ độ phân giải có sẵn trong Game Mode của Android: chỉ game đó vẽ thấp hơn, phần còn lại của máy vẫn nét.</li>
                 <li><b>Toàn màn hình</b> đổi độ phân giải màn hình (<code>wm size</code>) trong lúc game bạn chọn đang mở. <b>Khoá độ phân giải</b> giữ mức đó cả ngoài game, để game mở lên đã ở sẵn mức này.</li>
                 <li>Khung hình hay nhiệt độ thay đổi bao nhiêu là tuỳ game và tuỳ máy, và nhiều game tự giới hạn khung hình. Một số hãng điện thoại chặn các lệnh này. Cần Shizuku.</li>
+                <li>Vài game, nhất là game online có chống gian lận, bỏ qua Bộ đệm game. Gặp vậy thì thử Toàn màn hình: cả giao diện máy mờ theo, nhưng game nào cũng nhận.</li>
+                <li>Hạ quá sâu thì chữ và biểu tượng trong game mờ, vài game dồn nút vào giữa màn hình. Gặp vậy thì nâng lên khoảng 70%.</li>
               </ul>
               <ul lang="en">
                 <li><b>Game buffer</b> (recommended on Android 13+) uses Android's Game Mode downscaling: only that game renders at a lower resolution, the rest of the phone stays sharp.</li>
                 <li><b>Fullscreen</b> changes the screen resolution (<code>wm size</code>) while a game you picked is on screen. <b>Resolution Lock</b> keeps it on outside games too, so games start at it.</li>
                 <li>How much frame rate or temperature changes depends on the game and the phone, and many games cap their own frame rate. Some phone makers block these commands. Needs Shizuku.</li>
+                <li>Some games, online games with anti-cheat in particular, ignore Game buffer. If so, try Fullscreen: the whole phone interface gets softer, but every game follows it.</li>
+                <li>Go too low and in-game text and icons blur, and a few games squeeze their buttons toward the middle. If that happens, go back up to about 70%.</li>
               </ul>
             </div>
           </details>
@@ -265,8 +274,13 @@
       <article class="chap" data-screen="freeze">
         <div class="chap-in">
           <h3 class="h3"><span lang="vi">Đóng băng app chạy ngầm</span><span lang="en">Freeze background apps</span></h3>
-          <p lang="vi">Bốn mức cho từng app, từ chặn chạy ngầm tới tắt hẳn. Bật Focus Mode thì khi game bạn chọn lên màn hình, các app nền chưa ghim tự đóng băng, và rã đông khi bạn thoát game.</p>
-          <p lang="en">Four levels for each app, from blocking background work to turning it off. With Focus Mode on, apps you have not pinned freeze when a game you picked comes to the screen, and unfreeze when you leave it.</p>
+          <p lang="vi">Vào game là các app nền bạn chưa ghim bị đóng băng, thôi chạy ngầm trong lúc bạn chơi. Thoát game là Cryo tự rã đông tất cả, bạn không phải làm gì.</p>
+          <p lang="en">When your game opens, background apps you haven't pinned are frozen and stop working in the background while you play. Leave the game and Cryo unfreezes them all, nothing for you to do.</p>
+          <ul class="facts">
+            <li><span class="ms" aria-hidden="true">group</span><b><span lang="vi">Dành cho</span><span lang="en">Good for</span></b><span><span lang="vi">Máy cài nhiều app hay chạy ngầm (mạng xã hội, mua sắm, đồng bộ ảnh).</span><span lang="en">Phones with many apps that keep working in the background (social, shopping, photo sync).</span></span></li>
+            <li><span class="ms" aria-hidden="true">tune</span><b><span lang="vi">Cách dùng</span><span lang="en">How</span></b><span><span lang="vi">Bật Focus Mode, chọn mức từ Nhẹ (chặn chạy ngầm) tới Tối đa (tắt hẳn app). Ghim app cần giữ, như nhạc, VPN, tin nhắn.</span><span lang="en">Turn on Focus Mode and pick a level from Light (no background work) to Extreme (app fully off). Pin what must keep running, like music, VPN, messages.</span></span></li>
+            <li><span class="ms" aria-hidden="true">verified_user</span><b><span lang="vi">Cần</span><span lang="en">Needs</span></b><span><span lang="vi">Shizuku.</span><span lang="en">Shizuku.</span></span></li>
+          </ul>
           <p class="try"><span class="ms" aria-hidden="true">touch_app</span><span lang="vi">Chọn một mức, rồi bấm Mở game. Ba app có ghim luôn được chừa ra.</span><span lang="en">Pick a level, then press Open game. The three pinned apps are always skipped.</span></p>
           <details class="more">
             <summary><span lang="vi">Cách hoạt động</span><span lang="en">How it works</span><span class="ms" aria-hidden="true">expand_more</span></summary>
@@ -342,8 +356,13 @@
       <article class="chap" data-screen="mon">
         <div class="chap-in">
           <h3 class="h3"><span lang="vi">Cửa sổ theo dõi</span><span lang="en">Floating monitor</span></h3>
-          <p lang="vi">Một cửa sổ nhỏ nằm trên game với các chỉ số bạn chọn: FPS của app đang mở, tải CPU và GPU, RAM trống, nhiệt độ CPU, GPU và pin.</p>
-          <p lang="en">A small window over your game with the values you choose: FPS of the app on screen, CPU and GPU load, free RAM, CPU, GPU and battery temperature.</p>
+          <p lang="vi">Một ô nhỏ nổi trên game cho bạn thấy máy đang làm việc thế nào: FPS của game, tải CPU và GPU, RAM, nhiệt độ. Chạm vào là mở bảng đầy đủ với biểu đồ một phút gần nhất.</p>
+          <p lang="en">A small window over your game that shows how hard the phone is working: the game's FPS, CPU and GPU load, RAM and temperatures. Tap it for the full panel with a chart of the last minute.</p>
+          <ul class="facts">
+            <li><span class="ms" aria-hidden="true">group</span><b><span lang="vi">Dành cho</span><span lang="en">Good for</span></b><span><span lang="vi">Muốn biết game nặng tới đâu, máy nóng lúc nào, hay mức độ phân giải nào hợp.</span><span lang="en">Seeing how heavy a game is, when the phone heats up, or which resolution suits it.</span></span></li>
+            <li><span class="ms" aria-hidden="true">tune</span><b><span lang="vi">Cách dùng</span><span lang="en">How</span></b><span><span lang="vi">Kéo đi đâu cũng được, chọn chỉ số hiện lúc thu gọn. Chỉ số máy không cho đọc thì tự ẩn, không hiện số bịa.</span><span lang="en">Drag it anywhere and choose what the small window shows. Values a phone does not expose are hidden, never guessed.</span></span></li>
+            <li><span class="ms" aria-hidden="true">verified_user</span><b><span lang="vi">Cần</span><span lang="en">Needs</span></b><span><span lang="vi">Quyền hiện trên app khác. FPS, tải CPU và GPU cần Shizuku.</span><span lang="en">Permission to draw over other apps. FPS, CPU and GPU load need Shizuku.</span></span></li>
+          </ul>
           <p class="try"><span class="ms" aria-hidden="true">touch_app</span><span lang="vi">Kéo cửa sổ đi đâu cũng được. Đổi sang Không có Shizuku để xem những gì vẫn đọc được.</span><span lang="en">Drag the window anywhere. Switch to Without Shizuku to see what can still be read.</span></p>
           <details class="more">
             <summary><span lang="vi">Cách hoạt động</span><span lang="en">How it works</span><span class="ms" aria-hidden="true">expand_more</span></summary>
@@ -351,12 +370,14 @@
               <ul lang="vi">
                 <li>FPS, tải CPU và tải GPU cần Shizuku. Không có Shizuku, Cryo chỉ hiện những gì app nào cũng đọc được, như RAM trống và nhiệt độ pin.</li>
                 <li>Một số máy hoàn toàn không cho đọc tải GPU hay nhiệt độ CPU, GPU. Chỉ số nào không đọc được thì Cryo ẩn đi chứ không đoán.</li>
-                <li>Kéo đi hoặc thu gọn bất cứ lúc nào.</li>
+                <li>Kéo đi hoặc thu gọn bất cứ lúc nào. Lúc thu gọn, ô cập nhật thưa hơn nên tốn rất ít tài nguyên.</li>
+                <li>Vài game chống gian lận coi cửa sổ nổi là gian lận. Game cảnh báo thì hãy tắt cửa sổ khi chơi game đó.</li>
               </ul>
               <ul lang="en">
                 <li>FPS, CPU load and GPU load need Shizuku. Without it, Cryo shows only what any app may read, such as free RAM and battery temperature.</li>
                 <li>Some phones do not expose GPU load or CPU and GPU temperature at all. Values a phone does not expose are hidden, not guessed.</li>
-                <li>Drag it away or collapse it at any time.</li>
+                <li>Drag it away or collapse it at any time. Collapsed, it updates less often and costs very little.</li>
+                <li>A few games with anti-cheat treat floating windows as cheating. If a game warns you, turn the window off for that game.</li>
               </ul>
             </div>
           </details>
@@ -368,11 +389,7 @@
                 <div class="scr game">
                   <img class="game-img" src="assets/polar.webp" alt="" width="1600" height="720" loading="lazy">
                   <div class="ov" aria-label="Cửa sổ theo dõi / Floating monitor" role="group">
-                    <span class="ov-dot"></span>
-                    <span class="ov-c" data-m="cpu"><small>CPU</small><b>18%</b></span>
-                    <span class="ov-c" data-m="gpu"><small>GPU</small><b>41%</b></span>
-                    <span class="ov-c" data-m="ram"><small>RAM</small><b>5,6 GB</b></span>
-                    <span class="ov-c" data-m="bat"><small lang="vi">Pin</small><small lang="en">BAT</small><b>35,9°</b></span>
+                    <div class="ov-head"><span class="ov-dot"></span><span class="ov-m"><span class="ov-v">18%</span><span class="ov-u"> CPU</span></span><span class="ov-sep">·</span><span class="ov-m"><span class="ov-v">41%</span><span class="ov-u"> GPU</span></span><span class="ov-sep">·</span><span class="ov-m"><span class="ov-v">5.4</span><span class="ov-u"> GB</span></span><span class="ov-sep">·</span><span class="ov-m"><span class="ov-v">36°</span><span class="ov-u"> PIN</span></span><i class="ov-end"></i></div>
                   </div>
                 </div>
               </div>
@@ -416,19 +433,26 @@
       <article class="chap" data-screen="play">
         <div class="chap-in">
           <h3 class="h3"><span lang="vi">Trong lúc chơi</span><span lang="en">While you play</span></h3>
-          <p lang="vi">Màn hình AFK phủ đen, độ sáng về 0, game vẫn chạy bên dưới. Khoá 60 Hz, Không làm phiền và Wi-Fi độ trễ thấp bật trong lúc game bạn chọn đang mở.</p>
-          <p lang="en">The AFK screen goes black at brightness 0 while the game keeps running underneath. 60 Hz lock, Do Not Disturb and low-latency Wi-Fi stay on while a game you picked is open.</p>
+          <p lang="vi">Không làm phiền giữ cuộc gọi và thông báo khỏi đè lên game. Khoá 60 Hz giữ màn hình ở 60 Hz; Wi-Fi độ trễ thấp bật chế độ Wi-Fi dành cho game có sẵn của Android. Cả ba tự bật khi game bạn chọn mở, tự tắt khi thoát. Màn hình AFK thì bạn mở khi cần treo máy.</p>
+          <p lang="en">Do Not Disturb keeps calls and notifications from covering your game. 60 Hz lock holds the screen at 60 Hz; low-latency Wi-Fi turns on Android's own Wi-Fi mode for games. All three turn on when a game you picked opens and off when you leave. The AFK screen is yours to open when you leave the game running.</p>
+          <ul class="facts">
+            <li><span class="ms" aria-hidden="true">group</span><b><span lang="vi">Dành cho</span><span lang="en">Good for</span></b><span><span lang="vi">Chơi lâu, treo máy cày game, hay bị thông báo và cuộc gọi làm gián đoạn.</span><span lang="en">Long sessions, leaving a game running to farm, and anyone tired of pop-ups mid-match.</span></span></li>
+            <li><span class="ms" aria-hidden="true">tune</span><b><span lang="vi">Cách dùng</span><span lang="en">How</span></b><span><span lang="vi">Bật công tắc một lần. AFK: màn hình đen, độ sáng về 0, chạm hai lần để mở lại.</span><span lang="en">Flip the switch once. AFK: a black screen at brightness 0, double-tap to bring it back.</span></span></li>
+            <li><span class="ms" aria-hidden="true">verified_user</span><b><span lang="vi">Cần</span><span lang="en">Needs</span></b><span><span lang="vi">Không làm phiền: quyền Không làm phiền. AFK: quyền hiện trên app khác. 60 Hz và Wi-Fi: Shizuku.</span><span lang="en">Do Not Disturb: DND access. AFK: draw over other apps. 60 Hz and Wi-Fi: Shizuku.</span></span></li>
+          </ul>
           <p class="try"><span class="ms" aria-hidden="true">touch_app</span><span lang="vi">Bật Màn hình AFK, rồi chạm hai lần vào màn hình game để bật lại.</span><span lang="en">Turn on AFK screen, then double-tap the game screen to wake it.</span></p>
           <details class="more">
             <summary><span lang="vi">Cách hoạt động</span><span lang="en">How it works</span><span class="ms" aria-hidden="true">expand_more</span></summary>
             <div class="more-body">
               <ul lang="vi">
-                <li>Màn hình AFK: game vẫn tốn pin, chỉ màn hình bớt tiêu thụ.</li>
+                <li>Màn hình AFK: game vẫn tốn pin, chỉ màn hình bớt tiêu thụ. Đừng bấm nút nguồn: máy sẽ ngủ và game bị dừng.</li>
+                <li>Không làm phiền: thông báo vẫn đến, chỉ không kêu và không hiện lên màn hình. Âm thanh game và báo thức vẫn bình thường. Nếu bạn đã tự bật Không làm phiền, Cryo để nguyên.</li>
                 <li>Khoá 60 Hz giữ màn hình ở 60 Hz thay vì 90 hay 120 Hz, trên máy cho phép. Tắt công tắc là về tần số quét mặc định.</li>
                 <li>Wi-Fi độ trễ thấp (Android 10 trở lên) dùng chế độ có sẵn của Android. Tác dụng tuỳ chip Wi-Fi của máy.</li>
               </ul>
               <ul lang="en">
-                <li>AFK screen: the game still uses battery, only the display draws less.</li>
+                <li>AFK screen: the game still uses battery, only the display draws less. Don't press the power button: the phone sleeps and the game stops.</li>
+                <li>Do Not Disturb: notifications still arrive, they just don't ring or pop up. Game sound and alarms work as usual. If you turned on Do Not Disturb yourself, Cryo leaves it alone.</li>
                 <li>60 Hz lock keeps the screen at 60 Hz instead of 90 or 120 Hz, on phones that allow it. Switch it off and the default refresh rate is back.</li>
                 <li>Low-latency Wi-Fi (Android 10+) uses Android's own mode. The effect depends on the Wi-Fi chip.</li>
               </ul>
@@ -449,7 +473,7 @@
                   <div class="a-row">
                     <span class="a-ic on"><span class="ms">flight</span></span>
                     <span class="a-tx"><b>Focus Mode</b><small><span lang="vi">Đóng băng app nền trong lúc chơi game.</span><span lang="en">Freeze background apps while you play.</span></small></span>
-                    <button type="button" class="a-sw" role="switch" aria-checked="true" aria-label="Focus Mode"><i></i></button>
+                    <button type="button" class="a-sw" role="switch" aria-checked="true" data-sw="focus" aria-label="Focus Mode"><i></i></button>
                   </div>
                   <span class="a-link"><span class="ms">tune</span><span lang="vi">Chọn mức đóng băng</span><span lang="en">Select freeze level</span></span>
                   <span class="a-link"><span class="ms">keep</span><span lang="vi">Ghim ứng dụng cần giữ hoạt động</span><span lang="en">Pin apps to keep running</span></span>
@@ -457,19 +481,19 @@
                   <div class="a-row">
                     <span class="a-ic"><span class="ms">sync</span></span>
                     <span class="a-tx"><b><span lang="vi">Khóa tần số 60 Hz</span><span lang="en">60 Hz refresh lock</span></b><small><span lang="vi">Ghim tần số quét màn hình ở 60Hz.</span><span lang="en">Cap the display refresh rate at 60Hz.</span></small></span>
-                    <button type="button" class="a-sw" role="switch" aria-checked="false" aria-label="60 Hz"><i></i></button>
+                    <button type="button" class="a-sw" role="switch" aria-checked="false" data-sw="hz" aria-label="60 Hz"><i></i></button>
                   </div>
                   <hr class="a-div">
                   <div class="a-row">
                     <span class="a-ic on"><span class="ms">notifications_off</span></span>
                     <span class="a-tx"><b><span lang="vi">Không làm phiền</span><span lang="en">Do Not Disturb</span></b><small><span lang="vi">Tắt tiếng cuộc gọi và thông báo.</span><span lang="en">Silence calls and notifications.</span></small></span>
-                    <button type="button" class="a-sw" role="switch" aria-checked="true" aria-label="Không làm phiền / Do Not Disturb"><i></i></button>
+                    <button type="button" class="a-sw" role="switch" aria-checked="true" data-sw="dnd" aria-label="Không làm phiền / Do Not Disturb"><i></i></button>
                   </div>
                   <hr class="a-div">
                   <div class="a-row">
                     <span class="a-ic on"><span class="ms">wifi</span></span>
                     <span class="a-tx"><b><span lang="vi">Wi-Fi độ trễ thấp</span><span lang="en">Low-latency Wi-Fi</span></b><small><span lang="vi">Chế độ Wi-Fi độ trễ thấp của Android khi chơi.</span><span lang="en">Android's low-latency Wi-Fi mode while you play.</span></small></span>
-                    <button type="button" class="a-sw" role="switch" aria-checked="true" aria-label="Wi-Fi"><i></i></button>
+                    <button type="button" class="a-sw" role="switch" aria-checked="true" data-sw="wifi" aria-label="Wi-Fi"><i></i></button>
                   </div>
                   <hr class="a-div">
                   <div class="a-row">
@@ -488,8 +512,13 @@
       <article class="chap" data-screen="rep">
         <div class="chap-in">
           <h3 class="h3"><span lang="vi">Báo cáo sau khi chơi</span><span lang="en">Play reports</span></h3>
-          <p lang="vi">Sau mỗi lần chơi: thời gian chơi, nhiệt độ pin cao nhất, pin đã dùng, và khi ô FPS đang bật thì FPS trung bình cùng mức 5% thấp nhất. Lịch sử chỉ lưu trên máy.</p>
-          <p lang="en">After each session: play time, peak battery temperature, battery used and, with the FPS cell on, average and 5% low FPS. History stays on your phone.</p>
+          <p lang="vi">Thoát game là có bản tóm tắt lần chơi: chơi bao lâu, pin nóng tới đâu, tốn bao nhiêu pin, Cryo đã làm gì, và so với lần trước. Lịch sử chỉ lưu trên máy bạn.</p>
+          <p lang="en">Leave a game and you get a summary of the session: how long you played, how warm the battery got, how much battery it took, what Cryo did, and how it compares with last time. History stays on your phone.</p>
+          <ul class="facts">
+            <li><span class="ms" aria-hidden="true">group</span><b><span lang="vi">Dành cho</span><span lang="en">Good for</span></b><span><span lang="vi">Muốn biết game nào hao pin, nóng máy; so trước và sau khi đổi một thiết lập.</span><span lang="en">Finding out which games drain or heat the phone, and comparing before and after a setting change.</span></span></li>
+            <li><span class="ms" aria-hidden="true">tune</span><b><span lang="vi">Cách dùng</span><span lang="en">How</span></b><span><span lang="vi">Chọn mức theo dõi: Cơ bản đo pin và nhiệt độ. Chi tiết, hoặc khi ô FPS trên cửa sổ nổi đang bật, đo thêm FPS và độ ổn định khung hình.</span><span lang="en">Pick a tracking level: Basic measures battery and temperature. Detailed, or the floating monitor's FPS cell, adds FPS and frame stability.</span></span></li>
+            <li><span class="ms" aria-hidden="true">verified_user</span><b><span lang="vi">Cần</span><span lang="en">Needs</span></b><span><span lang="vi">Pin và nhiệt độ không cần Shizuku. FPS cần Shizuku.</span><span lang="en">Battery and temperature need nothing extra. FPS needs Shizuku.</span></span></li>
+          </ul>
           <details class="more">
             <summary><span lang="vi">Cách hoạt động</span><span lang="en">How it works</span><span class="ms" aria-hidden="true">expand_more</span></summary>
             <div class="more-body">
@@ -516,6 +545,7 @@
               <div class="a-wrap a-wrap-rep" data-b="up">
                 <div class="a-card sheet">
                   <span class="sheet-handle" aria-hidden="true"></span>
+                  <div class="sheet-body" data-lenis-prevent>
                   <div class="rp-head">
                     <img src="assets/polar-icon.webp" alt="">
                     <span><b>Polar Run</b><small><span lang="vi">11:12 Thứ Hai, 26 thg 10 · 7 phút trước</span><span lang="en">11:12 Mon, Oct 26 · 7 min ago</span></small></span>
@@ -524,13 +554,30 @@
                   <div class="rp-box">
                     <small><span lang="vi">Thời gian chơi</span><span lang="en">Play time</span></small>
                     <b><span lang="vi">4 phút 51 giây</span><span lang="en">4 min 51 s</span></b>
-                    <p><span lang="vi">Từ lúc mở tới lúc thoát game. Ra ngoài dưới 5 phút rồi quay lại vẫn là một lần chơi.</span><span lang="en">From opening the game to leaving it. Stepping out for under 5 minutes stays the same session.</span></p>
+                    <p><span lang="vi">Từ lúc mở tới lúc thoát game, gồm mọi trận trong đó. Ra ngoài dưới 5 phút rồi quay lại vẫn là một lần chơi; chỉ tính lúc ở trong game và màn hình sáng.</span><span lang="en">From opening the game to leaving it, every match included. Stepping out for under 5 minutes stays the same session; only time in the game with the screen on counts.</span></p>
                   </div>
                   <b class="rp-sec"><span lang="vi">Số đo trong lần chơi này</span><span lang="en">Measured in this session</span></b>
                   <small class="rp-trk"><span lang="vi">Theo dõi lần chơi: Cơ bản</span><span lang="en">Session tracking: Basic</span></small>
                   <div class="rp-tiles">
                     <div><span class="mt-h"><span class="ms">thermometer</span><span lang="vi">Pin nóng nhất</span><span lang="en">Battery peak</span></span><b><span lang="vi">36,7 °C</span><span lang="en">36.7 °C</span></b><small><span lang="vi">Thấp nhất 35,9 °C · trung bình 36,3 °C</span><span lang="en">Low 35.9 °C · average 36.3 °C</span></small></div>
-                    <div><span class="mt-h"><span class="ms">battery_charging_full</span><span lang="vi">Pin đã dùng</span><span lang="en">Battery used</span></span><b>1%</b><small><span lang="vi">Chỉ tính lúc chơi bằng pin</span><span lang="en">Only while playing on battery</span></small></div>
+                    <div><span class="mt-h"><span class="ms">battery_charging_full</span><span lang="vi">Pin đã dùng</span><span lang="en">Battery used</span></span><b>1%</b><small><span lang="vi">Chỉ tính lúc chơi bằng pin<br>Khoảng 12,4% mỗi giờ chơi</span><span lang="en">Only while playing on battery<br>About 12.4% per hour of play</span></small></div>
+                    <div><span class="mt-h"><span class="ms">speed</span><span lang="vi">FPS trung bình</span><span lang="en">Average FPS</span></span><b><span class="rp-none">—</span></b><small><span lang="vi">Chưa đo — bật ô FPS trên cửa sổ nổi, hoặc chọn mức theo dõi Chi tiết trong Thiết lập</span><span lang="en">Not measured — turn on the FPS cell of the floating monitor, or choose Detailed session tracking in Settings</span></small></div>
+                    <div><span class="mt-h"><span class="ms">memory</span><span lang="vi">Điều tiết nhiệt</span><span lang="en">Thermal throttling</span></span><b><span lang="vi">Không</span><span lang="en">None</span></b><small><span lang="vi">Android không báo hạ hiệu năng vì nhiệt</span><span lang="en">Android reported no slowdown for heat</span></small></div>
+                    <div><span class="mt-h"><span class="ms">bolt</span><span lang="vi">Công suất trung bình</span><span lang="en">Average power draw</span></span><b><span lang="vi">2,1 W</span><span lang="en">2.1 W</span></b><small><span lang="vi">Cao nhất 3,4 W<br>Chỉ tính lúc chơi bằng pin</span><span lang="en">Peak 3.4 W<br>Only while playing on battery</span></small></div>
+                  </div>
+                  <b class="rp-sec"><span lang="vi">Cryo trong lần chơi này</span><span lang="en">Cryo in this session</span></b>
+                  <div class="rp-cryo"><span class="ms">ac_unit</span><span lang="vi">Focus Mode đã tạm dừng 10 app nền</span><span lang="en">Focus Mode paused 10 background apps</span></div>
+                  <div class="rp-cryo"><span class="ms">layers</span><span lang="vi">Game chạy ở 70% độ phân giải</span><span lang="en">The game ran at 70% resolution</span></div>
+                  <b class="rp-sec"><span lang="vi">So với lần chơi trước</span><span lang="en">Compared with the previous session</span></b>
+                  <div class="rp-cmp">
+                    <span></span><span class="h"><span lang="vi">Lần này</span><span lang="en">This time</span></span><span class="h"><span lang="vi">Lần trước</span><span lang="en">Last time</span></span><i></i>
+                    <span class="l"><span lang="vi">Thời gian chơi</span><span lang="en">Play time</span></span><span><span lang="vi">4 phút 51 giây</span><span lang="en">4 min 51 s</span></span><span><span lang="vi">12 phút 6 giây</span><span lang="en">12 min 6 s</span></span>
+                    <span class="l"><span lang="vi">Pin nóng nhất</span><span lang="en">Battery peak</span></span><span><span lang="vi">36,7 °C</span><span lang="en">36.7 °C</span></span><span><span lang="vi">37,4 °C</span><span lang="en">37.4 °C</span></span>
+                    <small><span lang="vi">Lần trước bắt đầu hôm qua</span><span lang="en">The previous one started yesterday</span></small>
+                  </div>
+                  <b class="rp-sec"><span lang="vi">Polar Run — các lần chơi đã ghi</span><span lang="en">Polar Run — recorded sessions</span></b>
+                  <p class="rp-rec"><span lang="vi">6 lần chơi · tổng 48 phút · lâu nhất 12 phút 6 giây</span><span lang="en">6 sessions · 48 min in total · longest 12 min 6 s</span></p>
+                  <button type="button" class="rp-play"><span class="ms" aria-hidden="true">sports_esports</span><span lang="vi">Chơi lại</span><span lang="en">Play again</span></button>
                   </div>
                 </div>
               </div>
@@ -621,7 +668,11 @@
       <p lang="en">Cryo walks you through each step inside the app. On some phones Shizuku must be started again after a reboot.</p>
       <p lang="vi">Không có Shizuku, mọi thứ đổi thiết lập hệ thống hay app khác đều không chạy; bộ đo chỉ hiện những gì app nào cũng đọc được, như RAM trống và nhiệt độ pin.</p>
       <p lang="en">Without Shizuku, nothing that changes system settings or other apps works, and the monitor shows only what any app may read, such as free RAM and battery temperature.</p>
-      <a class="btn btn-text" href="https://play.google.com/store/apps/details?id=moe.shizuku.privileged.api" target="_blank" rel="noopener"><span lang="vi">Shizuku trên Google Play</span><span lang="en">Shizuku on Google Play</span><span class="ms" aria-hidden="true">open_in_new</span></a>
+      <p class="shz-links">
+        <a class="btn btn-text" href="https://play.google.com/store/apps/details?id=moe.shizuku.privileged.api" target="_blank" rel="noopener"><span lang="vi">Shizuku trên Google Play</span><span lang="en">Shizuku on Google Play</span><span class="ms" aria-hidden="true">open_in_new</span></a>
+        <a class="btn btn-text" href="https://shizuku.rikka.app/guide/setup/" target="_blank" rel="noopener"><span lang="vi">Hướng dẫn cài của Shizuku</span><span lang="en">Shizuku's setup guide</span><span class="ms" aria-hidden="true">open_in_new</span></a>
+        <a class="btn btn-text" href="https://github.com/RikkaApps/Shizuku" target="_blank" rel="noopener"><span lang="vi">Mã nguồn trên GitHub</span><span lang="en">Source on GitHub</span><span class="ms" aria-hidden="true">open_in_new</span></a>
+      </p>
     </div>
   </div>
 </section>
@@ -695,6 +746,27 @@
       </div>
     </details>
     <details>
+      <summary><span lang="vi">Dùng Cryo với game có chống gian lận (PUBG Mobile, Free Fire, Liên Quân, Genshin Impact…) có bị khoá tài khoản không?</span><span lang="en">Can a game with anti-cheat (PUBG Mobile, Free Fire, Arena of Valor, Genshin Impact…) ban me for using Cryo?</span><span class="qa-ic" aria-hidden="true"><span class="ms">add</span></span></summary>
+      <div class="qa-a">
+        <p lang="vi">Cryo không đọc, không sửa tệp hay bộ nhớ của game và không chèn gì vào game. Nó chỉ đổi thiết lập của Android (độ phân giải, tần số quét, Không làm phiền, Wi-Fi) và tạm dừng các app khác. Dù vậy, mỗi game tự quyết phần mềm nào bị coi là vi phạm, nên Cryo không thể hứa thay nhà phát hành. Vài game coi cửa sổ nổi trên màn hình là gian lận: game cảnh báo thì hãy tắt Cửa sổ theo dõi khi chơi game đó.</p>
+        <p lang="en">Cryo never reads or changes a game's files or memory and injects nothing into it. It only changes Android settings (resolution, refresh rate, Do Not Disturb, Wi-Fi) and pauses other apps. Each game still decides what it treats as a violation, so Cryo cannot promise anything on a publisher's behalf. A few games treat any floating window as cheating: if a game warns you, turn the floating monitor off for that game.</p>
+      </div>
+    </details>
+    <details>
+      <summary><span lang="vi">Vì sao có game báo lỗi hoặc không mở khi tôi dùng Shizuku?</span><span lang="en">Why won't some games open while I use Shizuku?</span><span class="qa-ic" aria-hidden="true"><span class="ms">add</span></span></summary>
+      <div class="qa-a">
+        <p lang="vi">Trên máy không root, Shizuku khởi động qua Gỡ lỗi không dây, nên Tùy chọn nhà phát triển và Gỡ lỗi USB phải luôn bật; tắt đi là Shizuku dừng. Một số game và app ngân hàng không chạy khi hai mục này đang bật. Với những game đó, bạn vẫn dùng được Màn hình AFK, Không làm phiền và Cửa sổ theo dõi với RAM, nhiệt độ pin; các tính năng cần Shizuku thì không.</p>
+        <p lang="en">On a phone without root, Shizuku starts through Wireless debugging, so Developer options and USB debugging have to stay on; turning them off stops Shizuku. Some games and banking apps refuse to run while those are on. With such a game you can still use the AFK screen, Do Not Disturb and the floating monitor with RAM and battery temperature, but not the features that need Shizuku.</p>
+      </div>
+    </details>
+    <details>
+      <summary><span lang="vi">Hạ độ phân giải không có tác dụng với game của tôi?</span><span lang="en">Lowering the resolution does nothing in my game?</span><span class="qa-ic" aria-hidden="true"><span class="ms">add</span></span></summary>
+      <div class="qa-a">
+        <p lang="vi">Bộ đệm game có hiệu lực từ lần mở game sau, nên hãy tắt hẳn game rồi mở lại. Vài game, nhất là game online có chống gian lận, bỏ qua Bộ đệm game; khi đó dùng Toàn màn hình, cách đổi độ phân giải của cả máy mà game nào cũng nhận. Cửa sổ theo dõi mở rộng ghi rõ game đang ở mức nào.</p>
+        <p lang="en">Game buffer takes effect the next time the game starts, so close the game fully and open it again. Some games, online games with anti-cheat in particular, ignore Game buffer; then use Fullscreen, which changes the whole phone's resolution so every game follows it. The expanded floating monitor shows which scale the game is at.</p>
+      </div>
+    </details>
+    <details>
       <summary><span lang="vi">Máy tôi có dùng được không?</span><span lang="en">Will it work on my phone?</span><span class="qa-ic" aria-hidden="true"><span class="ms">add</span></span></summary>
       <div class="qa-a">
         <p lang="vi">Cryo cài được từ Android 8. Bật Shizuku bằng Gỡ lỗi không dây cần Android 11 trở lên; máy cũ hơn bật bằng máy tính. Bộ đệm game nên dùng trên Android 13 trở lên. Một số hãng chặn các lệnh này, và chỉ số nào máy không cho đọc thì Cryo ẩn đi.</p>
@@ -755,6 +827,7 @@
 </footer>
 
 <script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js" defer></script>
+<script src="assets/polar.js" defer></script>
 <script src="assets/site.js" defer></script>
 <script src="assets/fx.js" defer></script>
 </body>

@@ -205,6 +205,75 @@
     pick(cur, true);
   }
 
+  /* ---------- Game chạy thật trên các màn game (Polar Run, assets/polar.js) ----------
+     Một nhịp rAF chung cho mọi canvas game đang chạy, tối đa ~60 khung/giây, chỉ chạy khi có màn đang hiện (start/stop của
+     từng mô phỏng) — hết màn chạy thì nhịp dừng hẳn. Không có polar.js hoặc bật giảm chuyển động: giữ ảnh tĩnh như cũ. */
+  const PR = window.PolarRun;
+  const games = new Set();
+  let gRaf = 0, gLast = 0;
+  function gameTick(now) {
+    gRaf = games.size ? requestAnimationFrame(gameTick) : 0;
+    if (gLast && now - gLast < 15) return;
+    const dt = gLast ? Math.min(0.1, (now - gLast) / 1000) : 0;
+    gLast = now;
+    games.forEach((g) => g.step(dt));
+  }
+  /* Đồng hồ của một màn game: chạy theo thời gian thật khi màn đang hiện, dừng thì giữ nguyên chỗ (mở lại chạy tiếp).
+     Bắt đầu ở 12,5 s — đúng khung của ảnh chụp trang Play. Chạy = mô phỏng đang bật (run) VÀ canvas đang nằm trong khung
+     nhìn: trên máy tính sân khấu dính giữ màn cuối cùng "đang bật" cả khi đã cuộn xuống cuối trang — đo #302: không chặn
+     thì cuối trang vẫn vẽ game ~165 khung/giây. */
+  const seenGame = 'IntersectionObserver' in window
+    ? new IntersectionObserver((es) => es.forEach((e) => { const c = e.target.cryoClock; if (c) { c.vis = e.isIntersecting; c.sync(); } }))
+    : null;
+  function gameClock(paint, el) {
+    const g = { t: 12.5, step(dt) { g.t += dt; paint(g.t); } };
+    const c = { want: false, vis: !seenGame || !el, sync() {
+      if (c.want && c.vis) { games.add(g); if (!gRaf) { gLast = 0; gRaf = requestAnimationFrame(gameTick); } } else games.delete(g);
+    } };
+    if (seenGame && el) { el.cryoClock = c; seenGame.observe(el); }
+    return {
+      get t() { return g.t; },
+      run(on) { if (!PR || reduced) return; c.want = on; c.sync(); },
+    };
+  }
+  /* Canvas game phủ lên ảnh tĩnh của màn; hiện ra từ khung vẽ đầu tiên. live() = có cần vẽ không (màn AFK phủ đen thì
+     game vẫn chạy — đồng hồ vẫn tăng — nhưng không tốn công vẽ thứ không ai thấy). */
+  function liveCanvas(scr, live) {
+    const img = $('.game-img', scr);
+    if (!PR || !img) return { run() {}, t: 0 };
+    const cv = d.createElement('canvas'); cv.className = 'game-cv game-live'; cv.setAttribute('aria-hidden', 'true');
+    img.after(cv);
+    const ctx = cv.getContext('2d');
+    return gameClock((t) => {
+      if (live && !live()) return;
+      const dpr = Math.min(2, devicePixelRatio || 1), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr);
+      if (!w || !h) return;
+      if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+      if (PR.draw(ctx, w, h, t)) cv.classList.add('on');
+    }, cv);
+  }
+  /* Màn hình AFK của app (GameAfkBlackScreenOverlay): đen, độ sáng về 0, dòng nhắc giữa màn; chạm hai lần để mở lại,
+     chạm một lần để ẩn/hiện dòng nhắc. Chữ đúng afk_hud_title / afk_hud_content của app. */
+  const AFK = {
+    vi: ['MÀN HÌNH AFK · GAME VẪN CHẠY', '• Chạm hai lần vào bất kỳ đâu để mở lại màn hình', '• ĐỪNG bấm nút nguồn: máy sẽ ngủ và game bị dừng', '• Chạm một lần để ẩn hoặc hiện dòng này'],
+    en: ['AFK SCREEN · GAME STILL RUNNING', '• Double-tap anywhere to bring the screen back', '• Do NOT press the power button: the phone sleeps and the game stops', '• Tap once to show or hide this note'],
+  };
+  function afkLayer(scr, onWake) {
+    let el = $('.afk', scr);
+    if (!el) { el = d.createElement('div'); el.className = 'afk'; el.setAttribute('aria-hidden', 'true'); scr.appendChild(el); }
+    const fill = () => { const t = AFK[lang()]; el.innerHTML = '<div class="afk-hud"><b>' + t[0] + '</b><span>' + t.slice(1).join('<br>') + '</span></div>'; };
+    fill(); refreshers.push(fill);
+    let last = 0, one = 0;
+    const wake = () => { clearTimeout(one); scr.classList.remove('afk-on'); el.classList.remove('bare'); if (onWake) onWake(); };
+    el.addEventListener('pointerup', () => {
+      const t = performance.now();
+      if (t - last < 320) { last = 0; wake(); return; }
+      last = t; clearTimeout(one);
+      one = setTimeout(() => el.classList.toggle('bare'), 330);
+    });
+    return { show() { scr.classList.add('afk-on'); }, hide: wake };
+  }
+
   /* ---------- Mô phỏng 1: độ phân giải kết xuất ---------- */
   const polar = new Image();
   polar.decoding = 'async';
@@ -219,12 +288,56 @@
     const off = d.createElement('canvas'), octx = off.getContext('2d');
     let val = 70, on = true, mode = 'buffer', shown = false, touched = false;
 
-    /* Thanh trượt M3 Expressive: rãnh trước/sau tay cầm tính từ --p trong CSS, chấm dừng ẩn khi tay cầm chạm cuối. */
-    const thumb = new Spring(0.571, 0.0005, owner(() => {
-      slider.style.setProperty('--p', thumb.x.toFixed(4));
-      slider.classList.toggle('at-end', thumb.x > 0.985);
-    }));
-    const eff = new Spring(0.7, 0.0008, owner(draw));
+    /* Thanh trượt M3 Expressive: rãnh sau tay cầm tính từ --p trong CSS, chấm dừng ẩn khi tay cầm chạm cuối.
+       Rãnh đã chọn là dải "con giun" (user #302: "thanh dài phía sau cong cong gấp gấp"): dải có chiều dài VẬT LIỆU riêng
+       (lò xo mềm, nảy) đuổi theo chiều dài thật. Kéo về trái nhanh hơn dải kịp co → phần dư gấp lại thành sóng (dư càng
+       nhiều sóng càng cao); kéo sang phải → dải bị kéo căng, mảnh lại; dừng tay → dải nảy qua lại vài nhịp rồi thẳng. Sóng
+       trôi theo chiều dài vật liệu nên nhìn như dải đang bò. Vẽ bằng SVG, chỉ vẽ lại khi lò xo còn chạy. */
+    const NS = 'http://www.w3.org/2000/svg', MAT = { z: 0.42, k: 170 };
+    const wsvg = d.createElementNS(NS, 'svg'), wpath = d.createElementNS(NS, 'path'), wcap = d.createElementNS(NS, 'circle');
+    wsvg.setAttribute('class', 'sl-wave'); wsvg.setAttribute('aria-hidden', 'true'); wsvg.append(wpath, wcap);
+    slider.insertBefore(wsvg, slider.firstChild);
+    slider.classList.add('wv');
+    let slW = 0, slH = 0, em = 16;
+    const measureSl = () => {
+      slW = slider.clientWidth; slH = slider.clientHeight; em = parseFloat(getComputedStyle(slider).fontSize) || 16;
+      wsvg.setAttribute('viewBox', '0 0 ' + slW + ' ' + slH);
+    };
+    /* Đầu phải của rãnh đã chọn (px), đúng công thức của .sl-act trong CSS. */
+    const trackEnd = (p) => { const hw = (slider.classList.contains('drag') ? 0.125 : 0.25) * em; return Math.max(0, p * (slW - hw) - 0.375 * em); };
+    function drawTrack() {
+      if (!slW) measureSl();
+      const L = trackEnd(clamp(thumb.x, 0, 1)), M = Math.max(0, mat.x), cy = slH / 2, lam = 2.6 * em, th0 = em;
+      if (L < 0.5) { wpath.setAttribute('d', ''); wcap.setAttribute('r', '0'); return; }
+      const ex = M / L - 1;
+      /* Dải hình sin dài L có độ dài cung ≈ L·(1 + (πA/λ)²) → biên độ để chứa đủ vật liệu M. */
+      const A = ex > 0 ? Math.min(0.62 * em, 0.75 * (lam / Math.PI) * Math.sqrt(ex)) : 0;
+      const th = ex < 0 ? th0 * clamp(1 + ex * 1.8, 0.5, 1) : th0;
+      const x0 = Math.min(th / 2, L / 2), ph = (M / lam) * Math.PI * 2;
+      const y = (x) => A * Math.max(0, Math.min(1, (x - x0) / (0.5 * lam), (L - x) / (0.35 * lam))) * Math.sin(((L - x) / lam) * Math.PI * 2 - ph);
+      let p = 'M' + x0.toFixed(1) + ' ' + (cy + y(x0)).toFixed(2);
+      for (let x = x0 + 2; ; x += 2) { const xx = Math.min(x, L); p += 'L' + xx.toFixed(1) + ' ' + (cy + y(xx)).toFixed(2); if (xx >= L) break; }
+      wpath.setAttribute('d', p); wpath.setAttribute('stroke-width', th.toFixed(2));
+      wcap.setAttribute('cx', x0.toFixed(1)); wcap.setAttribute('cy', (cy + y(x0)).toFixed(2)); wcap.setAttribute('r', (Math.min(th, L) / 2).toFixed(2));
+    }
+    const sl = owner(() => {
+      /* Lò xo nảy qua hai đầu thì tay cầm cũng không được vọt ra ngoài rãnh. */
+      const p = clamp(thumb.x, 0, 1);
+      slider.style.setProperty('--p', p.toFixed(4));
+      slider.classList.toggle('at-end', p > 0.985);
+      /* Lần đầu thấy thanh trượt (hoặc vừa đổi cỡ): vật liệu = đúng chiều dài, không "nảy" từ 0. */
+      if (!slW) { measureSl(); if (slW) { mat.x = mat.t = trackEnd(p); mat.v = 0; } }
+      const L = trackEnd(p);
+      if (Math.abs(mat.t - L) > 0.2) mat.to(L, MAT);
+      drawTrack();
+    });
+    const thumb = new Spring(0.571, 0.0005, sl), mat = new Spring(0, 0.05, sl);
+    /* Đặt thẳng (không hoạt ảnh): vật liệu theo luôn. */
+    const snap = () => { measureSl(); mat.set(trackEnd(clamp(thumb.x, 0, 1))); };
+    if ('ResizeObserver' in window) new ResizeObserver(() => { if (slider.clientWidth && slider.clientWidth !== slW) snap(); }).observe(slider);
+    /* Đồng hồ game đang chạy thì nó vẽ mỗi khung rồi — lò xo tỉ lệ không vẽ thêm lần nữa. */
+    let clockOn = false;
+    const eff = new Spring(0.7, 0.0008, owner(() => { if (!clockOn) draw(); }));
     const dims = (v) => Math.round(1260 * v / 100) + ' × ' + Math.round(2800 * v / 100);
     const pillText = () => (mode === 'buffer'
       ? (lang() === 'vi' ? 'Bộ đệm game: ' : 'Game buffer: ') + val + '%'
@@ -248,14 +361,19 @@
       c.fillStyle = '#3fd08f'; c.beginPath(); c.arc(x + padX + fs * 0.3, y + h / 2, fs * 0.3, 0, Math.PI * 2); c.fill();
       c.fillStyle = '#e3e1e9'; c.textBaseline = 'middle'; c.fillText(txt, x + padX + fs * 1.15, y + h / 2 + fs * 0.04);
     }
+    /* Game chạy thật: mỗi khung vẽ Polar Run thẳng vào khung THẤP (lw × lh) rồi phóng lên — đúng cách bộ đệm game được
+       hạ: game dựng hình ở ít điểm ảnh hơn, hệ thống phóng lên đầy màn. Chưa có polar.js thì dùng ảnh tĩnh như cũ. */
+    const clock = gameClock(() => draw(), cv);
+    if (PR) PR.onReady(() => draw());
     function draw() {
-      if (!polar.complete || !polar.naturalWidth || !cv.clientWidth) return;
+      const live = PR && PR.ready() && !reduced;
+      if ((!live && (!polar.complete || !polar.naturalWidth)) || !cv.clientWidth) return;
       sizeCanvas();
       const W = cv.width, H = cv.height, s = clamp(eff.x, 0.2, 1);
       const lw = Math.max(16, Math.round(W * s)), lh = Math.max(8, Math.round(H * s));
       if (off.width !== lw || off.height !== lh) { off.width = lw; off.height = lh; }
       octx.imageSmoothingEnabled = true; octx.imageSmoothingQuality = 'high';
-      octx.drawImage(polar, 0, 0, lw, lh);
+      if (live) PR.draw(octx, lw, lh, clock.t); else octx.drawImage(polar, 0, 0, lw, lh);
       if (mode === 'full' && on) drawPill(octx, lw, cv.clientWidth);
       ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low';
       ctx.drawImage(off, 0, 0, W, H);
@@ -296,15 +414,16 @@
     setVal(70);
     return {
       start() {
+        clock.run(true); clockOn = !!PR && !reduced;
         draw();
         if (shown || reduced) return;
         shown = true;
         /* Lần đầu: từ 100% hạ xuống 70% để thấy điểm ảnh thưa đi. */
-        eff.set(1); thumb.set(1); numEl.textContent = '100'; dimEl.textContent = dims(100);
+        eff.set(1); thumb.set(1); snap(); numEl.textContent = '100'; dimEl.textContent = dims(100);
         pBtns.forEach((b, j) => b.classList.toggle('sel', j === 4)); presets.style.setProperty('--i', 4);
         setTimeout(() => { if (!touched) setVal(70); }, 700);
       },
-      stop() {},
+      stop() { clock.run(false); clockOn = false; },
     };
   }
 
@@ -400,12 +519,34 @@
   }
 
   /* ---------- Mô phỏng 3: cửa sổ theo dõi ---------- */
+  /* Cửa sổ nổi dựng lại theo ui/widget/FloatingWidgetOverlay.kt của app (#302, user: "đầy đủ chi tiết như app thật"):
+     thu gọn = các chỉ số ghim (số đậm 16sp + đơn vị 10sp màu chủ đề, cách nhau "·"); chạm hàng đầu → mở rộng: trạng thái hạ
+     độ phân giải + tên game, biểu đồ 1 phút (chạm tiêu đề để đổi CPU / GPU / nhiệt pin), bảng CPU · GPU · RAM · PIN, nút
+     TẮT MH và ⚡ TỐI ƯU. Cửa sổ nhảy thẳng tới cỡ mới, khối chi tiết mờ dần vào 160 ms, biểu đồ chỉ vẽ lại theo nhịp đọc —
+     đúng như app. Số định dạng như app: chữ số dấu chấm (Locale.US), nhiệt và phần trăm làm tròn, RAM là phần ĐÃ DÙNG.
+     KHÔNG có số FPS (luật trang Play — lần gửi 74–77 bị từ chối vì số FPS trên ảnh): ghim chỉ số không gồm FPS, còn hàng
+     đầu lúc mở rộng (app chỉ đặt FPS ở đó) hiện đúng thứ app hiện khi chưa có số FPS: chữ "Cryo"; không Shizuku thì
+     "FPS cần Shizuku". */
+  const OVT = {
+    vi: { col: 'Thu gọn', hint: 'cần Shizuku', focus: '❄ Focus · 10 app L2', buf: 'Bộ đệm game: 70%', nat: 'Gốc (100%)', bat: 'PIN',
+      pct: (a, b) => 'TB ' + a + '% · cao nhất ' + b + '%', deg: (a, b) => 'TB ' + a + '° · cao nhất ' + b + '°', start: '1 phút trước', now: 'bây giờ',
+      afk: 'TẮT MH', opt: '⚡ TỐI ƯU', done: '✓ XONG', noshz: 'Chưa kích hoạt Shizuku', expand: 'Mở rộng cửa sổ theo dõi', collapse: 'Thu gọn cửa sổ theo dõi' },
+    en: { col: 'Collapse', hint: 'needs Shizuku', focus: '❄ Focus · 10 apps L2', buf: 'Game buffer: 70%', nat: 'Full resolution (100%)', bat: 'BAT',
+      pct: (a, b) => 'avg ' + a + '% · peak ' + b + '%', deg: (a, b) => 'avg ' + a + '° · peak ' + b + '°', start: '1 min ago', now: 'now',
+      afk: 'SCREEN OFF', opt: '⚡ OPTIMIZE', done: '✓ DONE', noshz: 'Shizuku Not Active', expand: 'Expand the floating monitor', collapse: 'Collapse the floating monitor' },
+  };
+  const SVG = {
+    up: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6" stroke-width="2.4"/></svg>',
+    sync: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 0 1-14.64 6.36L3 15M3 12a9 9 0 0 1 14.64-6.36L21 9M21 4v5h-5M3 20v-5h5" stroke-width="2"/></svg>',
+    off: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM9 9l6 6M15 9l-6 6" stroke-width="2"/></svg>',
+    grip: '<svg viewBox="0 0 11 11" aria-hidden="true"><path d="M5.5 10.45L10.45 5.5M1.3 10.45L10.45 1.3" stroke-width="1.5"/></svg>',
+  };
   function monDemo(sc) {
     const scr = $('.scr', sc), ov = $('.ov', sc), card = $('.mon-card', sc);
-    const cells = { cpu: $('[data-m="cpu"] b', ov), gpu: $('[data-m="gpu"] b', ov), ram: $('[data-m="ram"] b', ov), bat: $('[data-m="bat"] b', ov) };
     const mRam = $('.m-ram', card), mUsed = $('.m-used', card), mCpu = $('.m-cpu', card), mBat = $('.m-bat', card);
     const ringFg = $('.ring-fg', card), ringBg = $('.ring-bg', card);
     const N = 40;
+    const game = liveCanvas(scr, () => !scr.classList.contains('afk-on'));
     /* Vòng tiến độ dạng sóng M3 Expressive: phần đã dùng là sóng chạy, phần còn lại là rãnh phẳng, cách nhau một khe. */
     let wave = 0;
     /* Khi vòng lặp khung đang chạy thì nó tự vẽ vòng mỗi khung; lò xo chỉ vẽ lúc vòng lặp đứng (tránh vẽ hai lần). */
@@ -426,7 +567,8 @@
       ringBg.setAttribute('d', b1 - b0 < 0.02 ? '' : 'M' + (60 + R * Math.cos(b0)).toFixed(2) + ' ' + (60 + R * Math.sin(b0)).toFixed(2) +
         'A' + R + ' ' + R + ' 0 ' + (b1 - b0 > Math.PI ? 1 : 0) + ' 1 ' + (60 + R * Math.cos(b1)).toFixed(2) + ' ' + (60 + R * Math.sin(b1)).toFixed(2));
     }
-    const st = { cpu: 18, gpu: 41, ram: 5.6, bat: 35.9 };
+    /* Số đo giả lập (chạy quanh mức của Polar Run trên máy đo): ghz/mhz/nhiệt chip đi theo tải. */
+    const st = { cpu: 18, gpu: 41, ram: 5.6, bat: 35.9, ghz: 1.82, mhz: 443, ct: 46, gt: 43 };
     const mk = (tile, v0, lo, hi, jit) => {
       const el = $('[data-tile="' + tile + '"]', card);
       const hist = []; let v = v0;
@@ -435,19 +577,145 @@
       return { el, line: $('.ch-line', el), area: $('.ch-area', el), dot: $('.ch-dot', el), min: +$('.chart', el).dataset.min, max: +$('.chart', el).dataset.max, hist, head };
     };
     const charts = { cpu: mk('cpu', 18, 8, 42, 9), bat: mk('bat', 35.9, 35.3, 36.4, 0.12) };
+    /* Lịch sử 1 phút cho biểu đồ của cửa sổ nổi (app: TelemetryTrail) — cùng số với thẻ bên cạnh, thêm GPU. */
+    const trail = { cpu: charts.cpu.hist.slice(), gpu: [], bat: charts.bat.hist.slice() };
+    { let v = 41; for (let i = 0; i < N; i++) { v = clamp(v + (Math.random() - 0.5) * 12, 26, 66); trail.gpu.push(v); } }
     let phase = 0, lastT = 0, loopId = 0, tickId = 0, running = false;
     const dx = 100 / (N - 1);
 
+    /* ---- Cửa sổ nổi ---- */
+    let open = false, shz = true, metric = 'cpu', optBusy = 0, toastT = 0;
+    const r0 = (v) => Math.round(v);
+    function pillHtml(t) {
+      const m = (v, u) => '<span class="ov-m"><span class="ov-v">' + v + '</span><span class="ov-u"> ' + u + '</span></span>';
+      const used = (11 - st.ram).toFixed(1), out = [];
+      if (shz) out.push(m(r0(st.cpu) + '%', 'CPU'), m(r0(st.gpu) + '%', 'GPU'));
+      /* Đơn vị nhiệt pin trên pill là chữ "PIN" viết cứng trong app (pillEntry), cả khi app chạy tiếng Anh. */
+      out.push(m(used, 'GB'), m(r0(st.bat) + '°', 'PIN'));
+      return out.join('<span class="ov-sep" aria-hidden="true">·</span>');
+    }
+    function renderOv() {
+      const t = OVT[lang()];
+      head.innerHTML = '<span class="ov-dot"></span>' + (open
+        ? (shz ? '<span class="ov-name">Cryo</span>' : '<span class="ov-hint"><span class="ov-u">FPS</span><span> ' + t.hint + '</span></span>') +
+          '<i class="ov-fill"></i><span class="ov-col">' + SVG.up + t.col + '</span>'
+        : pillHtml(t)) + '<i class="ov-end"></i>';
+      head.setAttribute('aria-expanded', String(open));
+      head.setAttribute('aria-label', open ? t.collapse : t.expand);
+      chip.textContent = shz ? t.focus : '';
+      if (!open) return;
+      ds.innerHTML = '<span class="ov-sdot" style="background:' + (shz ? '#10b981' : 'var(--on-surface-v)') + '"></span><span style="color:' +
+        (shz ? '#10b981' : 'var(--on-surface-v)') + '">' + (shz ? t.buf : t.nat) + '</span>';
+      // Bảng: hàng nào có mặt theo khả năng đọc của máy, không theo giá trị.
+      const used = 11 - st.ram, rows = [];
+      if (shz) {
+        rows.push(['CPU', r0(st.cpu) + '%', st.ghz.toFixed(2) + ' GHz', r0(st.ct) + '°']);
+        rows.push(['GPU', r0(st.gpu) + '%', st.mhz + ' MHz', r0(st.gt) + '°']);
+      }
+      rows.push(['RAM', r0(used / 11 * 100) + '%', used.toFixed(1) + ' GB', '']);
+      rows.push([t.bat, r0(st.bat) + '°', '', '']);
+      const cols = shz ? 4 : 3;
+      tb.style.gridTemplateColumns = '1fr' + ' minmax(calc(34 * var(--dp)), max-content)'.repeat(cols - 1);
+      tb.innerHTML = rows.map((r, i) => r.slice(0, cols).map((v, k) => '<span class="' + (k ? '' : 'l') + (i ? ' r' : '') + '">' + v + '</span>').join('')).join('');
+      afkB.innerHTML = SVG.off + t.afk;
+      if (!optBusy) optB.textContent = t.opt;
+      drawPlot();
+    }
+    /* Biểu đồ 1 phút (TrendChart): lưới 0/50/100 (nhiệt pin 20–50), vạch giữa, nhãn "1 phút trước … bây giờ", vùng tô
+       nhạt dần, chấm ở đầu mới nhất. Vẽ lại theo nhịp đọc, không chạy theo khung hình. */
+    function drawPlot() {
+      const t = OVT[lang()], avail = shz ? ['cpu', 'gpu', 'bat'] : ['bat'];
+      if (avail.indexOf(metric) < 0) metric = avail[0];
+      const s = trail[metric], lo0 = Math.min.apply(null, s), hi0 = Math.max.apply(null, s), avg = r0(s.reduce((a, b) => a + b, 0) / s.length);
+      const temp = metric === 'bat';
+      const range = temp ? [lo0 - 2 < 20 ? Math.floor((lo0 - 2) / 5) * 5 : 20, hi0 + 2 > 50 ? Math.ceil((hi0 + 2) / 5) * 5 : 50] : [0, 100];
+      const ticks = temp ? [range[0], (range[0] + range[1]) / 2, range[1]] : [0, 50, 100];
+      cht.innerHTML = '<span>' + (temp ? t.bat + ' °C' : metric.toUpperCase()) + '</span>' + (avail.length > 1 ? SVG.sync : '') +
+        '<b class="' + ((temp ? hi0 >= 42 : hi0 >= 90) ? 'warn' : '') + '">' + (temp ? t.deg(avg, r0(hi0)) : t.pct(avg, r0(hi0))) + '</b>';
+      cht.disabled = avail.length < 2;
+      const dpr = Math.min(2, devicePixelRatio || 1), W = plot.clientWidth, H = plot.clientHeight;
+      if (!W || !H) return;
+      if (plot.width !== Math.round(W * dpr)) { plot.width = Math.round(W * dpr); plot.height = Math.round(H * dpr); }
+      /* Canvas cao đúng 54 dp (40 dp vẽ + trục) → unit = số điểm ảnh CSS của 1 dp. Màu đọc từ biến chủ đề (mã hex). */
+      const c = plot.getContext('2d'), cs = getComputedStyle(ov), unit = H / 54;
+      c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
+      const prim = cs.getPropertyValue('--primary').trim(), onv = cs.getPropertyValue('--on-surface-v').trim(), outl = cs.getPropertyValue('--outline').trim();
+      const rgba = (hx, a) => { const n = parseInt(hx.replace('#', ''), 16) || 0; return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')'; };
+      c.font = '700 ' + (8 * unit) + 'px ' + getComputedStyle(d.body).fontFamily;
+      c.textBaseline = 'middle';
+      const axisH = 12 * unit, plotBottom = H - axisH, bottom = plotBottom - 0.5 * unit;
+      const left = Math.max.apply(null, ticks.map((v) => c.measureText(String(v)).width)) + 4 * unit, topY = 5 * unit, width = W - left;
+      const y = (v) => bottom - (bottom - topY) * clamp((v - range[0]) / (range[1] - range[0]), 0, 1);
+      c.lineWidth = 1 * unit; c.strokeStyle = rgba(outl, 0.22);
+      c.fillStyle = rgba(onv, 0.8);
+      ticks.forEach((v, k) => {
+        const ty = y(v);
+        c.setLineDash(k ? [2 * unit, 3 * unit] : []);
+        c.beginPath(); c.moveTo(left, ty); c.lineTo(W, ty); c.stroke();
+        c.fillText(String(v), 0, ty);
+      });
+      const mid = W - width / 2;
+      c.setLineDash([2 * unit, 3 * unit]); c.beginPath(); c.moveTo(mid, topY); c.lineTo(mid, bottom); c.stroke(); c.setLineDash([]);
+      c.textBaseline = 'top';
+      if (c.measureText(t.start).width + c.measureText(t.now).width + 6 * unit <= width) {
+        c.fillText(t.start, left, bottom + 2 * unit);
+        c.fillText(t.now, W - c.measureText(t.now).width, bottom + 2 * unit);
+      }
+      const px = (i) => left + (i / (N - 1)) * width;
+      c.save(); c.beginPath(); c.rect(left, 0, width, H); c.clip();
+      const g = c.createLinearGradient(0, 0, 0, plotBottom);
+      g.addColorStop(0, rgba(prim, 0.28)); g.addColorStop(1, rgba(prim, 0));
+      c.beginPath(); c.moveTo(px(0), bottom); s.forEach((v, i) => c.lineTo(px(i), y(v))); c.lineTo(px(N - 1), bottom); c.closePath();
+      c.fillStyle = g; c.fill();
+      c.beginPath(); s.forEach((v, i) => (i ? c.lineTo(px(i), y(v)) : c.moveTo(px(i), y(v))));
+      c.strokeStyle = prim; c.lineWidth = 1.5 * unit; c.lineJoin = 'round'; c.lineCap = 'round'; c.stroke();
+      c.restore();
+      c.fillStyle = prim; c.beginPath(); c.arc(W, y(s[N - 1]), 2 * unit, 0, Math.PI * 2); c.fill();
+    }
+    ov.innerHTML = '<div class="ov-head" role="button" tabindex="0"></div><div class="ov-chip"></div>' +
+      '<div class="ov-x"><div class="ov-hr"></div><div class="ov-ds"></div><span class="ov-game">Polar Run</span>' +
+      '<div class="ov-ch"><button type="button" class="ov-cht"></button><canvas class="ov-plot" aria-hidden="true"></canvas></div>' +
+      '<div class="ov-tb"></div><div class="ov-hr" style="margin-top:calc(8 * var(--dp))"></div>' +
+      '<div class="ov-btns"><button type="button" class="ov-afk"></button><button type="button" class="ov-opt"></button></div></div>' +
+      '<span class="ov-grip">' + SVG.grip + '</span>';
+    const head = $('.ov-head', ov), chip = $('.ov-chip', ov), ds = $('.ov-ds', ov), cht = $('.ov-cht', ov), plot = $('.ov-plot', ov);
+    const tb = $('.ov-tb', ov), afkB = $('.ov-afk', ov), optB = $('.ov-opt', ov);
+    const toast = d.createElement('div'); toast.className = 'toast'; toast.setAttribute('role', 'status'); scr.appendChild(toast);
+    const say = (msg) => { toast.textContent = msg; toast.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => toast.classList.remove('on'), 2000); };
+    /* Màn hình AFK của app (GameAfkBlackScreenOverlay): đen, dòng nhắc; chạm hai lần để mở lại, chạm một lần ẩn/hiện nhắc. */
+    const afk = afkLayer(scr);
+    function toggle() {
+      open = !open; ov.classList.toggle('open', open); renderOv();
+      /* App: cửa sổ nằm yên chỗ cũ, cỡ mới vượt mép thì dời vào trong màn hình. */
+      fitInside();
+    }
+    function fitInside() {
+      const r = scr.getBoundingClientRect(), o = ov.getBoundingClientRect();
+      if (!r.width) return;
+      /* Chỉ dời khi thật sự vượt mép, theo ĐÍCH của lò xo — không cắt ngang cú trượt bám mép đang chạy. */
+      const nx = clamp(px.t, 0.01, Math.max(0.01, 0.99 - o.width / r.width)), ny = clamp(py.t, 0.02, Math.max(0.02, 0.98 - o.height / r.height));
+      if (nx !== px.t) px.to(nx, SPEC.spatial);
+      if (ny !== py.t) py.to(ny, SPEC.spatial);
+    }
+    head.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+    cht.addEventListener('click', () => { const a = shz ? ['cpu', 'gpu', 'bat'] : ['bat']; metric = a[(a.indexOf(metric) + 1) % a.length]; drawPlot(); });
+    afkB.addEventListener('click', () => afk.show());
+    optB.addEventListener('click', () => {
+      const t = OVT[lang()];
+      if (!shz) { say(t.noshz); return; }
+      if (optBusy) return;
+      optBusy = 1; optB.disabled = true; optB.textContent = '⏳ …';
+      setTimeout(() => { optB.textContent = OVT[lang()].done; }, 1200);
+      setTimeout(() => { optBusy = 0; optB.disabled = false; optB.textContent = OVT[lang()].opt; }, 3200);
+    });
+
     function render() {
-      cells.cpu.textContent = Math.round(st.cpu) + '%';
-      cells.gpu.textContent = Math.round(st.gpu) + '%';
-      cells.ram.textContent = num(st.ram, 1) + ' GB';
-      cells.bat.textContent = num(st.bat, 1) + '°';
       mRam.textContent = num(st.ram, 1);
       mUsed.textContent = num(11 - st.ram, 1) + ' / ' + num(11, 1) + ' GB';
       mCpu.textContent = Math.round(st.cpu);
       mBat.textContent = num(st.bat, 1);
       ringP.to(st.ram / 11, SPEC.m3Spatial);
+      renderOv();
     }
     function drawChart(c) {
       const y = (v) => 40 - ((v - c.min) / (c.max - c.min)) * 40;
@@ -474,70 +742,136 @@
       st.gpu = clamp(st.gpu + (Math.random() - 0.5) * 12, 26, 66);
       st.ram = clamp(st.ram + (Math.random() - 0.5) * 0.16, 5.3, 5.9);
       st.bat = clamp(st.bat + (Math.random() - 0.35) * 0.12, 35.4, 36.4);
+      st.ghz = clamp(0.96 + st.cpu / 41 * 1.45 + (Math.random() - 0.5) * 0.2, 0.96, 2.42);
+      st.mhz = [315, 443, 545, 660][clamp(Math.round(st.gpu / 22) - 1, 0, 3)];
+      st.ct = clamp(st.ct + (st.cpu - 25) * 0.03 + (Math.random() - 0.5) * 0.6, 42, 52);
+      st.gt = clamp(st.gt + (st.gpu - 45) * 0.02 + (Math.random() - 0.5) * 0.5, 40, 48);
       for (const k in charts) { const c = charts[k]; c.hist.shift(); c.hist.push(c.head.x); c.head.t = st[k]; }
+      for (const k in trail) { trail[k].shift(); trail[k].push(st[k]); }
       phase = 0;
       render();
     }
-    /* Kéo cửa sổ: thả ra thì bám vào mép trái hoặc phải gần nhất (app nhớ vị trí theo mép). */
+    /* Kéo cửa sổ: thả ra thì bám vào mép trái hoặc phải gần nhất (app nhớ vị trí theo mép). Chạm (không kéo) vào hàng đầu
+       thì thu gọn / mở rộng như app; nút bên trong thì bấm như nút. */
     const pos = owner(() => { ov.style.left = (px.x * 100).toFixed(3) + '%'; ov.style.top = (py.x * 100).toFixed(3) + '%'; });
     const px = new Spring(0.03, 0.0005, pos), py = new Spring(0.26, 0.0005, pos);
     let drag = null;
     ov.addEventListener('dragstart', (e) => e.preventDefault());
     ov.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('button')) return;
       /* Không chặn mặc định thì Chrome coi là kéo-thả gốc và huỷ con trỏ ngay nhịp di chuyển đầu. */
       e.preventDefault();
       const r = scr.getBoundingClientRect(), o = ov.getBoundingClientRect();
-      drag = { id: e.pointerId, ox: (e.clientX - o.left) / r.width, oy: (e.clientY - o.top) / r.height, w: o.width / r.width, h: o.height / r.height };
-      ov.setPointerCapture(e.pointerId); ov.classList.add('drag');
+      drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, moved: false, onHead: !!e.target.closest('.ov-head'),
+        ox: (e.clientX - o.left) / r.width, oy: (e.clientY - o.top) / r.height, w: o.width / r.width, h: o.height / r.height };
+      ov.setPointerCapture(e.pointerId);
     });
     ov.addEventListener('pointermove', (e) => {
       if (!drag || e.pointerId !== drag.id) return;
+      if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 6) return;
+      drag.moved = true; ov.classList.add('drag');
       const r = scr.getBoundingClientRect();
       px.set(clamp((e.clientX - r.left) / r.width - drag.ox, 0.01, Math.max(0.01, 0.99 - drag.w)));
       py.set(clamp((e.clientY - r.top) / r.height - drag.oy, 0.02, Math.max(0.02, 0.98 - drag.h)));
     });
-    const end = () => {
+    const end = (e) => {
       if (!drag) return;
-      const w = drag.w; drag = null; ov.classList.remove('drag');
-      px.to(px.x + w / 2 < 0.5 ? 0.03 : 0.97 - w, SPEC.spatial);
+      const g = drag; drag = null; ov.classList.remove('drag');
+      if (!g.moved) { if (g.onHead && e.type === 'pointerup') toggle(); return; }
+      px.to(px.x + g.w / 2 < 0.5 ? 0.03 : 0.97 - g.w, SPEC.spatial);
     };
     ov.addEventListener('pointerup', end); ov.addEventListener('pointercancel', end);
-    segInit($('.seg-demo', sc), 'shz', (v) => { const no = v === '0'; ov.classList.toggle('noshz', no); card.classList.toggle('noshz', no); });
+    segInit($('.seg-demo', sc), 'shz', (v) => { shz = v !== '0'; ov.classList.toggle('noshz', !shz); card.classList.toggle('noshz', !shz); render(); fitInside(); });
     refreshers.push(render);
     render();
     for (const k in charts) drawChart(charts[k]);
     return {
       start() {
+        game.run(true);
         if (running) return;
         running = true; lastT = 0;
         if (!reduced) loopId = requestAnimationFrame(frame);
         tickId = setInterval(() => { tick(); if (reduced) for (const k in charts) { charts[k].head.x = charts[k].head.t; drawChart(charts[k]); } }, 1000);
       },
-      stop() { running = false; cancelAnimationFrame(loopId); clearInterval(tickId); },
+      stop() { game.run(false); running = false; cancelAnimationFrame(loopId); clearInterval(tickId); },
     };
   }
 
   /* ---------- Mô phỏng 4: trong lúc chơi ---------- */
+  /* Mỗi công tắc có phản hồi thấy được trên màn game (#302, user: bấm vào "chẳng thấy hiện tượng gì, như bị gì đó"), đúng
+     cơ chế, không hứa hẹn số:
+     - ô biểu tượng của hàng nảy lên một nhịp; một dòng báo ngắn trên màn game nói công tắc vừa làm gì;
+     - Focus Mode bật: lớp băng giá lướt qua mép màn (app nền bị đóng băng);
+     - Không làm phiền TẮT: tin nhắn, email, cuộc gọi rơi xuống đè lên game vài giây một lần — đúng thứ chế độ này chặn;
+       BẬT lại: thông báo đang hiện bị thu về và không còn cái nào nữa;
+     - Wi-Fi / 60 Hz: biểu tượng trong dòng báo chạy một nhịp (sóng Wi-Fi lan ra, vòng làm mới quay). */
+  const PLAY = {
+    vi: { focus: ['App nền được đóng băng khi game mở', 'App nền chạy như thường'], hz: ['Màn hình giữ ở 60 Hz', 'Về tần số quét mặc định'],
+      dnd: ['Cuộc gọi và thông báo được tắt tiếng', 'Thông báo hiện lại như thường'], wifi: ['Wi-Fi độ trễ thấp đang bật', 'Wi-Fi về chế độ thường'],
+      now: 'bây giờ', hu: [['chat', 'Tin nhắn', 'Lan: Tối nay chơi tiếp không?'], ['mail', 'Email', 'Bạn có 3 thư mới'], ['call', 'Điện thoại', 'Cuộc gọi đến · Minh']] },
+    en: { focus: ['Background apps freeze while the game is open', 'Background apps run as usual'], hz: ['Display held at 60 Hz', 'Default refresh rate is back'],
+      dnd: ['Calls and notifications silenced', 'Notifications show as usual'], wifi: ['Low-latency Wi-Fi on', 'Wi-Fi back to normal mode'],
+      now: 'now', hu: [['chat', 'Messages', 'Lan: Another round tonight?'], ['mail', 'Email', 'You have 3 new emails'], ['call', 'Phone', 'Incoming call · Minh']] },
+  };
+  const PLAY_IC = { focus: ['ac_unit', 'flight'], hz: ['sync', 'sync'], dnd: ['notifications_off', 'notifications_active'], wifi: ['wifi', 'wifi'] };
   function playDemo(sc) {
-    const scr = $('.play-scr', sc), afkSw = $('[data-sw="afk"]', sc), layer = $('.afk', sc);
-    afkSw.addEventListener('sw', (e) => scr.classList.toggle('afk-on', e.detail));
-    let lastTap = 0;
-    const wake = () => setSwitch(afkSw, false);
-    layer.addEventListener('dblclick', wake);
-    layer.addEventListener('pointerup', (e) => {
-      if (e.pointerType === 'mouse') return;
-      const t = performance.now(); if (t - lastTap < 320) wake(); lastTap = t;
+    const scr = $('.play-scr', sc), afkSw = $('[data-sw="afk"]', sc), dndSw = $('[data-sw="dnd"]', sc);
+    const game = liveCanvas(scr, () => !scr.classList.contains('afk-on'));
+    const afk = afkLayer(scr, () => { if (afkSw.getAttribute('aria-checked') === 'true') setSwitch(afkSw, false); });
+    afkSw.addEventListener('sw', (e) => { if (e.detail) afk.show(); else afk.hide(); });
+    const mkEl = (cls) => { const e = d.createElement('div'); e.className = cls; e.setAttribute('aria-hidden', 'true'); scr.appendChild(e); return e; };
+    const note = mkEl('pl-note'), frost = mkEl('frost'), hu = mkEl('hu');
+    let running = false, noteT = 0, huT = 0, huHide = 0, huIdx = 0;
+    function say(kind, on) {
+      const t = PLAY[lang()];
+      note.innerHTML = '<span class="ms pl-ic ic-' + kind + '">' + PLAY_IC[kind][on ? 0 : 1] + '</span><span>' + t[kind][on ? 0 : 1] + '</span>';
+      note.classList.remove('on'); void note.offsetWidth; note.classList.add('on');
+      clearTimeout(noteT); noteT = setTimeout(() => note.classList.remove('on'), 2200);
+    }
+    function heads(show) {
+      clearTimeout(huHide);
+      if (!show) { hu.classList.remove('on'); return; }
+      const m = PLAY[lang()].hu[huIdx++ % 3];
+      hu.innerHTML = '<span class="hu-ic ms">' + m[0] + '</span><span class="hu-tx"><small>' + m[1] + ' · ' + PLAY[lang()].now + '</small><b>' + m[2] + '</b></span>';
+      hu.classList.add('on');
+      huHide = setTimeout(() => hu.classList.remove('on'), 2400);
+    }
+    /* Không làm phiền đang tắt + màn đang hiện: một thông báo mỗi ~3,6 s. */
+    function schedule() {
+      clearInterval(huT); huT = 0;
+      if (!running || reduced || dndSw.getAttribute('aria-checked') === 'true') return;
+      setTimeout(() => { if (running && dndSw.getAttribute('aria-checked') !== 'true') heads(true); }, 500);
+      huT = setInterval(() => heads(true), 3600);
+    }
+    $$('.a-sw[data-sw]', sc).forEach((sw) => {
+      const kind = sw.dataset.sw;
+      if (!PLAY_IC[kind]) return;
+      sw.addEventListener('sw', (e) => {
+        const ic = $('.a-ic', sw.closest('.a-row'));
+        if (ic && !reduced) { ic.classList.remove('pop'); void ic.offsetWidth; ic.classList.add('pop'); }
+        say(kind, e.detail);
+        if (kind === 'focus' && e.detail && !reduced) { frost.classList.remove('go'); void frost.offsetWidth; frost.classList.add('go'); }
+        if (kind === 'dnd') { if (e.detail) heads(false); schedule(); }
+      });
     });
-    return { start() {}, stop() {} };
+    refreshers.push(() => { note.classList.remove('on'); hu.classList.remove('on'); });
+    return {
+      start() { running = true; game.run(true); schedule(); },
+      stop() { running = false; game.run(false); clearInterval(huT); huT = 0; heads(false); },
+    };
   }
 
   /* ---------- Mô phỏng 5: báo cáo ---------- */
   function repDemo(sc) {
-    const scr = $('.comp-rep', sc), sheet = $('.sheet', sc);
+    const scr = $('.comp-rep', sc), sheet = $('.sheet', sc), body = $('.sheet-body', sc);
     let t = 0;
-    const open = () => scr.classList.add('open');
+    /* Bảng báo cáo cuộn bên trong (như app); mỗi lần mở lại bắt đầu từ đầu. */
+    const open = () => { if (body) body.scrollTop = 0; scr.classList.add('open'); };
     const closeNow = () => { sheet.style.transition = 'none'; scr.classList.remove('open'); void sheet.offsetHeight; sheet.style.transition = ''; };
     $('.rp-close', sc).addEventListener('click', () => scr.classList.remove('open'));
+    /* "Chơi lại": app đóng bảng rồi mở game qua Cryo — ở đây đóng bảng, lộ lại màn game. */
+    const play = $('.rp-play', sc);
+    if (play) play.addEventListener('click', () => scr.classList.remove('open'));
     $('.rp-again', sc).addEventListener('click', () => {
       if (scr.classList.contains('open')) { scr.classList.remove('open'); clearTimeout(t); t = setTimeout(open, 380); } else open();
     });

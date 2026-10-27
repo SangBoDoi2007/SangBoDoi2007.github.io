@@ -345,13 +345,24 @@ html:not(.js) .slot .screen { display: flex; flex-direction: column; align-items
 .comp-port { max-width: 640px; display: flex; align-items: center; }
 .fz-phone { width: 41%; flex: none; }
 .a-wrap-fz { width: 62%; margin-left: -3%; flex: none; }
+/* Ba dòng "Dành cho · Cách dùng · Cần" dưới đoạn mở của mỗi chương (#302): đủ ý mà vẫn đọc lướt được. */
+.facts { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 10px; }
+.facts li { display: grid; grid-template-columns: 22px 6.6em 1fr; gap: 10px; align-items: baseline; font-size: 15px; line-height: 1.45; color: var(--on-surface-v); }
+.facts .ms { font-size: 19px; color: var(--primary); align-self: start; transform: translateY(1px); }
+.facts b { font-weight: 600; color: var(--on-surface); }
+@media (max-width: 520px) { .facts li { grid-template-columns: 22px 1fr; } .facts li > span:last-child { grid-column: 2; } }
+.shz-links { display: flex; flex-wrap: wrap; gap: 4px 8px; margin: 8px 0 0 -14px; }
 .demo-ctl { margin-top: 22px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 14px; min-height: 44px; }
 .demo-lbl { font-size: 14px; color: var(--on-surface-v); }
 .demo-note { font-size: 14px; color: var(--on-surface-v); min-width: 12em; }
 .seg-demo { font-size: 14px; }
+/* Khổ hẹp: nhãn luôn ở dòng riêng. Để chung một hàng tự xuống dòng thì hàng nằm sát ngưỡng: nút phình lúc nhấn + dấu
+   tích bung ra là hàng nhảy 1 ↔ 2 dòng, đẩy cả phần dưới lên xuống (#302, đo ở khổ 400 px: 44 ↔ 72 px). */
+@media (max-width: 600px) { .demo-ctl { flex-direction: column; gap: 8px; } }
 @media (max-width: 1023px) {
   .comp-land .a-wrap { width: 88%; margin-top: -9%; }
-  .comp-mon .a-wrap { width: 92%; margin-top: -6%; }
+  /* Không đè lên đáy màn game: cửa sổ nổi mở rộng cao gần hết màn, đè vào là che mất hai nút cuối. */
+  .comp-mon .a-wrap { width: 92%; margin-top: 4%; }
   .comp-play .a-wrap { width: 90%; margin-top: -8%; }
   /* Điện thoại: thẻ ở trên, máy ở dưới, để lưới biểu tượng (nằm sát đáy màn hình chính) không bị che. */
   .comp-port { flex-direction: column-reverse; }
@@ -411,6 +422,11 @@ html:not(.js) .slot .screen { display: flex; flex-direction: column; align-items
 .a-slider.at-end .sl-stop { opacity: 0; }
 .sl-hdl { position: absolute; top: 50%; left: var(--x); width: var(--hw); height: 2.75em; margin-top: -1.375em; border-radius: 999px; background: var(--primary); transform: translateX(-50%); transition: width var(--t-quick) var(--ease-quick); }
 .a-slider.drag .sl-hdl { width: .125em; }
+/* Rãnh đã chọn "con giun" (site.js vẽ, #302): có nó thì ẩn dải phẳng .sl-act (giữ cho trang chạy không có JS). */
+.sl-wave { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.sl-wave path { fill: none; stroke: var(--primary); stroke-linejoin: round; }
+.sl-wave circle { fill: var(--primary); }
+.a-slider.wv .sl-act { visibility: hidden; }
 .sl-val {
   position: absolute; left: var(--x); bottom: calc(100% + .1em); padding: .55em .85em; border-radius: 999px; pointer-events: none;
   background: var(--inverse-surface); color: var(--inverse-on-surface); font-size: .9em; font-weight: 560; line-height: 1; white-space: nowrap;
@@ -491,13 +507,84 @@ html:not(.js) .slot .screen { display: flex; flex-direction: column; align-items
 .fz-go[aria-pressed="true"] .st-on { display: inline; }
 
 /* Cửa sổ theo dõi */
-.ov { position: absolute; left: 3%; top: 26%; display: inline-flex; align-items: center; gap: 1.1em; padding: .7em 1.2em .7em 1em; border-radius: 1.3em; background: rgba(20,21,26,.88); color: #e3e1e9; font-size: 1.15em; box-shadow: 0 .6em 1.6em -.4em rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.08); cursor: grab; touch-action: none; user-select: none; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); z-index: 3; }
+/* Cửa sổ nổi — dựng lại theo ui/widget/FloatingWidgetOverlay.kt của app (#302). --dp = 1 dp của màn ngang 933 × 420 dp
+   (Vivo 2800 × 1260, mật độ 3) nhân 1,25 cho đọc được trên trang; mọi cỡ dưới đây là đúng số dp/sp trong mã Compose. */
+.ov {
+  --dp: calc(100cqw / 933 * 1.25);
+  position: absolute; left: 3%; top: 26%; z-index: 3; display: flex; flex-direction: column; width: max-content;
+  padding: calc(10 * var(--dp)) calc(14 * var(--dp)); border-radius: calc(18 * var(--dp));
+  background: color-mix(in oklab, var(--surface) 92%, transparent); color: var(--on-surface);
+  box-shadow: inset 0 0 0 calc(1 * var(--dp)) color-mix(in oklab, var(--outline) 60%, transparent);
+  cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; line-height: 1.2;
+}
 .ov.drag { cursor: grabbing; }
-.ov-dot { width: .6em; height: .6em; border-radius: 50%; background: var(--primary); flex: none; }
-.ov-c { display: inline-flex; flex-direction: column; line-height: 1.15; overflow: hidden; white-space: nowrap; transition: max-width var(--t-spatial) var(--ease-spatial), opacity 200ms ease, margin var(--t-spatial) var(--ease-spatial); max-width: 6em; }
-.ov-c small { font-size: .72em; color: #a9a8b3; font-weight: 560; letter-spacing: .04em; }
-.ov-c b { font-weight: 560; font-variant-numeric: tabular-nums; }
-.ov.noshz .ov-c[data-m="cpu"], .ov.noshz .ov-c[data-m="gpu"] { max-width: 0; opacity: 0; margin-right: -1.1em; }
+.ov-head { display: flex; align-items: center; justify-content: center; white-space: nowrap; }
+.ov.open .ov-head { justify-content: flex-start; }
+.ov-dot, .ov-sdot { flex: none; width: calc(6 * var(--dp)); height: calc(6 * var(--dp)); border-radius: 50%; background: var(--primary); margin-right: calc(6 * var(--dp)); }
+.ov-m { display: inline-flex; align-items: flex-end; }
+.ov-v { font-size: calc(16 * var(--dp)); font-weight: 700; font-variant-numeric: tabular-nums; }
+.ov-u { font-size: calc(10 * var(--dp)); font-weight: 700; color: var(--primary); padding-bottom: calc(1 * var(--dp)); white-space: pre; }
+.ov-sep { font-size: calc(12 * var(--dp)); color: var(--outline); padding: 0 calc(8 * var(--dp)); }
+.ov-name { font-size: calc(13 * var(--dp)); font-weight: 700; }
+.ov-hint { display: inline-flex; align-items: center; }
+.ov-hint .ov-u { padding: 0; }
+.ov-hint span:last-child { font-size: calc(12 * var(--dp)); font-weight: 500; color: var(--on-surface-v); white-space: pre; }
+.ov-end { flex: none; width: calc(8 * var(--dp)); }
+.ov-col {
+  display: inline-flex; align-items: center; height: calc(24 * var(--dp)); padding: 0 calc(9 * var(--dp)) 0 calc(6 * var(--dp));
+  flex: none; border-radius: 999px; background: color-mix(in oklab, var(--outline-v) 90%, transparent);
+  box-shadow: inset 0 0 0 calc(1 * var(--dp)) color-mix(in oklab, var(--outline) 35%, transparent);
+  font-size: calc(10 * var(--dp)); font-weight: 700; color: var(--on-surface-v);
+}
+.ov-fill { flex: 1 0 calc(10 * var(--dp)); }
+.ov-col svg { width: calc(13 * var(--dp)); height: calc(13 * var(--dp)); margin-right: calc(3 * var(--dp)); }
+.ov svg path { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+/* Dòng Focus: theo bề rộng thẻ, không quyết định nó (FollowCardWidth) → contain: inline-size. */
+.ov-chip {
+  contain: inline-size; margin-top: calc(4 * var(--dp)); padding: calc(2 * var(--dp)) calc(6 * var(--dp)); border-radius: calc(6 * var(--dp));
+  background: color-mix(in oklab, var(--primary) 18%, transparent); color: var(--primary);
+  font-size: calc(9 * var(--dp)); font-weight: 700; line-height: calc(11 * var(--dp)); white-space: normal;
+}
+.ov-chip:empty { display: none; }
+.ov-x { display: none; padding-top: calc(8 * var(--dp)); }
+.ov.open .ov-x { display: block; animation: ovIn 160ms cubic-bezier(.4, 0, .2, 1) both; }
+@keyframes ovIn { from { opacity: 0; } }
+.ov-hr { height: calc(1 * var(--dp)); background: color-mix(in oklab, var(--outline) 40%, transparent); margin: 0 0 calc(8 * var(--dp)); }
+.ov-ds { display: flex; align-items: center; font-size: calc(11 * var(--dp)); font-weight: 700; white-space: nowrap; }
+.ov-game { display: block; padding: calc(1 * var(--dp)) 0 0 calc(12 * var(--dp)); font-size: calc(9 * var(--dp)); font-weight: 500; color: var(--on-surface-v); white-space: nowrap; }
+.ov-ch { padding-top: calc(8 * var(--dp)); }
+.ov-cht {
+  contain: inline-size; display: flex; align-items: center; gap: calc(4 * var(--dp)); width: 100%; border: 0; padding: 0; background: none; color: var(--on-surface-v);
+  font: inherit; font-size: calc(9 * var(--dp)); font-weight: 700; text-align: left; cursor: pointer; white-space: nowrap;
+}
+.ov-cht svg { width: calc(10 * var(--dp)); height: calc(10 * var(--dp)); }
+.ov-cht b { margin-left: auto; color: var(--on-surface); font-variant-numeric: tabular-nums; }
+.ov-cht b.warn { color: #f59e0b; }
+.ov-plot { display: block; width: 100%; height: calc(54 * var(--dp)); margin-top: calc(4 * var(--dp)); }
+.ov-tb { display: grid; column-gap: calc(10 * var(--dp)); margin-top: calc(8 * var(--dp)); }
+.ov-tb > span { height: calc(21 * var(--dp)); display: flex; align-items: center; justify-content: flex-end; font-size: calc(12 * var(--dp)); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; border-top: calc(1 * var(--dp)) solid transparent; }
+.ov-tb > span.l { justify-content: flex-start; font-size: calc(9 * var(--dp)); color: var(--on-surface-v); }
+.ov-tb > span.r { border-top-color: color-mix(in oklab, var(--outline) 22%, transparent); }
+.ov-tb > span.hot { color: #f43f5e; }
+.ov-btns { display: flex; align-items: center; gap: calc(6 * var(--dp)); }
+.ov-btns button {
+  display: inline-flex; align-items: center; height: calc(28 * var(--dp)); border: 0; border-radius: 999px; font: inherit; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.ov-afk { padding: 0 calc(8 * var(--dp)); background: var(--surface-high); color: var(--primary); font-size: calc(9 * var(--dp)) !important;
+  box-shadow: inset 0 0 0 calc(1 * var(--dp)) color-mix(in oklab, var(--outline-v) 60%, transparent); }
+.ov-afk svg { width: calc(12 * var(--dp)); height: calc(12 * var(--dp)); margin-right: calc(4 * var(--dp)); }
+.ov-opt { padding: 0 calc(10 * var(--dp)); background: var(--primary); color: var(--on-primary); font-size: calc(10 * var(--dp)) !important; }
+.ov-opt:disabled { background: color-mix(in oklab, var(--on-surface) 12%, transparent); color: color-mix(in oklab, var(--on-surface) 38%, transparent); cursor: default; }
+.ov-grip { position: absolute; right: calc(7 * var(--dp)); bottom: calc(7 * var(--dp)); width: calc(11 * var(--dp)); height: calc(11 * var(--dp)); color: color-mix(in oklab, var(--primary) 45%, transparent); pointer-events: none; }
+/* Thông báo ngắn của Android (Toast) ở đáy màn hình. */
+.toast {
+  position: absolute; left: 50%; bottom: 9%; z-index: 6; max-width: 80%; padding: .5em 1.1em; border-radius: 999px; background: rgba(40,41,46,.94); color: #e3e1e9;
+  font-size: .95em; white-space: nowrap; transform: translateX(-50%) translateY(.6em); opacity: 0; pointer-events: none; transition: opacity 180ms ease, transform 260ms var(--ease-spatial);
+}
+.toast.on { opacity: 1; transform: translateX(-50%); }
+/* Màn theo dõi: thẻ số đo đè lên nửa phải đáy màn game → thông báo đứng ở phần đáy còn trống. */
+.comp-mon .toast { left: 23%; bottom: 13%; }
+@media (max-width: 1023px) { .comp-mon .toast { left: 50%; bottom: 18%; } }
 .mon-card { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; gap: .75em; padding: .75em; }
 .mon-ram { grid-row: span 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .9em; padding: 1em .6em; border-radius: 1.4em; background: var(--surface-high); position: relative; }
 .ring-box { position: relative; width: 86%; }
@@ -531,7 +618,53 @@ html:not(.js) .slot .screen { display: flex; flex-direction: column; align-items
 
 /* Trong lúc chơi: màn hình AFK */
 .afk { position: absolute; inset: 0; z-index: 4; display: grid; place-items: center; background: #000; color: rgba(255,255,255,.28); font-size: 1em; letter-spacing: .18em; font-weight: 560; opacity: 0; pointer-events: none; transition: opacity 700ms ease; }
-.play-scr.afk-on .afk { opacity: 1; pointer-events: auto; cursor: pointer; }
+.scr.afk-on .afk { opacity: 1; pointer-events: auto; cursor: pointer; }
+/* Màn AFK phủ lên cả dòng báo / thông báo mô phỏng của trang. */
+.scr .afk { z-index: 6; }
+/* Dòng nhắc của màn AFK (chữ của app); chạm một lần ẩn/hiện phần gạch đầu dòng. */
+.afk-hud { display: grid; gap: .7em; justify-items: center; text-align: center; padding: 0 6%; }
+.afk-hud span { letter-spacing: 0; font-weight: 400; font-size: .82em; line-height: 1.55; color: rgba(255,255,255,.4); text-align: left; transition: opacity 240ms ease; }
+.afk.bare .afk-hud span { opacity: 0; }
+/* Game chạy thật (polar.js) phủ lên ảnh tĩnh, hiện ra từ khung vẽ đầu tiên. */
+.game-live { opacity: 0; }
+.game-live.on { opacity: 1; }
+/* Phản hồi của công tắc trên màn game (#302). Dòng báo: viên thuốc tối như thông báo hệ thống, nảy xuống từ trên. */
+.pl-note {
+  position: absolute; left: 50%; top: 25%; z-index: 5; display: inline-flex; align-items: center; gap: .55em; max-width: 86%;
+  padding: .5em 1.1em .5em .8em; border-radius: 999px; background: rgba(24,25,30,.9); color: #e3e1e9; font-size: 1em; font-weight: 500;
+  white-space: nowrap; pointer-events: none; opacity: 0; transform: translate(-50%, -.8em) scale(.9);
+  transition: opacity 200ms ease, transform var(--t-spatial) var(--ease-spatial);
+}
+.pl-note.on { opacity: 1; transform: translate(-50%, 0); }
+.pl-ic { font-size: 1.3em; color: var(--primary); font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
+.pl-note.on .ic-hz { animation: plSpin 700ms var(--ease-spatial); }
+.pl-note.on .ic-focus { animation: plSpin 900ms var(--ease-spatial); }
+.pl-note.on .ic-wifi { animation: plWave 900ms ease-out; }
+.pl-note.on .ic-dnd { animation: plShake 520ms ease-out; }
+@keyframes plSpin { from { transform: rotate(-180deg) scale(.4); } }
+@keyframes plWave { 0% { transform: scale(.4); opacity: .3; } 40% { transform: scale(1.25); opacity: 1; } 100% { transform: none; } }
+@keyframes plShake { 0%, 100% { transform: none; } 20% { transform: rotate(-18deg); } 45% { transform: rotate(14deg); } 70% { transform: rotate(-8deg); } }
+/* Băng giá lướt vào từ mép màn khi bật Focus Mode. */
+.frost { position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0;
+  background: radial-gradient(farthest-side at 50% 50%, transparent 50%, rgba(205,232,255,.55) 82%, rgba(240,248,255,.92) 100%); }
+.frost.go { animation: frost 1400ms ease-out; }
+@keyframes frost { 0% { opacity: 0; transform: scale(1.12); } 28% { opacity: 1; } 100% { opacity: 0; transform: none; } }
+/* Thông báo nổi (heads-up) của Android khi Không làm phiền đang tắt: rơi xuống từ đỉnh màn, đè lên game. */
+.hu {
+  position: absolute; left: 50%; top: 3%; z-index: 5; display: flex; align-items: center; gap: .8em; width: min(56%, 26em);
+  padding: .75em 1em; border-radius: 1.4em; background: rgba(46,47,53,.96); color: #e3e1e9; box-shadow: 0 .6em 1.6em -.4em rgba(0,0,0,.5);
+  pointer-events: none; transform: translate(-50%, -140%); transition: transform var(--t-spatial) var(--ease-spatial);
+}
+.hu.on { transform: translate(-50%, 0); }
+.hu-ic { flex: none; display: grid; place-items: center; width: 2.2em; height: 2.2em; border-radius: 50%; background: #3fa66b; color: #fff; font-size: 1.05em; font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
+.hu-tx { display: grid; min-width: 0; line-height: 1.3; }
+.hu-tx small { font-size: .78em; color: #c6c5d0; }
+.hu-tx b { font-weight: 500; font-size: .95em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Ô biểu tượng của hàng nảy một nhịp khi bật/tắt; bật thì biểu tượng tô đặc. */
+.a-ic.pop { animation: icPop 560ms var(--ease-spatial); }
+@keyframes icPop { from { transform: scale(.78); } }
+.a-ic .ms { transition: font-variation-settings 240ms ease; }
+.play-card .a-ic.on .ms { font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
 .play-card { padding: 1em 1.25em; }
 .play-card .a-row { min-height: 3.4em; }
 .play-card .a-div { margin: .55em 0; }
@@ -562,6 +695,23 @@ html:not(.js) .slot .screen { display: flex; flex-direction: column; align-items
 .rp-tiles .mt-h .ms { color: var(--primary); }
 .rp-tiles b { font-size: 1.55em; font-weight: 500; font-variant-numeric: tabular-nums; }
 .rp-tiles small { font-size: .72em; line-height: 1.35; color: var(--on-surface-v); }
+/* Bảng báo cáo đủ các phần của GameSessionSheet (#302): cuộn trong bảng như app, không kéo dài cả chương. */
+.sheet-body { max-height: 31em; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; margin: 0 -.2em; padding: 0 .2em;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 2.2em), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 2.2em), transparent); }
+.sheet-body::-webkit-scrollbar { display: none; }
+.rp-none { color: var(--on-surface-v); }
+.rp-cryo { display: flex; align-items: center; gap: .75em; font-size: .9em; margin-bottom: .6em; }
+.rp-cryo .ms { flex: none; display: grid; place-items: center; width: 2.1em; height: 2.1em; border-radius: .7em; background: var(--secondary-c); color: var(--on-secondary-c); font-size: 1.12em; }
+.rp-cmp { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: .5em; padding: .8em .9em; border-radius: 1.3em; background: var(--surface-high); font-size: .88em; }
+.rp-cmp span { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.rp-cmp .h { font-weight: 500; color: var(--on-surface-v); font-size: .92em; }
+.rp-cmp .l { text-align: left; font-weight: 400; color: var(--on-surface-v); }
+.rp-cmp i { grid-column: 1 / -1; height: 1px; background: color-mix(in oklab, var(--outline-v) 60%, transparent); }
+.rp-cmp small { grid-column: 1 / -1; font-size: .86em; color: var(--on-surface-v); }
+.rp-rec { font-size: .9em; margin: 0 0 .4em; }
+.rp-play { display: flex; align-items: center; justify-content: center; gap: .6em; width: 100%; min-height: 3.25em; margin: 1em 0 1.6em; border: 0;
+  border-radius: 1.06em; background: var(--primary); color: var(--on-primary); font: inherit; font-weight: 600; cursor: pointer; }
+.rp-play .ms { font-size: 1.25em; }
 
 /* ---------- Hoàn tác ---------- */
 .undo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(32px, 5vw, 80px); align-items: center; padding-top: clamp(80px, 12vw, 160px); padding-bottom: clamp(80px, 10vw, 140px); }
@@ -743,6 +893,8 @@ html:not(.js) .slot .screen { display: flex; flex-direction: column; align-items
 .kw { display: inline-block; white-space: nowrap; }
 .kl { display: block; white-space: nowrap; }
 .kl-c { contain: size layout style; }
+/* Chữ cái ở "ô" cố định khi phình theo con trỏ (fx.js pin): rộng đúng như lúc đứng yên, vị trí đổi bằng transform. */
+.kc-pin { display: inline-block; }
 
 /* ---------- Câu chuyện: chương đang xem sáng lên, ánh sau sân khấu đổi tông ---------- */
 /* Biến tông nằm trên chính ::before (không kế thừa): sân khấu chứa cả năm màn, đổi biến ở .stage sẽ tính lại cả cây. */
@@ -834,6 +986,14 @@ html:not(.js) .slot .screen { display: flex; flex-direction: column; align-items
 }
 /* Nới vùng tô ra ngoài nét chữ (khoảng chữ âm + đuôi chữ y) mà không đổi bố cục. */
 .fin-word .kw { padding: .06em .12em .24em; margin: -.06em -.12em -.24em; }
+/* fx.js tách chữ: chỉ chữ cái tô dải màu (kích thước + vị trí dải do fx.js đặt theo chỗ của từng chữ, nên vẫn liền một
+   dải); khối cha và từ thôi tô — cả hai cùng tô thì Chrome vẽ thêm một bản chữ lệch chỗ lúc từ đang bay lên ("CryoCryo",
+   user #302). Chữ cái có transform riêng khi phình, nên tô ở chính nó mới vẽ được. */
+.fin-word.split, .fin-word.split .kw { background: none; }
+.fin-word.split .kc {
+  background-image: linear-gradient(110deg, var(--primary) 10%, var(--tertiary) 55%, var(--primary) 95%); background-repeat: no-repeat;
+  -webkit-background-clip: text; background-clip: text; color: transparent; padding: .06em .12em .24em; margin: -.06em -.12em -.24em;
+}
 .o6 { --s: min(260px, 26vw); left: 8%; top: 4%; }
 .o7 { --s: min(220px, 22vw); right: 7%; bottom: -6%; }
 
