@@ -32,7 +32,9 @@ Landing page, privacy policy and `app-ads.txt` for **Cryo: Game Mode & FPS Meter
   slow 0.8/200; effects 1.0/3800 · 1600 · 800). The resolution slider, the wavy RAM ring and Shizuku progress line, the connected
   button groups, the switch with its check icon and the shape-morphing loading indicator follow the M3 Expressive component specs.
 - **Expressive layer (`fx.js`)**: on a mouse, the cursor is an inverted (`mix-blend-mode: difference`) dot that turns into the
-  exact pill of the button under it (a ring around light filled buttons) and becomes a lens over big headings; headings bloom from
+  exact pill of transparent buttons and links; around colour-filled buttons and images (logo, the Google Play badge, which
+  must not be recoloured) it becomes a ring that hugs the button's live shape; leaving a button it shrinks back without
+  rotating; it becomes a lens over big headings; headings bloom from
   thin/condensed to their weight and swell with the `wght`/`wdth` axes near the cursor; the hero, the light "paper" section and
   the finale carry clay-like 3D M3 shapes drawn on canvas in the current color scheme. With reduced motion or on touch, the
   cursor and swelling are off and every word is visible.

@@ -840,9 +840,58 @@ html:not(.js) .slot .screen { display: flex; flex-direction: column; align-items
 /* ---------- Con trỏ âm bản ---------- */
 html.cur-on, html.cur-on * { cursor: none !important; }
 .m3-cursor { position: fixed; left: 0; top: 0; z-index: 1000; pointer-events: none; mix-blend-mode: difference; opacity: 0; will-change: transform; }
-.m3-cursor i { position: absolute; left: 0; top: 0; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 6px; background: #fff; box-shadow: inset 0 0 0 2px #fff; transition: background-color 140ms ease; }
-/* Nút đặc màu sáng: đảo màu sẽ ra tông bù (vàng ô-liu) chỏi với màu chủ đề → con trỏ ôm thành viền quanh nút. */
-.m3-cursor i.ring { background-color: transparent; }
+.m3-cursor i { position: absolute; left: 0; top: 0; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 6px; background: #fff; }
+/* Vòng sáng quanh nút tô màu / nút có ảnh (đảo màu lên chúng ra tông xỉn, và huy hiệu Google Play không được đổi màu). */
+.m3-halo i { background: none; box-shadow: inset 0 0 0 2px #fff; }
+
+/* ---------- Miễn phí & PRO: danh sách quyền lợi, thẻ PRO là điểm nhấn ---------- */
+.plan p:empty { display: none; }
+.perks { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 14px; }
+.perks li { display: grid; grid-template-columns: 32px 1fr; gap: 14px; align-items: start; color: var(--on-surface-v); line-height: 1.5; }
+.perks .ms {
+  display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; font-size: 18px;
+  background: var(--surface-high); color: var(--primary); font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 20;
+}
+/* Quyền lợi bật lên lần lượt khi thẻ vào màn hình (fx.js gắn .in; không có fx.js thì hiện sẵn). */
+.fx .plan:not(.in) .perks li { opacity: 0; transform: translateY(12px) scale(.98); }
+.fx .plan .perks li { transition: opacity 360ms ease, transform var(--t-spatial) var(--ease-spatial); }
+.plan .perks li:nth-child(2) { transition-delay: 90ms; } .plan .perks li:nth-child(3) { transition-delay: 180ms; }
+.plan-pro {
+  isolation: isolate; overflow: hidden; transform-origin: 50% 60%;
+  background: linear-gradient(155deg, color-mix(in oklab, var(--primary-c) 82%, #000), color-mix(in oklab, var(--tertiary-c) 70%, #000));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 32%, transparent), 0 40px 80px -42px color-mix(in oklab, var(--primary) 60%, transparent);
+}
+.plan-pro h3 { font-size: clamp(28px, 1.4rem + 1vw, 36px); background: linear-gradient(100deg, var(--on-primary-c), var(--primary) 60%, var(--tertiary)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.plan-pro .perks li { color: var(--on-primary-c); }
+.plan-pro .perks .ms { border-radius: 50%; background: color-mix(in oklab, var(--primary) 24%, transparent); color: var(--primary); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 35%, transparent); }
+/* Cực quang xoay chậm phía sau (chỉ transform → compositor; dừng khi thẻ khuất) + đốm sáng theo con trỏ + khối 3D. */
+.pro-aura {
+  position: absolute; z-index: -2; inset: -70%; pointer-events: none; opacity: .5; filter: blur(46px);
+  background: conic-gradient(from 0deg, var(--primary), transparent 22%, var(--tertiary) 40%, transparent 58%, var(--primary-c) 75%, var(--primary));
+  animation: proSpin 20s linear infinite; animation-play-state: paused;
+}
+.plan-pro.live .pro-aura { animation-play-state: running; }
+@keyframes proSpin { to { transform: rotate(1turn); } }
+.pro-shine { position: absolute; z-index: -1; inset: 0; pointer-events: none; opacity: 0; transition: opacity 400ms ease; background: radial-gradient(360px circle at var(--mx, 70%) var(--my, 20%), rgba(255,255,255,.16), transparent 62%); }
+.plan-pro:hover .pro-shine { opacity: 1; }
+.plan-pro .pro-badge { top: 20px; right: 20px; }
+/* Khối 3D chỉ ló ở góc dưới phải; danh sách chừa lề phải để chữ không nằm đè lên khối. */
+.o8 { --s: 170px; right: -64px; bottom: -84px; opacity: .8; }
+.plan-pro .perks { padding-right: 64px; }
+@media (max-width: 760px) { .o8 { --s: 140px; right: -60px; bottom: -76px; } .plan-pro .perks { padding-right: 36px; } }
+
+/* ---------- Cộng đồng Discord ---------- */
+.community { padding-top: clamp(40px, 6vw, 80px); }
+.cm-card {
+  position: relative; isolation: isolate; overflow: hidden; display: grid; grid-template-columns: auto 1fr auto; align-items: center;
+  gap: 20px 28px; padding: clamp(24px, 3.5vw, 40px); border-radius: 32px; box-shadow: inset 0 0 0 1px var(--outline-v);
+  background: linear-gradient(115deg, var(--surface-c) 30%, color-mix(in oklab, var(--secondary-c) 70%, var(--surface-c)));
+}
+.cm-h { font-size: clamp(22px, 1.2rem + .8vw, 30px); line-height: 1.2; letter-spacing: -.01em; margin-bottom: 8px; font-variation-settings: 'ROND' 100; }
+.cm-tx p { color: var(--on-surface-v); max-width: 40em; text-wrap: pretty; }
+.cm-ic .ms { position: relative; font-size: 30px; font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
+.o9 { --s: 230px; right: -70px; top: -96px; opacity: .45; }
+@media (max-width: 760px) { .cm-card { grid-template-columns: 1fr; } .cm-card .btn { justify-self: start; } .o9 { --s: 170px; right: -60px; top: -70px; } }
 
 /* ---------- Trạng thái ban đầu của chuyển động (chỉ khi JS chạy) ---------- */
 .js:not(.no-motion) .hero-h .hl, .js:not(.no-motion) .hero-in { opacity: 0; }

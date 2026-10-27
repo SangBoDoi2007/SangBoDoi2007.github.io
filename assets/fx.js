@@ -84,16 +84,22 @@
      để liên tục thì khung nào cũng dựng phông mới (đo được ~15 ms/khung); theo bậc thì bản phông được dùng lại từ bộ đệm. */
   function letterKit(letters, opt) {
     return letters.map((c) => {
-      const L = { c, a: null, u: null, x: 0, y: 0, fv: '', col: '' };
+      const L = { c, a: null, u: null, x: 0, y: 0, fv: '', col: '', w: 0, wd: 0 };
+      const sw = opt.sw || 10, sd = opt.sd || 1;
       const o = owner(() => {
         const a = L.a.x, u = Math.max(0, L.u.x);
         let fv = '', col = '';
         if (!(L.a.t === 1 && L.u.t === 0 && Math.abs(a - 1) < 0.003 && u < 0.003)) {
-          const w = Math.round(clamp(lerp(opt.w0a, opt.w0, a) + (opt.w1 - opt.w0) * u, 300, 800) / 10) * 10;
-          const wd = Math.round(clamp(lerp(opt.d0a, opt.d0, a) + (opt.d1 - opt.d0) * u, 75, 125));
-          fv = "'wght' " + w + ", 'wdth' " + wd + ", 'ROND' 100";
+          /* Trễ bậc: chỉ nhảy sang bậc mới khi giá trị đã đi quá ¾ bậc — không thì dao động nhỏ quanh ranh giới hai bậc
+             làm chữ nhảy qua lại mỗi khung (user #301: "Cryo" di quanh mà không vào chữ thì rung giật). */
+          const rw = clamp(lerp(opt.w0a, opt.w0, a) + (opt.w1 - opt.w0) * u, 300, 800);
+          const rd = clamp(lerp(opt.d0a, opt.d0, a) + (opt.d1 - opt.d0) * u, 75, 125);
+          if (!L.w || Math.abs(rw - L.w) >= sw * 0.75) L.w = Math.round(rw / sw) * sw;
+          if (!L.wd || Math.abs(rd - L.wd) >= sd * 0.75) L.wd = Math.round(rd / sd) * sd;
+          fv = "'wght' " + L.w + ", 'wdth' " + L.wd + ", 'ROND' 100";
           if (opt.tint && u > 0.03) col = 'color-mix(in oklab, var(--primary) ' + Math.round(clamp(u, 0, 1) * 20) * 5 + '%, var(--on-surface))';
         }
+        if (!fv) L.w = L.wd = 0;
         if (fv !== L.fv) { L.fv = fv; c.style.fontVariationSettings = fv; }
         if (col !== L.col) { L.col = col; c.style.color = col; }
       });
@@ -127,6 +133,8 @@
   /* Chỉ nhóm đang trong màn hình mới được xét (IntersectionObserver; thứ tiếng đang ẩn không bao giờ "trong màn hình"),
      nên mỗi lần chuột nhúc nhích chỉ đọc khung của một hai tiêu đề thay vì của tất cả. */
   const swells = [];
+  /* Phình không nảy (tắt dần tới hạn): nảy qua lại là chữ co giãn qua lại = rung. */
+  const SWELL = { z: 1, k: 240 };
   const seen = 'IntersectionObserver' in window
     ? new IntersectionObserver((es) => es.forEach((e) => { const s = swells.find((x) => x.k.vis === e.target); if (s) s.inView = e.isIntersecting; }), { rootMargin: '25% 0px' })
     : null;
@@ -157,11 +165,11 @@
         s.kit.forEach((L) => {
           const dx = e.clientX - (r.left + L.x), dy = (e.clientY - (r.top + L.y)) * 1.25;
           const t = near ? Math.exp(-(dx * dx + dy * dy) / (R * R)) : 0;
-          if (Math.abs(t - L.u.t) > 0.015) L.u.to(t < 0.02 ? 0 : t, SPEC.m3Spatial);
+          if (Math.abs(t - L.u.t) > 0.015) L.u.to(t < 0.02 ? 0 : t, SWELL);
         });
       });
     }, { passive: true });
-    d.addEventListener('mouseout', (e) => { if (!e.relatedTarget) swells.forEach((s) => { s.hot = false; s.kit.forEach((L) => L.u.to(0, SPEC.m3Spatial)); }); });
+    d.addEventListener('mouseout', (e) => { if (!e.relatedTarget) swells.forEach((s) => { s.hot = false; s.kit.forEach((L) => L.u.to(0, SWELL)); }); });
   }
   const restale = () => swells.forEach((s) => { s.stale = true; s.fs = 0; });
 
@@ -202,7 +210,8 @@
   }
 
   /* Chữ "Cryo" cỡ lớn cuối trang: mảnh và hẹp, phình mạnh theo con trỏ; trên điện thoại nở một lần khi cuộn tới. */
-  const FIN = { w0a: 300, w0: 330, w1: 800, d0a: 75, d0: 92, d1: 125, reach: 0.55, tint: false };
+  /* Chữ rất lớn: bậc trục mịn hơn (mỗi bậc wdth ở cỡ này là vài điểm ảnh) — chỉ 4 chữ cái nên dựng phông vẫn rẻ. */
+  const FIN = { w0a: 300, w0: 330, w1: 800, d0a: 75, d0: 92, d1: 125, reach: 0.55, tint: false, sw: 4, sd: 0.5 };
   const finEl = $('.fin-word');
   if (finEl) {
     const k = split(finEl, false), kit = letterKit(k.letters, FIN);
@@ -249,44 +258,65 @@
   })();
 
   /* ================= Con trỏ âm bản ================= */
+  /* Hai lớp, cùng hoà trộn "difference" để thấy được trên cả nền tối lẫn khu nền sáng:
+     - khối âm bản (chấm trắng): nút trong suốt / chữ → khối bay vào phủ đúng viên thuốc của nút, chữ bên dưới đảo màu;
+     - vòng sáng: nút TÔ MÀU, nút có ảnh (logo, huy hiệu Google Play) → đảo màu lên chúng ra tông xỉn/bẩn (user #301 chê
+       "Open game bị tối đi", và huy hiệu Google Play không được đổi màu) → chấm thu nhỏ biến mất, vòng bay ra ôm quanh nút.
+     Rời nút: hình thu về chấm theo hướng chuột, KHÔNG xoay (bản trước kéo giãn theo vận tốc bằng phép xoay cả hình → viên
+     thuốc rời theo chiều dọc bị "nằm ngang rồi xoay dọc"). */
   (function cursor() {
     if (reduced || !fine) return;
-    const el = d.createElement('div'); el.className = 'm3-cursor'; el.setAttribute('aria-hidden', 'true');
-    const blob = d.createElement('i'); el.appendChild(blob); d.body.appendChild(el);
+    const mk = (cls) => { const e = d.createElement('div'); e.className = cls; e.setAttribute('aria-hidden', 'true'); const i = d.createElement('i'); e.appendChild(i); d.body.appendChild(e); return [e, i]; };
+    const [el, blob] = mk('m3-cursor'), [hel, ring] = mk('m3-cursor m3-halo');
     root.classList.add('cur-on');
     const HIT = 'a[href], button, summary, [role="switch"], [role="radio"], .ov, input[type="range"]';
     const MAG = '.btn, .top-nav a, .brand, .seg button, .swatches button, .play-badge, .foot-links a, .more summary, .rp-close';
     /* Chữ "Cryo" cuối trang không dùng thấu kính: để hiệu ứng phình chữ tự nói. */
     const LENS = '.hero-h, .h2, .kin-row';
-    const FOLLOW = { z: 0.82, k: 1100 };
-    let px = -200, py = -200, tgt = null, lens = null, kind = 'free', inside = false;
+    const FOLLOW = { z: 0.82, k: 1100 }, SHRINK = { z: 0.92, k: 760 };
+    /* Vùng có màu thật của ảnh huy hiệu Google Play (ảnh có lề trong suốt): [lề ngang, lề dọc, bán kính góc] theo tỉ lệ. */
+    const BADGE = { vi: [0, 0.116, 0.13], en: [0.0635, 0.164, 0.137] };
+    let px = -200, py = -200, tgt = null, lens = null, kind = 'free', inside = false, shownR = 6, follow = 0;
     const o = owner(paint);
     const X = new Spring(px, 0.05, o), Y = new Spring(py, 0.05, o), W = new Spring(12, 0.05, o), H = new Spring(12, 0.05, o);
     const R = new Spring(6, 0.05, o), S = new Spring(1, 0.001, o), O = new Spring(0, 0.002, o);
-    /* Nền nút đặc và sáng (đọc lại mỗi lần vì nút bật/tắt đổi màu): đảo màu sẽ ra tông bù chỏi với màu chủ đề. */
-    /* Màu tính ra có thể ở dạng color()/oklab() (do color-mix) → vẽ thử 1 điểm ảnh để đọc ra RGB; nhớ theo chuỗi màu. */
+    const hX = new Spring(px, 0.05, o), hY = new Spring(py, 0.05, o), hW = new Spring(12, 0.05, o), hH = new Spring(12, 0.05, o);
+    const hR = new Spring(6, 0.05, o), hO = new Spring(0, 0.002, o);
+    /* Nền đặc (màu có độ phủ) hay có ảnh → vòng sáng. Màu tính ra có thể ở dạng color()/oklab() (do color-mix) → vẽ thử
+       1 điểm ảnh để đọc độ phủ; nhớ theo chuỗi màu. */
     const probe = d.createElement('canvas').getContext('2d', { willReadFrequently: true });
     probe.canvas.width = probe.canvas.height = 1;
-    const lightBg = (t) => {
-      const bg = getComputedStyle(t).backgroundColor;
+    const solid = (t) => {
+      if (t.querySelector('img')) return true;
+      const cs = getComputedStyle(t), bg = cs.backgroundColor + cs.backgroundImage;
       if (t.cryoBg !== bg) {
-        probe.clearRect(0, 0, 1, 1); probe.fillStyle = 'transparent'; probe.fillStyle = bg; probe.fillRect(0, 0, 1, 1);
-        const p = probe.getImageData(0, 0, 1, 1).data;
-        t.cryoBg = bg; t.cryoLight = p[3] > 128 && (0.2126 * p[0] + 0.7152 * p[1] + 0.0722 * p[2]) / 255 > 0.45;
+        probe.clearRect(0, 0, 1, 1); probe.fillStyle = 'transparent'; probe.fillStyle = cs.backgroundColor; probe.fillRect(0, 0, 1, 1);
+        t.cryoBg = bg; t.cryoSolid = cs.backgroundImage !== 'none' || probe.getImageData(0, 0, 1, 1).data[3] > 128;
       }
-      return t.cryoLight;
+      return t.cryoSolid;
+    };
+    const box = (b, i, x, y, w, h, r, k, sc) => {
+      /* Kéo giãn theo hướng chuột mà không xoay hình: xoay vào hướng, giãn, xoay trả lại. */
+      const a = Math.atan2(Y.v, X.v) * 57.2958;
+      b.style.transform = 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0)' +
+        (k > 0.004 ? ' rotate(' + a.toFixed(1) + 'deg) scale(' + (1 + k).toFixed(3) + ',' + (1 - k * 0.45).toFixed(3) + ') rotate(' + (-a).toFixed(1) + 'deg)' : '') +
+        (sc !== 1 ? ' scale(' + sc.toFixed(3) + ')' : '');
+      i.style.width = w.toFixed(1) + 'px'; i.style.height = h.toFixed(1) + 'px';
+      i.style.margin = (-h / 2).toFixed(1) + 'px 0 0 ' + (-w / 2).toFixed(1) + 'px';
+      i.style.borderRadius = r.toFixed(1) + 'px';
     };
     function paint() {
-      let k = 0, ang = 0;
-      if (kind !== 'shape' && kind !== 'ring') { k = Math.min(0.42, Math.hypot(X.v, Y.v) / 4200); ang = Math.atan2(Y.v, X.v) * 57.2958; }
-      blob.classList.toggle('ring', kind === 'ring');
-      el.style.transform = 'translate3d(' + X.x.toFixed(1) + 'px,' + Y.x.toFixed(1) + 'px,0) rotate(' + ang.toFixed(1) + 'deg) scale(' +
-        ((1 + k) * S.x).toFixed(3) + ',' + ((1 - k * 0.5) * S.x).toFixed(3) + ')';
       const w = Math.max(0, W.x), h = Math.max(0, H.x);
-      blob.style.width = w.toFixed(1) + 'px'; blob.style.height = h.toFixed(1) + 'px';
-      blob.style.margin = (-h / 2).toFixed(1) + 'px 0 0 ' + (-w / 2).toFixed(1) + 'px';
-      blob.style.borderRadius = clamp(R.x, 0, Math.min(w, h) / 2).toFixed(1) + 'px';
+      /* Ngoài lúc phủ nút, khối luôn là viên thuốc/chấm tròn (bán kính = nửa cạnh ngắn) — không bao giờ ra chữ nhật góc
+         vuông lúc đang co về. Độ giãn theo vận tốc chỉ áp khi khối gần tròn. */
+      shownR = kind === 'shape' ? clamp(R.x, 0, Math.min(w, h) / 2) : Math.min(w, h) / 2;
+      const round = Math.min(w, h) / Math.max(1, w, h);
+      const k = kind === 'shape' ? 0 : Math.min(0.38, Math.hypot(X.v, Y.v) / 4400) * round * round;
+      box(el, blob, X.x, Y.x, w, h, shownR, k, S.x);
       el.style.opacity = clamp(O.x, 0, 1).toFixed(3);
+      const hw = Math.max(0, hW.x), hh = Math.max(0, hH.x);
+      box(hel, ring, hX.x, hY.x, hw, hh, clamp(hR.x, 0, Math.min(hw, hh) / 2), 0, S.x);
+      hel.style.opacity = clamp(hO.x, 0, 1).toFixed(3);
     }
     /* Nút nhích theo con trỏ một chút (thuộc tính translate, cộng dồn được với transform sẵn có của nút). */
     const mags = new Map();
@@ -307,37 +337,69 @@
       if (t !== tgt) {
         if (tgt && mags.has(tgt)) magnet(tgt, 0, 0);
         tgt = t;
-        if (t) t.cryoR = getComputedStyle(t).borderTopLeftRadius;
       }
       lens = !t && node && node.closest ? node.closest(LENS) : null;
     }
-    function radius(t, r) {
-      const v = t.cryoR || '0';
-      const n = parseFloat(v) || 0;
-      return Math.min(r.height / 2, r.width / 2, /%$/.test(v) ? Math.min(r.width, r.height) * n / 100 : n);
+    /* Khung + bán kính THẬT của nút, đọc lại mỗi lần (nút bấm vuông góc lại, nút bật/tắt đổi dáng → con trỏ bám theo).
+       Huy hiệu Google Play: lấy đúng vùng có màu của ảnh. Chữ/logo không viền: chừa lề và bo tối thiểu như một viên thuốc. */
+    function frame(t) {
+      const img = t.matches('.play-badge') && [...t.querySelectorAll('img')].find((i) => i.getClientRects().length);
+      if (img) {
+        const r = img.getBoundingClientRect(), b = BADGE[img.lang] || BADGE.en, ix = r.width * b[0], iy = r.height * b[1];
+        return { l: r.left + ix, t: r.top + iy, w: r.width - ix * 2, h: r.height - iy * 2, r: (r.height - iy * 2) * b[2] };
+      }
+      const r = t.getBoundingClientRect(), v = getComputedStyle(t).borderTopLeftRadius, n = parseFloat(v) || 0;
+      let rad = Math.min(r.height / 2, r.width / 2, /%$/.test(v) ? Math.min(r.width, r.height) * n / 100 : n), pad = 0;
+      if (rad < 6) { pad = 6; rad = Math.min(14, (r.height + 12) / 2) - pad; }
+      return { l: r.left - pad, t: r.top - pad, w: r.width + pad * 2, h: r.height + pad * 2, r: rad + pad };
     }
     function update() {
       if (tgt && !tgt.isConnected) tgt = null;
+      let halo = null;
       if (tgt) {
-        const r = tgt.getBoundingClientRect(), m = mags.get(tgt);
-        if (tgt.matches('input[type="range"]')) { kind = 'free'; size(8); follow(); return; }
-        if (!r.width || r.height > 78 || r.width > 460) { kind = 'soft'; size(44); follow(); return; }
-        kind = lightBg(tgt) ? 'ring' : 'shape';
-        const pad = kind === 'ring' ? 5 : 0;
-        const cx = r.left + r.width / 2 - (m ? m.x.x : 0), cy = r.top + r.height / 2 - (m ? m.y.x : 0);
-        const dx = px - cx, dy = py - cy;
-        let mx = 0, my = 0;
-        if (tgt.matches(MAG)) { mx = clamp(dx * 0.16, -7, 7); my = clamp(dy * 0.22, -5, 5); magnet(tgt, mx, my); }
-        X.to(cx + mx + dx * 0.05, SPEC.m3FastSpatial); Y.to(cy + my + dy * 0.05, SPEC.m3FastSpatial);
-        W.to(r.width + pad * 2, SPEC.m3FastSpatial); H.to(r.height + pad * 2, SPEC.m3FastSpatial); R.to(radius(tgt, r) + pad, SPEC.m3FastSpatial);
-      } else if (lens) { kind = 'lens'; size(92); follow(); }
-      else { kind = 'free'; size(12); follow(); }
+        const r = tgt.getBoundingClientRect();
+        if (tgt.matches('input[type="range"]')) { kind = 'free'; size(8); chase(); }
+        else if (!r.width || r.height > 78 || r.width > 460) { kind = 'soft'; size(44); chase(); }
+        else {
+          const f = frame(tgt), m = mags.get(tgt);
+          const cx = f.l + f.w / 2 - (m ? m.x.x : 0), cy = f.t + f.h / 2 - (m ? m.y.x : 0), dx = px - cx, dy = py - cy;
+          let mx = 0, my = 0;
+          if (tgt.matches(MAG)) { mx = clamp(dx * 0.16, -7, 7); my = clamp(dy * 0.22, -5, 5); magnet(tgt, mx, my); }
+          const g = { x: cx + mx + dx * 0.05, y: cy + my + dy * 0.05, w: f.w, h: f.h, r: f.r };
+          if (solid(tgt)) { halo = g; kind = 'halo'; size(6); chase(); }
+          else {
+            if (kind !== 'shape') R.set(shownR);
+            kind = 'shape';
+            X.to(g.x, SPEC.m3FastSpatial); Y.to(g.y, SPEC.m3FastSpatial);
+            grow(W, g.w); grow(H, g.h); R.to(g.r, SPEC.m3FastSpatial);
+          }
+        }
+      } else if (lens) { kind = 'lens'; size(92); chase(); }
+      else { kind = 'free'; size(12); chase(); }
+      /* Vòng sáng: bay ra từ vị trí chuột tới ôm nút (cách mép 5px), rời nút thì co về chuột và tan. */
+      if (halo) {
+        if (hO.t === 0) { hX.set(px); hY.set(py); hW.set(12); hH.set(12); hR.set(6); }
+        hX.to(halo.x, SPEC.m3FastSpatial); hY.to(halo.y, SPEC.m3FastSpatial);
+        grow(hW, halo.w + 10); grow(hH, halo.h + 10); hR.to(halo.r + 5, SPEC.m3FastSpatial); hO.to(1, SPEC.m3FastEffects);
+        O.to(0, SPEC.m3FastEffects);
+      } else {
+        hX.to(px, FOLLOW); hY.to(py, FOLLOW); grow(hW, 12); grow(hH, 12); hR.to(6, SHRINK); hO.to(0, SPEC.m3Effects);
+        if (inside) O.to(1, SPEC.m3FastEffects);
+      }
     }
-    function size(s) { W.to(s, SPEC.m3FastSpatial); H.to(s, SPEC.m3FastSpatial); R.to(s / 2, SPEC.m3FastSpatial); }
-    function follow() { X.to(px, FOLLOW); Y.to(py, FOLLOW); }
+    /* Phình ra thì nảy (M3 nhanh), co lại thì êm (không nảy ngược qua cỡ chấm). */
+    function grow(s, v) { s.to(v, v >= s.x ? SPEC.m3FastSpatial : SHRINK); }
+    function size(s) { grow(W, s); grow(H, s); R.to(s / 2, SHRINK); }
+    function chase() { X.to(px, FOLLOW); Y.to(py, FOLLOW); }
+    /* Bấm / thả: nút đổi dáng và đổi màu trong ~0,3 s — bám theo từng khung trong lúc đó. */
+    function track(ms) {
+      clearTimeout(follow); let on = true; follow = setTimeout(() => { on = false; }, ms);
+      const loop = () => { if (!on || !inside) return; update(); requestAnimationFrame(loop); };
+      requestAnimationFrame(loop);
+    }
     addEventListener('pointermove', (e) => {
       /* Bút/cảm ứng trên máy có chuột: trả con trỏ gốc của hệ thống (không thì không còn con trỏ nào hiện). */
-      if (e.pointerType !== 'mouse') { O.to(0, SPEC.m3FastEffects); inside = false; root.classList.remove('cur-on'); return; }
+      if (e.pointerType !== 'mouse') { O.to(0, SPEC.m3FastEffects); hO.to(0, SPEC.m3FastEffects); inside = false; root.classList.remove('cur-on'); return; }
       root.classList.add('cur-on');
       px = e.clientX; py = e.clientY;
       if (!inside) { inside = true; X.set(px); Y.set(py); O.to(1, SPEC.m3FastEffects); }
@@ -349,11 +411,11 @@
       if (!inside || probeT) return;
       probeT = setTimeout(() => { probeT = 0; if (inside) { pick(d.elementFromPoint(px, py)); update(); } }, 120);
     }, { passive: true });
-    d.addEventListener('mouseout', (e) => { if (!e.relatedTarget) { inside = false; O.to(0, SPEC.m3FastEffects); } });
-    addEventListener('blur', () => { inside = false; O.to(0, SPEC.m3FastEffects); });
-    addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse') S.to(kind === 'shape' || kind === 'ring' ? 0.94 : 0.75, SPEC.m3FastSpatial); });
-    /* Bấm xong nút bật/tắt có thể đổi màu nền → tính lại kiểu con trỏ sau khi màu đổi. */
-    addEventListener('pointerup', () => { S.to(1, SPEC.m3FastSpatial); if (inside) setTimeout(update, 220); });
+    const leave = () => { inside = false; O.to(0, SPEC.m3FastEffects); hO.to(0, SPEC.m3FastEffects); };
+    d.addEventListener('mouseout', (e) => { if (!e.relatedTarget) leave(); });
+    addEventListener('blur', leave);
+    addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse') { S.to(kind === 'shape' || kind === 'halo' ? 0.95 : 0.75, SPEC.m3FastSpatial); track(400); } });
+    addEventListener('pointerup', () => { S.to(1, SPEC.m3FastSpatial); if (inside) track(450); });
   })();
 
   /* ================= Khối 3D theo màu chủ đề ================= */
@@ -516,11 +578,13 @@
     function frame(t) {
       const dt = t0 ? Math.min(0.05, (t - t0) / 1000) : 0; t0 = t;
       const dy = y - lastY; lastY = y;
-      vel = lerp(vel, dt ? dy / dt : 0, 0.12);
-      /* Cuộn nhanh thì chữ nghiêng theo hướng cuộn và co ngang lại — như chữ bị gió thổi; chỉ ghi transform. */
-      const sk = clamp(-vel / 420, -7, 7), sx = 1 - Math.min(0.08, Math.abs(vel) / 30000);
+      /* Vận tốc làm mượt theo THỜI GIAN (~0,25 s) và chặn đỉnh: sự kiện cuộn không đến đều từng khung nên vận tốc thô
+         nhảy 0 ↔ gấp đôi, làm độ nghiêng rung (user #301: dải chữ "chưa mượt khi lướt"). */
+      if (dt) vel += (clamp(dy / dt, -5000, 5000) - vel) * (1 - Math.exp(-dt * 4));
+      /* Cuộn nhanh thì chữ nghiêng nhẹ theo hướng cuộn — như chữ bị gió thổi; chỉ ghi transform. */
+      const sk = clamp(-vel / 800, -4, 4);
       rows.forEach((r) => {
-        r.tr.style.transform = 'translate3d(' + (-mod(y * 0.42 * r.dir, r.half)).toFixed(1) + 'px,0,0) skewX(' + sk.toFixed(2) + 'deg) scaleX(' + sx.toFixed(3) + ')';
+        r.tr.style.transform = 'translate3d(' + (-mod(y * 0.42 * r.dir, r.half)).toFixed(2) + 'px,0,0) skewX(' + sk.toFixed(2) + 'deg)';
       });
       quiet = Math.abs(vel) < 4 && dy === 0 ? quiet + 1 : 0;
       raf = on && quiet < 20 ? requestAnimationFrame(frame) : 0;
@@ -610,6 +674,30 @@
       if (vis) { measure(); target(); }
       if (on && !raf && !reduced) { t0 = 0; raf = requestAnimationFrame(frame); }
     });
+  })();
+
+  /* ================= Thẻ Miễn phí / PRO ================= */
+  (function plans() {
+    const plans = $$('.plan');
+    if (!plans.length) return;
+    if (!reduced) root.classList.add('fx');
+    /* Quyền lợi bật lên khi thẻ vào màn hình; cực quang của thẻ PRO chỉ xoay khi thẻ đang hiện. */
+    io(plans, { threshold: 0.25 }, (el, on) => { if (on) el.classList.add('in'); el.classList.toggle('live', on); });
+    const card = $('.plan-pro'), shine = card && $('.pro-shine', card);
+    if (!card || !fine || reduced) return;
+    /* Nghiêng 3D theo con trỏ (lò xo M3) + đốm sáng chạy theo — như cầm một tấm thẻ thật dưới đèn. */
+    const o = owner(() => {
+      const still = Math.abs(rx.x) < 0.01 && Math.abs(ry.x) < 0.01 && rx.t === 0 && ry.t === 0;
+      card.style.transform = still ? '' : 'perspective(1000px) rotateX(' + rx.x.toFixed(2) + 'deg) rotateY(' + ry.x.toFixed(2) + 'deg)';
+    });
+    const rx = new Spring(0, 0.01, o), ry = new Spring(0, 0.01, o);
+    card.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      const r = card.getBoundingClientRect(), u = (e.clientX - r.left) / r.width, v = (e.clientY - r.top) / r.height;
+      ry.to((u - 0.5) * 9, SPEC.m3Spatial); rx.to(-(v - 0.5) * 7, SPEC.m3Spatial);
+      shine.style.setProperty('--mx', (u * 100).toFixed(1) + '%'); shine.style.setProperty('--my', (v * 100).toFixed(1) + '%');
+    });
+    card.addEventListener('pointerleave', () => { rx.to(0, SPEC.m3Spatial); ry.to(0, SPEC.m3Spatial); });
   })();
 
   /* ================= Ánh nền đổi tông theo mục ================= */

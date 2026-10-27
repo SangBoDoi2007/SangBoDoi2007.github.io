@@ -43,7 +43,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wdth,wght,ROND@6..144,75..125,300..800,0..100&display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&icon_names=ac_unit,account_balance,add,alarm,battery_charging_full,battery_full,bedtime,bolt,calendar_month,chat,check,chevron_right,close,dashboard,expand_more,flight,group,keep,layers,light_mode,lock,mail,map,memory,monitoring,music_note,newspaper,notifications_off,open_in_new,photo,picture_in_picture,play_arrow,restart_alt,settings,shopping_bag,signal_cellular_alt,smart_display,sports_esports,sync,thermometer,thermostat,touch_app,translate,tune,undo,verified_user,wifi&display=block">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&icon_names=ac_unit,account_balance,add,alarm,all_inclusive,battery_charging_full,battery_full,bedtime,block,bolt,calendar_month,chat,check,chevron_right,close,dashboard,expand_more,flight,forum,group,keep,layers,light_mode,lock,mail,map,memory,monitoring,music_note,newspaper,notifications_off,open_in_new,photo,picture_in_picture,play_arrow,restart_alt,settings,shopping_bag,signal_cellular_alt,smart_display,sports_esports,sync,thermometer,thermostat,touch_app,translate,tune,undo,verified_user,wifi&display=block">
 <link rel="stylesheet" href="assets/site.css">
 </head>
 <body>
@@ -630,16 +630,25 @@
 <section class="price wrap" id="pricing" aria-labelledby="price-title" data-amb="s">
   <h2 id="price-title" class="h2"><span lang="vi">Miễn phí, có quảng cáo. Hoặc PRO.</span><span lang="en">Free with ads. Or PRO.</span></h2>
   <div class="plans">
-    <div class="plan">
+    <div class="plan plan-free">
       <h3><span lang="vi">Miễn phí</span><span lang="en">Free</span></h3>
-      <p lang="vi">Mọi tính năng, có quảng cáo. Tích chọn một game, bật một tính năng hay đóng băng một app dùng một lượt trong số lượt miễn phí có hạn. Xem video có thưởng để nhận thêm lượt.</p>
-      <p lang="en">Every feature, with ads. Ticking a game, switching on a feature or freezing an app uses one action from a limited free balance. A rewarded video adds more.</p>
+      <ul class="perks">
+        <li><span class="ms" aria-hidden="true">check</span><span lang="vi">Mọi tính năng, có quảng cáo.</span><span lang="en">Every feature, with ads.</span></li>
+        <li><span class="ms" aria-hidden="true">bolt</span><span lang="vi">Tích chọn một game, bật một tính năng hay đóng băng một app dùng một lượt trong số lượt miễn phí có hạn.</span><span lang="en">Ticking a game, switching on a feature or freezing an app uses one action from a limited free balance.</span></li>
+        <li><span class="ms" aria-hidden="true">smart_display</span><span lang="vi">Xem video có thưởng để nhận thêm lượt.</span><span lang="en">A rewarded video adds more.</span></li>
+      </ul>
     </div>
     <div class="plan plan-pro">
+      <span class="pro-aura" aria-hidden="true"></span>
+      <span class="pro-shine" aria-hidden="true"></span>
+      <div class="orbs" aria-hidden="true"><div class="orb o8" data-shape="sunny cookie9" data-c="tertiary primary" data-depth=".15" data-rot="-12"></div></div>
       <span class="shape pro-badge" data-shape="3" aria-hidden="true"><svg viewBox="0 0 100 100"><path/></svg><b>PRO</b></span>
       <h3>Cryo PRO</h3>
-      <p lang="vi">Gỡ quảng cáo và không giới hạn lượt. Mua qua Google Play và gắn với tài khoản Google Play trên máy.</p>
-      <p lang="en">No ads and no action limit. Bought through Google Play and tied to the Play account on your phone.</p>
+      <ul class="perks">
+        <li><span class="ms" aria-hidden="true">block</span><span lang="vi">Không quảng cáo.</span><span lang="en">No ads.</span></li>
+        <li><span class="ms" aria-hidden="true">all_inclusive</span><span lang="vi">Không giới hạn lượt.</span><span lang="en">No action limit.</span></li>
+        <li><span class="ms" aria-hidden="true">shopping_bag</span><span lang="vi">Mua qua Google Play và gắn với tài khoản Google Play trên máy.</span><span lang="en">Bought through Google Play and tied to the Play account on your phone.</span></li>
+      </ul>
     </div>
   </div>
   <div class="privacy" id="privacy">
@@ -695,6 +704,20 @@
   </div>
 </section>
 
+<!-- ============ Cộng đồng (cùng link và lời mời với app: EngagementRepository.DISCORD_INVITE_URL, community_*) ============ -->
+<section class="community wrap" aria-labelledby="community-title" data-amb="s">
+  <div class="cm-card">
+    <div class="orbs" aria-hidden="true"><div class="orb o9" data-shape="clover flower" data-c="primary tertiary" data-depth=".2" data-rot="20"></div></div>
+    <span class="shape cm-ic" data-shape="1" aria-hidden="true"><svg viewBox="0 0 100 100"><path/></svg><span class="ms">forum</span></span>
+    <div class="cm-tx">
+      <h2 id="community-title" class="cm-h"><span lang="vi">Cộng đồng Cryo trên Discord</span><span lang="en">Cryo community on Discord</span></h2>
+      <p lang="vi">Gặp những người cùng dùng Cryo: hỏi đáp, chia sẻ thiết lập chạy tốt trên máy bạn, và góp ý tính năng tiếp theo.</p>
+      <p lang="en">Meet other Cryo players: ask questions, share settings that work on your phone, and tell us what to build next.</p>
+    </div>
+    <a class="btn btn-filled" href="https://discord.gg/CvAgGsMBrE" target="_blank" rel="noopener"><span class="ms" aria-hidden="true">forum</span><span lang="vi">Tham gia</span><span lang="en">Join</span><span class="ms" aria-hidden="true">open_in_new</span></a>
+  </div>
+</section>
+
 <section class="end wrap" aria-labelledby="end-title" data-amb="t">
   <h2 id="end-title" class="h2"><span lang="vi">Cryo có trên Google Play.</span><span lang="en">Cryo is on Google Play.</span></h2>
   <a class="play-badge" href="https://play.google.com/store/apps/details?id=com.astvn.cryo" target="_blank" rel="noopener">
@@ -723,6 +746,7 @@
       <a href="/privacy"><span lang="vi">Chính sách quyền riêng tư</span><span lang="en">Privacy policy</span></a>
       <a href="/app-ads.txt">app-ads.txt</a>
       <a href="https://play.google.com/store/apps/details?id=com.astvn.cryo" target="_blank" rel="noopener">Google Play</a>
+      <a href="https://discord.gg/CvAgGsMBrE" target="_blank" rel="noopener">Discord</a>
       <a href="mailto:hoten2817@gmail.com">hoten2817@gmail.com</a>
     </nav>
     <p class="foot-note" lang="vi">Cryo không liên kết với bất kỳ nhà phát hành game nào hay với Shizuku. Mọi nhãn hiệu thuộc về chủ sở hữu. Google Play và biểu trưng Google Play là nhãn hiệu của Google LLC. Polar Run là game minh hoạ do ASTVN Studios làm. © 2026 ASTVN Studios.</p>
