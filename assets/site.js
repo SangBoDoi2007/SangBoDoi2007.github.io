@@ -289,16 +289,15 @@
     let val = 70, on = true, mode = 'buffer', shown = false, touched = false;
 
     /* Thanh trượt M3 Expressive: rãnh sau tay cầm tính từ --p trong CSS, chấm dừng ẩn khi tay cầm chạm cuối.
-       Rãnh đã chọn là dải "con giun" (user #302: "thanh dài phía sau cong cong gấp gấp"): dải có chiều dài VẬT LIỆU riêng
-       (lò xo mềm, nảy) đuổi theo chiều dài thật. Kéo về trái nhanh hơn dải kịp co → phần dư gấp lại thành sóng (dư càng
-       nhiều sóng càng cao); kéo sang phải → dải bị kéo căng, mảnh lại; dừng tay → dải nảy qua lại vài nhịp rồi thẳng. Sóng
-       trôi theo chiều dài vật liệu nên nhìn như dải đang bò. Vẽ bằng SVG, chỉ vẽ lại khi lò xo còn chạy. */
-    const NS = 'http://www.w3.org/2000/svg', MAT = { z: 0.42, k: 170 };
+       Rãnh đã chọn vẽ bằng SVG: đứng yên là dải dày phẳng như M3; ĐANG GIỮ/KÉO thì dải mảnh lại và uốn thành sóng sin đều
+       trôi liên tục (kiểu thanh trượt sóng của Google), thả tay thì êm về phẳng. User #302 bỏ bản "con giun" lò xo: "chỉ
+       uốn lượn gấp cong như của google khi kéo và giữ". Vòng rAF chỉ chạy lúc đang giữ hoặc sóng chưa tắt hẳn. */
+    const NS = 'http://www.w3.org/2000/svg';
     const wsvg = d.createElementNS(NS, 'svg'), wpath = d.createElementNS(NS, 'path'), wcap = d.createElementNS(NS, 'circle');
     wsvg.setAttribute('class', 'sl-wave'); wsvg.setAttribute('aria-hidden', 'true'); wsvg.append(wpath, wcap);
     slider.insertBefore(wsvg, slider.firstChild);
     slider.classList.add('wv');
-    let slW = 0, slH = 0, em = 16;
+    let slW = 0, slH = 0, em = 16, phase = 0, waveRaf = 0, waveT = 0, held = false;
     const measureSl = () => {
       slW = slider.clientWidth; slH = slider.clientHeight; em = parseFloat(getComputedStyle(slider).fontSize) || 16;
       wsvg.setAttribute('viewBox', '0 0 ' + slW + ' ' + slH);
@@ -307,33 +306,43 @@
     const trackEnd = (p) => { const hw = (slider.classList.contains('drag') ? 0.125 : 0.25) * em; return Math.max(0, p * (slW - hw) - 0.375 * em); };
     function drawTrack() {
       if (!slW) measureSl();
-      const L = trackEnd(clamp(thumb.x, 0, 1)), M = Math.max(0, mat.x), cy = slH / 2, lam = 2.6 * em, th0 = em;
+      const L = trackEnd(clamp(thumb.x, 0, 1)), cy = slH / 2, a = clamp(amp.x, 0, 1);
       if (L < 0.5) { wpath.setAttribute('d', ''); wcap.setAttribute('r', '0'); return; }
-      const ex = M / L - 1;
-      /* Dải hình sin dài L có độ dài cung ≈ L·(1 + (πA/λ)²) → biên độ để chứa đủ vật liệu M. */
-      const A = ex > 0 ? Math.min(0.62 * em, 0.75 * (lam / Math.PI) * Math.sqrt(ex)) : 0;
-      const th = ex < 0 ? th0 * clamp(1 + ex * 1.8, 0.5, 1) : th0;
-      const x0 = Math.min(th / 2, L / 2), ph = (M / lam) * Math.PI * 2;
-      const y = (x) => A * Math.max(0, Math.min(1, (x - x0) / (0.5 * lam), (L - x) / (0.35 * lam))) * Math.sin(((L - x) / lam) * Math.PI * 2 - ph);
+      /* Sóng: bước sóng 2,4em, biên độ 0,3em, nét từ 1em (phẳng) xuống 0,42em; hai đầu thu biên độ về 0 trong nửa bước sóng
+         để đầu dải tròn trịa và chỗ chạm tay cầm nằm đúng giữa. */
+      const lam = 2.4 * em, A = 0.3 * em * a, th = lerp(em, 0.42 * em, a);
+      const x0 = Math.min(th / 2, L / 2);
+      const y = a < 0.001 ? () => 0
+        : (x) => A * Math.max(0, Math.min(1, (x - x0) / (0.5 * lam), (L - x) / (0.5 * lam))) * Math.sin((x / lam) * Math.PI * 2 - phase);
       let p = 'M' + x0.toFixed(1) + ' ' + (cy + y(x0)).toFixed(2);
-      for (let x = x0 + 2; ; x += 2) { const xx = Math.min(x, L); p += 'L' + xx.toFixed(1) + ' ' + (cy + y(xx)).toFixed(2); if (xx >= L) break; }
+      if (a < 0.001) p += 'L' + L.toFixed(1) + ' ' + cy.toFixed(2);
+      else for (let x = x0 + 2; ; x += 2) { const xx = Math.min(x, L); p += 'L' + xx.toFixed(1) + ' ' + (cy + y(xx)).toFixed(2); if (xx >= L) break; }
       wpath.setAttribute('d', p); wpath.setAttribute('stroke-width', th.toFixed(2));
       wcap.setAttribute('cx', x0.toFixed(1)); wcap.setAttribute('cy', (cy + y(x0)).toFixed(2)); wcap.setAttribute('r', (Math.min(th, L) / 2).toFixed(2));
     }
+    /* Sóng trôi sang phải một bước sóng mỗi 0,9 s khi đang giữ; lúc tắt dần vẫn trôi cho tới khi phẳng hẳn. */
+    const waveLoop = (now) => {
+      const dt = waveT ? Math.min(0.05, (now - waveT) / 1000) : 0; waveT = now;
+      phase += dt * Math.PI * 2 / 0.9;
+      drawTrack();
+      waveRaf = held || amp.x > 0.002 ? requestAnimationFrame(waveLoop) : 0;
+      if (!waveRaf) { waveT = 0; drawTrack(); }
+    };
     const sl = owner(() => {
       /* Lò xo nảy qua hai đầu thì tay cầm cũng không được vọt ra ngoài rãnh. */
       const p = clamp(thumb.x, 0, 1);
       slider.style.setProperty('--p', p.toFixed(4));
       slider.classList.toggle('at-end', p > 0.985);
-      /* Lần đầu thấy thanh trượt (hoặc vừa đổi cỡ): vật liệu = đúng chiều dài, không "nảy" từ 0. */
-      if (!slW) { measureSl(); if (slW) { mat.x = mat.t = trackEnd(p); mat.v = 0; } }
-      const L = trackEnd(p);
-      if (Math.abs(mat.t - L) > 0.2) mat.to(L, MAT);
-      drawTrack();
+      if (!waveRaf) drawTrack();
     });
-    const thumb = new Spring(0.571, 0.0005, sl), mat = new Spring(0, 0.05, sl);
-    /* Đặt thẳng (không hoạt ảnh): vật liệu theo luôn. */
-    const snap = () => { measureSl(); mat.set(trackEnd(clamp(thumb.x, 0, 1))); };
+    const thumb = new Spring(0.571, 0.0005, sl);
+    const amp = new Spring(0, 0.002, owner(() => { if (!waveRaf) drawTrack(); }));
+    const hold = (on) => {
+      held = on && !reduced;
+      amp.to(held ? 1 : 0, SPEC.m3SlowEffects);
+      if (held && !waveRaf) { waveT = 0; waveRaf = requestAnimationFrame(waveLoop); }
+    };
+    const snap = () => { measureSl(); drawTrack(); };
     if ('ResizeObserver' in window) new ResizeObserver(() => { if (slider.clientWidth && slider.clientWidth !== slW) snap(); }).observe(slider);
     /* Đồng hồ game đang chạy thì nó vẽ mỗi khung rồi — lò xo tỉ lệ không vẽ thêm lần nữa. */
     let clockOn = false;
@@ -402,8 +411,8 @@
       if (i >= 0) presets.style.setProperty('--i', i);
     }
     input.addEventListener('input', () => { touched = true; setVal(+input.value, true); });
-    input.addEventListener('pointerdown', () => slider.classList.add('drag'));
-    const lift = () => slider.classList.remove('drag');
+    input.addEventListener('pointerdown', () => { slider.classList.add('drag'); hold(true); });
+    const lift = () => { if (!held && !slider.classList.contains('drag')) return; slider.classList.remove('drag'); hold(false); };
     addEventListener('pointerup', lift); addEventListener('pointercancel', lift);
     pBtns.forEach((b) => b.addEventListener('click', () => { touched = true; setVal(+b.dataset.v); }));
     sw.addEventListener('sw', (e) => { on = e.detail; card.classList.toggle('off', !on); setVal(val); });
@@ -576,7 +585,27 @@
       const head = new Spring(v0, 0.001, null);
       return { el, line: $('.ch-line', el), area: $('.ch-area', el), dot: $('.ch-dot', el), min: +$('.chart', el).dataset.min, max: +$('.chart', el).dataset.max, hist, head };
     };
-    const charts = { cpu: mk('cpu', 18, 8, 42, 9), bat: mk('bat', 35.9, 35.3, 36.4, 0.12) };
+    const charts = { cpu: mk('cpu', 18, 8, 42, 9), bat: mk('bat', 35.9, 35.3, 36.4, 0.12),
+      gpu: mk('gpu', 41, 26, 66, 12), ct: mk('ct', 46, 42, 52, 0.8), gt: mk('gt', 43, 40, 48, 0.6) };
+    ['gpu', 'ct', 'gt'].forEach((k) => { charts[k].more = true; });
+    const mGpu = $('.m-gpu', card), mCt = $('.m-ct', card), mGt = $('.m-gt', card);
+    /* "Chi tiết" / "Thu gọn" như app: phần xổ ra cao theo lò xo (mở nảy, đóng êm); máy tính co sân khấu cho vừa. */
+    const mx = $('.mon-x', card), mxi = $('.mon-xi', card), tog = $('.mon-tog', card);
+    let more = false;
+    const hx = new Spring(0, 0.3, owner(() => { mx.style.height = Math.max(0, hx.x).toFixed(1) + 'px'; }));
+    const TOG = { vi: ['Chi tiết', 'Thu gọn'], en: ['Details', 'Show less'] };
+    const togText = () => { tog.innerHTML = '<span lang="vi">' + TOG.vi[+more] + '</span><span lang="en">' + TOG.en[+more] + '</span>'; };
+    tog.addEventListener('click', () => {
+      more = !more; card.classList.toggle('more', more); tog.setAttribute('aria-expanded', String(more)); togText();
+      const H = mxi.offsetHeight, gap = parseFloat(getComputedStyle(mxi).rowGap) || 0;
+      hx.to(more ? H : 0, more ? { z: 0.62, k: 380 } : SPEC.exit);
+      refit(sc, more ? H + gap - mx.offsetHeight : -mx.offsetHeight - gap);
+      if (more) for (const k in charts) drawChart(charts[k]);
+    });
+    /* Đổi ngôn ngữ / đổi cỡ lúc đang mở: chữ xuống dòng khác → chiều cao theo nội dung mới (khi lò xo đã đứng). */
+    if ('ResizeObserver' in window) new ResizeObserver(() => {
+      if (more && Math.abs(hx.x - hx.t) < 0.5 && Math.abs(hx.v) < 1 && Math.abs(mxi.offsetHeight - hx.t) > 0.5) hx.set(mxi.offsetHeight);
+    }).observe(mxi);
     /* Lịch sử 1 phút cho biểu đồ của cửa sổ nổi (app: TelemetryTrail) — cùng số với thẻ bên cạnh, thêm GPU. */
     const trail = { cpu: charts.cpu.hist.slice(), gpu: [], bat: charts.bat.hist.slice() };
     { let v = 41; for (let i = 0; i < N; i++) { v = clamp(v + (Math.random() - 0.5) * 12, 26, 66); trail.gpu.push(v); } }
@@ -714,6 +743,9 @@
       mUsed.textContent = num(11 - st.ram, 1) + ' / ' + num(11, 1) + ' GB';
       mCpu.textContent = Math.round(st.cpu);
       mBat.textContent = num(st.bat, 1);
+      mGpu.textContent = Math.round(st.gpu);
+      mCt.textContent = num(st.ct, 1);
+      mGt.textContent = num(st.gt, 1);
       ringP.to(st.ram / 11, SPEC.m3Spatial);
       renderOv();
     }
@@ -732,7 +764,8 @@
       const dt = lastT ? Math.min(0.1, (t - lastT) / 1000) : 0; lastT = t;
       phase = Math.min(1, phase + dt);
       /* Đầu biểu đồ trượt dần về giá trị mới: đường chạy liền, không trượt-rồi-đứng. */
-      for (const k in charts) { const c = charts[k]; c.head.x += (c.head.t - c.head.x) * Math.min(1, dt * 6); drawChart(c); }
+      /* Ô của phần "Chi tiết" chỉ vẽ khi đang mở (đóng thì nằm khuất, vẽ là phí). */
+      for (const k in charts) { const c = charts[k]; c.head.x += (c.head.t - c.head.x) * Math.min(1, dt * 6); if (more || !c.more) drawChart(c); }
       wave = (wave + dt * 2.6) % (Math.PI * 2);
       drawRing();
       loopId = requestAnimationFrame(frame);
@@ -814,11 +847,115 @@
       now: 'now', hu: [['chat', 'Messages', 'Lan: Another round tonight?'], ['mail', 'Email', 'You have 3 new emails'], ['call', 'Phone', 'Incoming call · Minh']] },
   };
   const PLAY_IC = { focus: ['ac_unit', 'flight'], hz: ['sync', 'sync'], dnd: ['notifications_off', 'notifications_active'], wifi: ['wifi', 'wifi'] };
+  /* Nhật ký "Cryo vừa chạy": tiêu đề (h), lệnh shell (c) / lời gọi API hệ thống (a) đúng như mã app, dòng hệ thống trả về
+     (o), ghi chú (n), kết luận từ phép ĐỌC LẠI trạng thái (k) — app không tin mã thoát, nó đọc lại OS. Nguồn:
+     Focus = AppControlRepository.killCommands/lockdownCommands + bản rã đông; 60 Hz = Gpu3DRenderScaler.applyFpsCapOnDevice
+     (+ readPanelFrameRateHz) và SystemStateGuard.restoreSystem; Không làm phiền = CryoZenRule; Wi-Fi = WifiLowLatency
+     (LOCK_TAG "cryo-ll-game", WorkSource = uid game); AFK = OverlayMonitorService (một cửa sổ đen, screenBrightness 0).
+     uid và tên gói là ví dụ. Cố ý KHÔNG có số ping/FPS: app không đo ping, lợi của Wi-Fi tuỳ chip (memory
+     project_wifi_low_latency) — hiện "ping giảm" là hứa một con số không có thật. */
+  const PKG = 'com.zing.zalo', UID = 10231;
+  const PLAY_LOG = {
+    vi: {
+      start: [['h', '# Polar Run vừa mở → áp các thiết lập đang bật']],
+      focus: [
+        [['h', '# Focus Mode · mức L2 · 10 app nền'], ['c', 'am force-stop --user 0 ' + PKG], ['c', 'am set-inactive --user 0 ' + PKG + ' true'],
+          ['c', 'am set-standby-bucket ' + PKG + ' restricted'], ['c', 'cmd netpolicy add restrict-background-blacklist ' + UID],
+          ['c', 'cmd appops set ' + PKG + ' RUN_ANY_IN_BACKGROUND ignore'], ['n', '… cùng các lệnh đó cho 9 app còn lại'],
+          ['k', '✓ Đọc lại từng gói: 10/10 app đã bị giữ, 3 app ghim được chừa']],
+        [['h', '# Tắt Focus Mode → rã đông theo bản ghi'], ['c', 'cmd appops set ' + PKG + ' RUN_ANY_IN_BACKGROUND default'],
+          ['c', 'cmd netpolicy remove restrict-background-blacklist ' + UID], ['c', 'am set-standby-bucket ' + PKG + ' active'],
+          ['c', 'am set-inactive --user 0 ' + PKG + ' false'], ['n', '… 9 app còn lại'], ['k', '✓ Đã trả 10/10 app về như trước']],
+      ],
+      hz: [
+        [['h', '# Khóa tần số 60 Hz'], ['c', 'settings put system min_refresh_rate 60; settings put system peak_refresh_rate 60'],
+          ['c', "dumpsys display | grep -m1 -oE 'renderFrameRate [0-9.]+'"], ['o', 'renderFrameRate 60.0'], ['k', '✓ Màn hình đang chạy ở 60 Hz']],
+        [['h', '# Bỏ khóa → trả mốc đọc lúc vào game'], ['c', 'settings delete system min_refresh_rate; settings put system peak_refresh_rate 120'],
+          ['k', '✓ Về tần số quét như trước']],
+      ],
+      dnd: [
+        [['h', '# Không làm phiền · quy tắc riêng của Cryo'], ['a', 'NotificationManager.setAutomaticZenRuleState(Cryo · đang chơi, bật)'],
+          ['c', 'dumpsys notification | grep -m1 mZenMode'], ['o', 'mZenMode=ZEN_MODE_IMPORTANT_INTERRUPTIONS'],
+          ['k', '✓ Ẩn thông báo nổi; báo thức và cuộc gọi từ liên hệ gắn sao vẫn qua']],
+        [['h', '# Tắt Không làm phiền'], ['a', 'NotificationManager.setAutomaticZenRuleState(Cryo · đang chơi, tắt)'],
+          ['o', 'mZenMode=ZEN_MODE_OFF'], ['k', '✓ Thông báo hiện lại như thường']],
+      ],
+      wifi: [
+        [['h', '# Wi-Fi độ trễ thấp'], ['a', 'IWifiManager.acquireWifiLock(LOW_LATENCY, "cryo-ll-game", WorkSource{uid 10342 · Polar Run})'],
+          ['c', 'dumpsys wifi | grep -m1 cryo-ll-game'], ['o', 'WifiLock{cryo-ll-game type=4 …}'],
+          ['k', '✓ Android bật chế độ độ trễ thấp khi game ở trên màn hình'], ['n', 'Mức khác biệt tuỳ chip Wi-Fi và bộ phát']],
+        [['h', '# Tắt Wi-Fi độ trễ thấp'], ['a', 'IWifiManager.releaseWifiLock("cryo-ll-game")'], ['k', '✓ Wi-Fi về chế độ thường']],
+      ],
+      afk: [
+        [['h', '# Màn hình AFK'], ['a', 'WindowManager.addView(TYPE_APPLICATION_OVERLAY · nền đen · screenBrightness = 0)'],
+          ['k', '✓ Màn đen, tắt đèn nền; game vẫn chạy. Chạm hai lần để mở lại']],
+        [['a', 'WindowManager.removeView(màn hình AFK)'], ['k', '✓ Màn hình sáng lại']],
+      ],
+    },
+    en: {
+      start: [['h', '# Polar Run opened → applying the settings that are on']],
+      focus: [
+        [['h', '# Focus Mode · level L2 · 10 background apps'], ['c', 'am force-stop --user 0 ' + PKG], ['c', 'am set-inactive --user 0 ' + PKG + ' true'],
+          ['c', 'am set-standby-bucket ' + PKG + ' restricted'], ['c', 'cmd netpolicy add restrict-background-blacklist ' + UID],
+          ['c', 'cmd appops set ' + PKG + ' RUN_ANY_IN_BACKGROUND ignore'], ['n', '… the same commands for the other 9 apps'],
+          ['k', '✓ Read back per package: 10/10 apps held, 3 pinned apps skipped']],
+        [['h', '# Focus Mode off → unfreeze from the record'], ['c', 'cmd appops set ' + PKG + ' RUN_ANY_IN_BACKGROUND default'],
+          ['c', 'cmd netpolicy remove restrict-background-blacklist ' + UID], ['c', 'am set-standby-bucket ' + PKG + ' active'],
+          ['c', 'am set-inactive --user 0 ' + PKG + ' false'], ['n', '… the other 9 apps'], ['k', '✓ 10/10 apps back as they were']],
+      ],
+      hz: [
+        [['h', '# 60 Hz refresh lock'], ['c', 'settings put system min_refresh_rate 60; settings put system peak_refresh_rate 60'],
+          ['c', "dumpsys display | grep -m1 -oE 'renderFrameRate [0-9.]+'"], ['o', 'renderFrameRate 60.0'], ['k', '✓ The display is running at 60 Hz']],
+        [['h', '# Lock off → restore the values read on game start'], ['c', 'settings delete system min_refresh_rate; settings put system peak_refresh_rate 120'],
+          ['k', '✓ Refresh rate back as it was']],
+      ],
+      dnd: [
+        [['h', "# Do Not Disturb · Cryo's own rule"], ['a', 'NotificationManager.setAutomaticZenRuleState(Cryo · playing, on)'],
+          ['c', 'dumpsys notification | grep -m1 mZenMode'], ['o', 'mZenMode=ZEN_MODE_IMPORTANT_INTERRUPTIONS'],
+          ['k', '✓ Pop-up notifications hidden; alarms and calls from starred contacts still ring']],
+        [['h', '# Do Not Disturb off'], ['a', 'NotificationManager.setAutomaticZenRuleState(Cryo · playing, off)'],
+          ['o', 'mZenMode=ZEN_MODE_OFF'], ['k', '✓ Notifications show as usual']],
+      ],
+      wifi: [
+        [['h', '# Low-latency Wi-Fi'], ['a', 'IWifiManager.acquireWifiLock(LOW_LATENCY, "cryo-ll-game", WorkSource{uid 10342 · Polar Run})'],
+          ['c', 'dumpsys wifi | grep -m1 cryo-ll-game'], ['o', 'WifiLock{cryo-ll-game type=4 …}'],
+          ['k', "✓ Android turns on low-latency mode while the game is on screen"], ['n', 'How much it helps depends on the Wi-Fi chip and router']],
+        [['h', '# Low-latency Wi-Fi off'], ['a', 'IWifiManager.releaseWifiLock("cryo-ll-game")'], ['k', '✓ Wi-Fi back to normal mode']],
+      ],
+      afk: [
+        [['h', '# AFK screen'], ['a', 'WindowManager.addView(TYPE_APPLICATION_OVERLAY · black · screenBrightness = 0)'],
+          ['k', '✓ Screen black, backlight off; the game keeps running. Double-tap to come back']],
+        [['a', 'WindowManager.removeView(AFK screen)'], ['k', '✓ Screen back on']],
+      ],
+    },
+  };
   function playDemo(sc) {
     const scr = $('.play-scr', sc), afkSw = $('[data-sw="afk"]', sc), dndSw = $('[data-sw="dnd"]', sc);
     const game = liveCanvas(scr, () => !scr.classList.contains('afk-on'));
     const afk = afkLayer(scr, () => { if (afkSw.getAttribute('aria-checked') === 'true') setSwitch(afkSw, false); });
-    afkSw.addEventListener('sw', (e) => { if (e.detail) afk.show(); else afk.hide(); });
+    /* ---- Nhật ký lệnh: các dòng xếp hàng, gõ ra lần lượt (lệnh nhanh, dòng kết luận chờ thêm một nhịp như đang đọc lại). */
+    const logBox = $('.pl-log', sc), logList = $('.pl-log-b', sc);
+    const queue = [];
+    let logT = 0;
+    const pump = () => {
+      logT = 0;
+      const it = queue.shift();
+      if (!it) { logBox.classList.remove('busy'); return; }
+      const li = d.createElement('li'); li.className = it[0] + (reduced ? '' : ' in'); li.textContent = it[1];
+      logList.appendChild(li);
+      while (logList.children.length > 40) logList.firstChild.remove();
+      logList.scrollTop = logList.scrollHeight;
+      const next = queue[0];
+      logT = setTimeout(pump, reduced ? 0 : next && next[0] === 'k' ? 620 : next && next[0] === 'h' ? 380 : 230);
+    };
+    const log = (lines) => {
+      if (!lines) return;
+      queue.push(...lines); logBox.classList.add('busy');
+      if (!logT) logT = setTimeout(pump, reduced ? 0 : 120);
+    };
+    const logSw = (kind, on) => { const L = PLAY_LOG[lang()][kind]; if (L) log(L[on ? 0 : 1]); };
+    let logged = false;
+    afkSw.addEventListener('sw', (e) => { if (e.detail) afk.show(); else afk.hide(); logSw('afk', e.detail); });
     const mkEl = (cls) => { const e = d.createElement('div'); e.className = cls; e.setAttribute('aria-hidden', 'true'); scr.appendChild(e); return e; };
     const note = mkEl('pl-note'), frost = mkEl('frost'), hu = mkEl('hu');
     let running = false, noteT = 0, huT = 0, huHide = 0, huIdx = 0;
@@ -850,39 +987,120 @@
         const ic = $('.a-ic', sw.closest('.a-row'));
         if (ic && !reduced) { ic.classList.remove('pop'); void ic.offsetWidth; ic.classList.add('pop'); }
         say(kind, e.detail);
+        logSw(kind, e.detail);
         if (kind === 'focus' && e.detail && !reduced) { frost.classList.remove('go'); void frost.offsetWidth; frost.classList.add('go'); }
         if (kind === 'dnd') { if (e.detail) heads(false); schedule(); }
       });
     });
     refreshers.push(() => { note.classList.remove('on'); hu.classList.remove('on'); });
+    /* Lần đầu màn này hiện: như lúc game vừa mở — chạy lần lượt các công tắc đang bật. Đổi ngôn ngữ thì gõ lại từ đầu. */
+    const replay = () => {
+      clearTimeout(logT); logT = 0; queue.length = 0; logList.textContent = '';
+      log(PLAY_LOG[lang()].start);
+      ['focus', 'hz', 'dnd', 'wifi'].forEach((k) => { const s = $('[data-sw="' + k + '"]', sc); if (s && s.getAttribute('aria-checked') === 'true') logSw(k, true); });
+    };
+    refreshers.push(() => { if (logged) replay(); });
     return {
-      start() { running = true; game.run(true); schedule(); },
-      stop() { running = false; game.run(false); clearInterval(huT); huT = 0; heads(false); },
+      start() { running = true; game.run(true); schedule(); if (!logged) { logged = true; replay(); } else if (queue.length && !logT) logT = setTimeout(pump, 200); },
+      stop() { running = false; game.run(false); clearInterval(huT); huT = 0; heads(false); clearTimeout(logT); logT = 0; },
     };
   }
 
   /* ---------- Mô phỏng 5: báo cáo ---------- */
   function repDemo(sc) {
     const scr = $('.comp-rep', sc), sheet = $('.sheet', sc), body = $('.sheet-body', sc);
-    let t = 0;
+    let t = 0, c = 0;
+    /* Thanh cuộn mảnh của riêng bảng (thanh cuộn hệ thống đã ẩn): cho thấy bảng còn dài, đang ở đâu. */
+    const bar = d.createElement('i'); bar.className = 'sheet-bar'; bar.setAttribute('aria-hidden', 'true');
+    const thumb = d.createElement('i'); bar.appendChild(thumb); sheet.appendChild(bar);
+    let edge = '', dim = null;
+    /* Kích thước đo một lần mỗi lần mở / đổi cỡ: lúc tự cuộn, mỗi khung chỉ còn đọc scrollTop và ghi transform. */
+    const measure = () => {
+      const max = body.scrollHeight - body.clientHeight, bh = bar.clientHeight;
+      if (!bh) return null;
+      const h = Math.max(18, bh * body.clientHeight / Math.max(1, body.scrollHeight));
+      thumb.style.height = h.toFixed(1) + 'px';
+      return (dim = { max, h, room: bh - h });
+    };
+    addEventListener('resize', () => { dim = null; }, { passive: true });
+    const paint = () => {
+      const D = dim || measure();
+      if (!D) return;
+      const { max, room } = D, y = body.scrollTop;
+      thumb.style.transform = 'translateY(' + (max > 0 ? room * clamp(y / max, 0, 1) : 0).toFixed(1) + 'px)';
+      /* Mờ mép trên khi đã cuộn xuống, mép dưới khi chưa tới cuối — đổi lớp chỉ khi đổi trạng thái. */
+      const e = (y > 4 ? 't' : '') + (y < max - 4 ? 'b' : '');
+      if (e !== edge) { edge = e; body.classList.toggle('fade-t', e.includes('t')); body.classList.toggle('fade-b', e.includes('b')); }
+    };
+    body.addEventListener('scroll', paint, { passive: true });
+    /* Tự cuộn chậm xuống cuối rồi lên đầu (user #302: bảng "trông không giống vuốt được"). Người xem chạm, lăn chuột, rê
+       chuột vào bảng hay bấm phím là dừng ngay; thôi đụng vào 5 s thì đi tiếp từ chỗ đang đứng. Chỉ chạy khi màn này đang
+       hiện (start/stop) VÀ bảng còn nằm trong khung nhìn — máy tính: chương cuối vẫn "đang hiện" khi đã cuộn xuống cuối
+       trang (đo #302: chân trang tốn 239 ms/giây chỉ vì bảng khuất vẫn tự cuộn). Nghỉ ở hai đầu bằng hẹn giờ, không giữ rAF. */
+    const SPEED = 42;
+    let raf = 0, dir = 1, leg = null, holdT = 0, touring = false, inside = false, inView = true, pokedAt = -1e9;
+    const ease = (p) => p * p * (3 - 2 * p);
+    if ('IntersectionObserver' in window) new IntersectionObserver((es) => es.forEach((e) => {
+      inView = e.isIntersecting;
+      if (inView && touring && !raf) hold(Math.max(500, pokedAt + 5000 - performance.now()));
+    })).observe(sheet);
+    const step = (now) => {
+      raf = 0;
+      if (!touring || !inView) return;
+      const D = dim || measure();
+      if (!D) { hold(600); return; }
+      if (D.max < 8) return;
+      const max = D.max;
+      if (!leg) {
+        const from = body.scrollTop, to = dir > 0 ? max : 0;
+        leg = { from, to, t0: now, T: Math.max(700, Math.abs(to - from) / SPEED * 1000) };
+      }
+      const p = clamp((now - leg.t0) / leg.T, 0, 1);
+      body.scrollTop = lerp(leg.from, leg.to, ease(p));
+      if (p >= 1) { dir = -dir; leg = null; hold(dir < 0 ? 1600 : 2600); return; }
+      raf = requestAnimationFrame(step);
+    };
+    const hold = (ms) => {
+      cancelAnimationFrame(raf); raf = 0; leg = null; clearTimeout(holdT);
+      holdT = setTimeout(() => { if (touring && !inside && inView && !raf) raf = requestAnimationFrame(step); }, ms);
+    };
+    const tour = (on) => {
+      touring = on && !reduced;
+      if (!touring) { cancelAnimationFrame(raf); raf = 0; leg = null; clearTimeout(holdT); return; }
+      dir = 1; hold(1300);
+    };
+    const poke = () => { pokedAt = performance.now(); if (touring) hold(5000); };
+    ['wheel', 'pointerdown', 'touchstart', 'keydown'].forEach((ev) => body.addEventListener(ev, poke, { passive: true }));
+    sheet.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') { inside = true; poke(); } });
+    sheet.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') { inside = false; if (touring) hold(1400); } });
     /* Bảng báo cáo cuộn bên trong (như app); mỗi lần mở lại bắt đầu từ đầu. */
-    const open = () => { if (body) body.scrollTop = 0; scr.classList.add('open'); };
-    const closeNow = () => { sheet.style.transition = 'none'; scr.classList.remove('open'); void sheet.offsetHeight; sheet.style.transition = ''; };
-    $('.rp-close', sc).addEventListener('click', () => scr.classList.remove('open'));
+    const open = () => { body.scrollTop = 0; dim = null; paint(); scr.classList.add('open'); tour(true); };
+    const close = () => { tour(false); scr.classList.remove('open'); };
+    const closeNow = () => { tour(false); sheet.style.transition = 'none'; scr.classList.remove('open'); void sheet.offsetHeight; sheet.style.transition = ''; };
+    $('.rp-close', sc).addEventListener('click', close);
     /* "Chơi lại": app đóng bảng rồi mở game qua Cryo — ở đây đóng bảng, lộ lại màn game. */
     const play = $('.rp-play', sc);
-    if (play) play.addEventListener('click', () => scr.classList.remove('open'));
+    if (play) play.addEventListener('click', close);
     $('.rp-again', sc).addEventListener('click', () => {
-      if (scr.classList.contains('open')) { scr.classList.remove('open'); clearTimeout(t); t = setTimeout(open, 380); } else open();
+      if (scr.classList.contains('open')) { close(); clearTimeout(t); t = setTimeout(open, 380); } else open();
     });
+    /* Màn này rời đi thì bảng đóng SAU khi khối đã bay khỏi khung (exit ~420 ms; điện thoại: đã cuộn khuất). Quay lại thì chỉ
+       mở khi đang đóng — bản cũ đóng phắt bảng đang mở rồi mở lại ngay lúc màn vừa hiện: nháy hai lần (user #302). */
     return {
-      start() { if (reduced) { open(); return; } closeNow(); clearTimeout(t); t = setTimeout(open, 420); },
-      stop() { clearTimeout(t); },
+      start() {
+        clearTimeout(c);
+        if (scr.classList.contains('open')) { tour(true); return; }
+        if (reduced) { open(); return; }
+        clearTimeout(t); t = setTimeout(open, 420);
+      },
+      stop() { clearTimeout(t); tour(false); clearTimeout(c); c = setTimeout(closeNow, 480); },
     };
   }
 
   /* ---------- Câu chuyện: sân khấu dính (máy tính) hoặc từng màn ngay dưới chữ (điện thoại) ---------- */
   const DEMOS = { res: resDemo, freeze: fzDemo, mon: monDemo, play: playDemo, rep: repDemo };
+  /* Mô phỏng nào đổi chiều cao (thẻ xổ ra) gọi refit(màn, phần cao thêm) để sân khấu máy tính co lại cho vừa. */
+  let refit = () => {};
   const stage = $('.stage'), deskMQ = matchMedia('(min-width: 1024px)');
   const screens = {};
   $$('.chap').forEach((c) => {
@@ -896,13 +1114,16 @@
   const FROM = { up: { y: 70, s: 0.94 }, left: { x: -150, r: -5, s: 0.96 }, right: { x: 160, r: 4, s: 0.94 }, zoom: { s: 0.84, y: 30 }, fade: { y: 16 } };
   const OUT = { up: { y: -50, s: 0.95 }, left: { x: -110, r: -3, s: 0.96 }, right: { x: 120, r: 3, s: 0.95 }, zoom: { s: 1.05, y: -20 }, fade: { y: -12 } };
 
-  function fitScreen(sc) {
+  /* offsetWidth/Height không tính transform nên đo được mà không phải gỡ scale cũ. extra = phần cao sắp thêm (thẻ đang
+     xổ ra) để co ngay tới cỡ cuối; anim = co mượt (.fit-anim) thay vì đặt thẳng. */
+  function fitScreen(sc, extra, anim) {
     if (!deskMQ.matches) { sc.fit.style.transform = ''; return; }
-    sc.fit.style.transform = '';
-    const H = stage.clientHeight, W = stage.clientWidth, h = sc.fit.offsetHeight, w = sc.fit.offsetWidth;
+    const H = stage.clientHeight, W = stage.clientWidth, h = sc.fit.offsetHeight + (extra || 0), w = sc.fit.offsetWidth;
     const s = Math.min(1, H / Math.max(1, h), W / Math.max(1, w));
-    if (s < 0.999) sc.fit.style.transform = 'scale(' + s.toFixed(4) + ')';
+    sc.fit.classList.toggle('fit-anim', !!anim && !reduced);
+    sc.fit.style.transform = s < 0.999 ? 'scale(' + s.toFixed(4) + ')' : '';
   }
+  refit = (el, extra) => { const sc = Object.values(screens).find((x) => x.el === el); if (sc && active === sc.key) fitScreen(sc, extra, true); };
   function enter(sc, delay) {
     sc.timers.forEach(clearTimeout); sc.timers = [];
     sc.el.classList.add('on');
@@ -931,15 +1152,18 @@
     active = key;
     /* Chương đang xem sáng lên, các chương khác lùi lại; ánh nền sau sân khấu đổi tông theo chương. */
     Object.values(screens).forEach((sc) => sc.chap.classList.toggle('chap-on', sc.key === key));
+    pulseMark(screens[key]);
     stage.dataset.tone = key;
     if (prev) exit(prev);
     enter(screens[key], prev ? 230 : 0);
   }
 
-  let bandIO = null, stageIO = null, slotIO = null;
+  /* Huy hiệu hình khối trên tên chương đổi dáng một nhịp khi chương sáng lên (shapes() bên dưới gắn cryoPulse). */
+  const pulseMark = (sc) => { const m = sc && $('.cm-shape', sc.chap); if (m && m.cryoPulse && !reduced) m.cryoPulse(); };
+  let bandIO = null, stageIO = null, slotIO = null, chapIO = null;
   function place() {
     const desk = deskMQ.matches;
-    [bandIO, stageIO, slotIO].forEach((o) => o && o.disconnect());
+    [bandIO, stageIO, slotIO, chapIO].forEach((o) => o && o.disconnect());
     Object.values(screens).forEach((sc) => {
       sc.timers.forEach(clearTimeout); sc.timers = []; sc.demo.stop();
       sc.el.classList.remove('on'); sc.chap.classList.remove('chap-on');
@@ -950,7 +1174,15 @@
     });
     active = null;
     if (desk) {
-      bandIO = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) activate(e.target.dataset.screen); }), { rootMargin: '-45% 0px -45% 0px' });
+      /* Mỗi lần dải giữa màn đổi (chương vào HAY ra), chọn lại chương đang nằm ngay giữa màn. Bản cũ chỉ bật chương vừa
+         VÀO dải: ranh hai chương nằm trong dải thì chương dưới vào trước, rồi vuốt ngược lên chương trên chưa từng rời dải
+         nên không có sự kiện nào → nó kẹt mờ (user #302: "vuốt lên lại để xem thì nó vẫn bị mờ"). */
+      const pick = () => {
+        const mid = innerHeight / 2;
+        const hit = Object.values(screens).find((sc) => { const r = sc.chap.getBoundingClientRect(); return r.top <= mid && r.bottom > mid; });
+        if (hit) activate(hit.key);
+      };
+      bandIO = new IntersectionObserver(pick, { rootMargin: '-49% 0px -49% 0px' });
       Object.values(screens).forEach((sc) => bandIO.observe(sc.chap));
       stageIO = new IntersectionObserver((es) => es.forEach((e) => {
         if (e.isIntersecting && !active) {
@@ -968,10 +1200,21 @@
         } else sc.demo.stop();
       }), { threshold: 0.22 });
       Object.values(screens).forEach((sc) => { sc.el.dataset.key = sc.key; slotIO.observe(sc.el); });
+      /* Điện thoại không có sân khấu dính: chương sáng lên (số nền + huy hiệu) khi phần chữ của nó tới giữa màn hình. */
+      chapIO = new IntersectionObserver((es) => es.forEach((e) => {
+        const sc = screens[e.target.closest('.chap').dataset.screen];
+        /* Sáng rồi thì giữ: điện thoại không làm mờ chương cũ, và biến hình trục chữ (số nền, tên chương) chỉ chạy lần đầu —
+           cuộn qua lại không dựng lại phông cỡ lớn mỗi lượt. */
+        if (!e.isIntersecting || sc.chap.classList.contains('chap-on')) return;
+        pulseMark(sc); sc.chap.classList.add('chap-on');
+      }), { rootMargin: '-30% 0px -30% 0px' });
+      Object.values(screens).forEach((sc) => chapIO.observe($('.chap-in', sc.chap)));
     }
   }
   place();
   deskMQ.addEventListener('change', place);
+  /* Cả phần câu chuyện khuất khỏi màn → quầng màu sau chương thôi trôi (site.css .story.off-view). */
+  if ('IntersectionObserver' in window) new IntersectionObserver((es) => es.forEach((e) => e.target.classList.toggle('off-view', !e.isIntersecting))).observe($('.story'));
   let rT = 0;
   addEventListener('resize', () => { clearTimeout(rT); rT = setTimeout(() => { if (active) fitScreen(screens[active]); }, 120); });
   refreshers.push(() => { if (active) fitScreen(screens[active]); });

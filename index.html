@@ -42,8 +42,8 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wdth,wght,ROND@6..144,75..125,300..800,0..100&display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&icon_names=ac_unit,account_balance,add,alarm,all_inclusive,battery_charging_full,battery_full,bedtime,block,bolt,calendar_month,call,chat,check,chevron_right,close,dashboard,expand_more,flight,forum,group,keep,layers,light_mode,lock,mail,map,memory,monitoring,music_note,newspaper,notifications_active,notifications_off,open_in_new,photo,picture_in_picture,play_arrow,restart_alt,settings,shopping_bag,signal_cellular_alt,smart_display,speed,sports_esports,sync,thermometer,thermostat,touch_app,translate,tune,undo,verified_user,wifi&display=block">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:slnt,wdth,wght,ROND@-10..0,25..151,100..1000,0..100&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&icon_names=ac_unit,account_balance,add,alarm,all_inclusive,battery_charging_full,battery_full,bedtime,block,bolt,calendar_month,call,chat,check,chevron_right,close,dashboard,developer_board,expand_more,flight,forum,group,keep,layers,light_mode,lock,mail,map,memory,monitoring,music_note,newspaper,notifications_active,notifications_off,open_in_new,photo,picture_in_picture,play_arrow,restart_alt,settings,shopping_bag,signal_cellular_alt,smart_display,speed,sports_esports,sync,thermometer,thermostat,touch_app,translate,tune,undo,verified_user,wifi&display=block">
 <link rel="stylesheet" href="assets/site.css">
 </head>
 <body>
@@ -88,8 +88,8 @@
   </div>
   <div class="hero-copy">
     <h1 id="hero-title" class="hero-h">
-      <span lang="vi"><span class="hl">Vào game là bật.</span> <span class="hl">Thoát game là trả lại.</span></span>
-      <span lang="en"><span class="hl">On when you play.</span> <span class="hl">Undone when you leave.</span></span>
+      <span lang="vi"><span class="hl"><span class="x-c" data-x="c">Vào game</span> <span class="x-t" data-x="t">là</span> <span class="x-w" data-x="w">bật.</span></span> <span class="hl">Thoát game <span class="x-t" data-x="t">là</span> <span class="x-c" data-x="c">trả lại.</span></span></span>
+      <span lang="en"><span class="hl"><span class="x-c" data-x="c">On</span> <span class="x-t" data-x="t">when you</span> <span class="x-w" data-x="w">play.</span></span> <span class="hl">Undone <span class="x-t" data-x="t">when you</span> <span class="x-c" data-x="c">leave.</span></span></span>
     </h1>
     <p class="lead hero-in" lang="vi">Cryo chỉnh những thiết lập Android bình thường phải dùng lệnh ADB mới đổi được: độ phân giải kết xuất của game, app nào được chạy ngầm, tần số quét, Không làm phiền. Chúng bật trong lúc game bạn chọn đang mở, và về như cũ khi bạn thoát.</p>
     <p class="lead hero-in" lang="en">Cryo changes Android settings that normally take an ADB command: a game's render resolution, which apps may run in the background, refresh rate, Do Not Disturb. They switch on while a game you picked is open, and go back the way they were when you leave.</p>
@@ -181,7 +181,7 @@
 <!-- ============ Câu chuyện: giao diện dựng lại, có thể chạm ============ -->
 <section class="story" id="features" aria-labelledby="story-title" data-amb="p">
   <div class="wrap story-intro">
-    <h2 id="story-title" class="h2"><span lang="vi">Thử ngay trên trang này.</span><span lang="en">Try it right here.</span></h2>
+    <h2 id="story-title" class="h2"><span lang="vi">Thử <span class="x-w" data-x="w">ngay</span> trên trang này.</span><span lang="en">Try it <span class="x-w" data-x="w">right here.</span></span></h2>
     <p class="lead" lang="vi">Các khối bên dưới là giao diện thật của Cryo, dựng lại bằng mã. Kéo, bấm, bật tắt thử. Đây chỉ là mô phỏng, không đổi gì trên máy bạn.</p>
     <p class="lead" lang="en">The panels below are Cryo's real interface, rebuilt in code. Drag, tap and toggle them. It's a simulation and changes nothing on your device.</p>
   </div>
@@ -191,11 +191,13 @@
 
       <!-- 1. Độ phân giải -->
       <article class="chap" data-screen="res">
+        <span class="chap-bg" aria-hidden="true">01</span>
         <div class="chap-in">
-          <h3 class="h3"><span lang="vi">Độ phân giải game</span><span lang="en">Game resolution</span></h3>
+          <div class="cmk" aria-hidden="true"><span class="shape cm-shape" data-shape="1"><svg viewBox="0 0 100 100"><path/></svg><span class="ms">layers</span></span><span class="cm-n">01<i> / 05</i></span></div>
+          <h3 class="h3"><span lang="vi">Độ phân giải <span class="x-w" data-x="w">game</span></span><span lang="en">Game <span class="x-w" data-x="w">resolution</span></span></h3>
           <p lang="vi">Cho game vẽ ít điểm ảnh hơn mỗi khung hình rồi phóng đầy màn hình. GPU bớt việc; đổi lại hình mềm hơn một chút. Khác biệt bao nhiêu là tuỳ game và tuỳ máy.</p>
           <p lang="en">Let a game draw fewer pixels each frame, then scale it up to fill the screen. The GPU has less to do; in return the picture gets a little softer. How much that changes depends on the game and the phone.</p>
-          <ul class="facts">
+          <ul class="cfacts">
             <li><span class="ms" aria-hidden="true">group</span><b><span lang="vi">Dành cho</span><span lang="en">Good for</span></b><span><span lang="vi">Game đồ hoạ nặng, máy chạy GPU hết sức hay nóng lên sau một lúc chơi.</span><span lang="en">Graphics-heavy games, and phones that run the GPU flat out or warm up after a while.</span></span></li>
             <li><span class="ms" aria-hidden="true">tune</span><b><span lang="vi">Cách dùng</span><span lang="en">How</span></b><span><span lang="vi">Chỉ áp cho game bạn chọn, mức 30–100%. Nên bắt đầu ở 70%, đổi xong thì mở lại game.</span><span lang="en">Only for the games you pick, 30–100%. Start at 70%, then reopen the game after a change.</span></span></li>
             <li><span class="ms" aria-hidden="true">verified_user</span><b><span lang="vi">Cần</span><span lang="en">Needs</span></b><span><span lang="vi">Shizuku. Bộ đệm game hợp nhất từ Android 13.</span><span lang="en">Shizuku. Game buffer works best on Android 13 and newer.</span></span></li>
@@ -272,11 +274,13 @@
 
       <!-- 2. Đóng băng -->
       <article class="chap" data-screen="freeze">
+        <span class="chap-bg" aria-hidden="true">02</span>
         <div class="chap-in">
-          <h3 class="h3"><span lang="vi">Đóng băng app chạy ngầm</span><span lang="en">Freeze background apps</span></h3>
+          <div class="cmk" aria-hidden="true"><span class="shape cm-shape" data-shape="2"><svg viewBox="0 0 100 100"><path/></svg><span class="ms">ac_unit</span></span><span class="cm-n">02<i> / 05</i></span></div>
+          <h3 class="h3"><span lang="vi"><span class="x-c" data-x="c">Đóng băng</span> app chạy ngầm</span><span lang="en"><span class="x-c" data-x="c">Freeze</span> background apps</span></h3>
           <p lang="vi">Vào game là các app nền bạn chưa ghim bị đóng băng, thôi chạy ngầm trong lúc bạn chơi. Thoát game là Cryo tự rã đông tất cả, bạn không phải làm gì.</p>
           <p lang="en">When your game opens, background apps you haven't pinned are frozen and stop working in the background while you play. Leave the game and Cryo unfreezes them all, nothing for you to do.</p>
-          <ul class="facts">
+          <ul class="cfacts">
             <li><span class="ms" aria-hidden="true">group</span><b><span lang="vi">Dành cho</span><span lang="en">Good for</span></b><span><span lang="vi">Máy cài nhiều app hay chạy ngầm (mạng xã hội, mua sắm, đồng bộ ảnh).</span><span lang="en">Phones with many apps that keep working in the background (social, shopping, photo sync).</span></span></li>
             <li><span class="ms" aria-hidden="true">tune</span><b><span lang="vi">Cách dùng</span><span lang="en">How</span></b><span><span lang="vi">Bật Focus Mode, chọn mức từ Nhẹ (chặn chạy ngầm) tới Tối đa (tắt hẳn app). Ghim app cần giữ, như nhạc, VPN, tin nhắn.</span><span lang="en">Turn on Focus Mode and pick a level from Light (no background work) to Extreme (app fully off). Pin what must keep running, like music, VPN, messages.</span></span></li>
             <li><span class="ms" aria-hidden="true">verified_user</span><b><span lang="vi">Cần</span><span lang="en">Needs</span></b><span><span lang="vi">Shizuku.</span><span lang="en">Shizuku.</span></span></li>
@@ -354,11 +358,13 @@
 
       <!-- 3. Cửa sổ theo dõi -->
       <article class="chap" data-screen="mon">
+        <span class="chap-bg" aria-hidden="true">03</span>
         <div class="chap-in">
-          <h3 class="h3"><span lang="vi">Cửa sổ theo dõi</span><span lang="en">Floating monitor</span></h3>
+          <div class="cmk" aria-hidden="true"><span class="shape cm-shape" data-shape="3"><svg viewBox="0 0 100 100"><path/></svg><span class="ms">picture_in_picture</span></span><span class="cm-n">03<i> / 05</i></span></div>
+          <h3 class="h3"><span lang="vi">Cửa sổ <span class="x-t" data-x="t">theo dõi</span></span><span lang="en">Floating <span class="x-t" data-x="t">monitor</span></span></h3>
           <p lang="vi">Một ô nhỏ nổi trên game cho bạn thấy máy đang làm việc thế nào: FPS của game, tải CPU và GPU, RAM, nhiệt độ. Chạm vào là mở bảng đầy đủ với biểu đồ một phút gần nhất.</p>
           <p lang="en">A small window over your game that shows how hard the phone is working: the game's FPS, CPU and GPU load, RAM and temperatures. Tap it for the full panel with a chart of the last minute.</p>
-          <ul class="facts">
+          <ul class="cfacts">
             <li><span class="ms" aria-hidden="true">group</span><b><span lang="vi">Dành cho</span><span lang="en">Good for</span></b><span><span lang="vi">Muốn biết game nặng tới đâu, máy nóng lúc nào, hay mức độ phân giải nào hợp.</span><span lang="en">Seeing how heavy a game is, when the phone heats up, or which resolution suits it.</span></span></li>
             <li><span class="ms" aria-hidden="true">tune</span><b><span lang="vi">Cách dùng</span><span lang="en">How</span></b><span><span lang="vi">Kéo đi đâu cũng được, chọn chỉ số hiện lúc thu gọn. Chỉ số máy không cho đọc thì tự ẩn, không hiện số bịa.</span><span lang="en">Drag it anywhere and choose what the small window shows. Values a phone does not expose are hidden, never guessed.</span></span></li>
             <li><span class="ms" aria-hidden="true">verified_user</span><b><span lang="vi">Cần</span><span lang="en">Needs</span></b><span><span lang="vi">Quyền hiện trên app khác. FPS, tải CPU và GPU cần Shizuku.</span><span lang="en">Permission to draw over other apps. FPS, CPU and GPU load need Shizuku.</span></span></li>
@@ -395,6 +401,7 @@
               </div>
               <div class="a-wrap a-wrap-mon" data-b="left">
                 <div class="a-card mon-card">
+                  <div class="mon-hd"><b><span lang="vi">Thiết bị của bạn</span><span lang="en">Your device</span></b><button type="button" class="mon-tog" aria-expanded="false"><span lang="vi">Chi tiết</span><span lang="en">Details</span></button></div>
                   <div class="mon-ram">
                     <div class="ring-box">
                       <svg viewBox="0 0 120 120" class="ring" aria-hidden="true"><path class="ring-bg"/><path class="ring-fg"/></svg>
@@ -402,7 +409,7 @@
                     </div>
                     <span class="mon-used"><span lang="vi">RAM đã dùng</span><span lang="en">RAM used</span><br><span class="m-used">5,4 / 11,0 GB</span></span>
                   </div>
-                  <div class="mon-tile" data-tile="cpu">
+                  <div class="mon-tile" data-tile="cpu" data-shz>
                     <span class="mt-h"><span class="ms">memory</span><span lang="vi">Tải CPU</span><span lang="en">CPU load</span></span>
                     <span class="mt-v"><b class="m-cpu">18</b><small>%</small></span>
                     <div class="chart" data-max="100" data-min="0"><svg preserveAspectRatio="none" viewBox="0 0 100 40"><path class="ch-area"/><path class="ch-line"/></svg><i class="ch-dot"></i><span class="ch-y"><span>100</span><span>0</span></span></div>
@@ -414,6 +421,34 @@
                     <span class="mt-v"><b class="m-bat">35,9</b><small>°C</small></span>
                     <div class="chart" data-max="50" data-min="20"><svg preserveAspectRatio="none" viewBox="0 0 100 40"><path class="ch-area"/><path class="ch-line"/></svg><i class="ch-dot"></i><span class="ch-y"><span>50</span><span>20</span></span></div>
                     <span class="mt-x"><span lang="vi">1 phút trước</span><span lang="en">1 min ago</span><span lang="vi">bây giờ</span><span lang="en">now</span></span>
+                  </div>
+                  <!-- "Chi tiết" như app (DeviceTelemetryPanel): tải GPU, nhiệt CPU, nhiệt GPU + ghi chú cảm biến. Ô "Giao diện Cryo"
+                       (FPS khung vẽ của chính app) cố ý KHÔNG dựng: trang không hiện số FPS (lần gửi Play 74–77 bị từ chối vì số FPS). -->
+                  <div class="mon-x" id="mon-x">
+                    <div class="mon-xi">
+                      <div class="mon-tile" data-tile="gpu" data-shz>
+                        <span class="mt-h"><span class="ms">developer_board</span><span lang="vi">Tải GPU</span><span lang="en">GPU load</span></span>
+                        <span class="mt-v"><b class="m-gpu">41</b><small>%</small></span>
+                        <div class="chart" data-max="100" data-min="0"><svg preserveAspectRatio="none" viewBox="0 0 100 40"><path class="ch-area"/><path class="ch-line"/></svg><i class="ch-dot"></i><span class="ch-y"><span>100</span><span>0</span></span></div>
+                        <span class="mt-x"><span lang="vi">1 phút trước</span><span lang="en">1 min ago</span><span lang="vi">bây giờ</span><span lang="en">now</span></span>
+                        <span class="mt-need"><span lang="vi">Cần Shizuku</span><span lang="en">Needs Shizuku</span></span>
+                      </div>
+                      <div class="mon-tile" data-tile="ct" data-shz>
+                        <span class="mt-h"><span class="ms">thermometer</span><span lang="vi">Nhiệt CPU</span><span lang="en">CPU temp</span></span>
+                        <span class="mt-v"><b class="m-ct">46,0</b><small>°C</small></span>
+                        <div class="chart" data-max="85" data-min="25"><svg preserveAspectRatio="none" viewBox="0 0 100 40"><path class="ch-area"/><path class="ch-line"/></svg><i class="ch-dot"></i><span class="ch-y"><span>85</span><span>25</span></span></div>
+                        <span class="mt-x"><span lang="vi">1 phút trước</span><span lang="en">1 min ago</span><span lang="vi">bây giờ</span><span lang="en">now</span></span>
+                        <span class="mt-need"><span lang="vi">Cần Shizuku</span><span lang="en">Needs Shizuku</span></span>
+                      </div>
+                      <div class="mon-tile mt-wide" data-tile="gt" data-shz>
+                        <span class="mt-h"><span class="ms">developer_board</span><span lang="vi">Nhiệt GPU</span><span lang="en">GPU temp</span></span>
+                        <span class="mt-v"><b class="m-gt">43,0</b><small>°C</small></span>
+                        <div class="chart" data-max="85" data-min="25"><svg preserveAspectRatio="none" viewBox="0 0 100 40"><path class="ch-area"/><path class="ch-line"/></svg><i class="ch-dot"></i><span class="ch-y"><span>85</span><span>25</span></span></div>
+                        <span class="mt-x"><span lang="vi">1 phút trước</span><span lang="en">1 min ago</span><span lang="vi">bây giờ</span><span lang="en">now</span></span>
+                        <span class="mt-need"><span lang="vi">Cần Shizuku</span><span lang="en">Needs Shizuku</span></span>
+                      </div>
+                      <p class="mon-note"><span lang="vi">Chỉ hiện cảm biến thiết bị hỗ trợ.</span><span lang="en">Only available sensors are shown.</span></p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -431,11 +466,13 @@
 
       <!-- 4. Trong lúc chơi -->
       <article class="chap" data-screen="play">
+        <span class="chap-bg" aria-hidden="true">04</span>
         <div class="chap-in">
-          <h3 class="h3"><span lang="vi">Trong lúc chơi</span><span lang="en">While you play</span></h3>
+          <div class="cmk" aria-hidden="true"><span class="shape cm-shape" data-shape="0"><svg viewBox="0 0 100 100"><path/></svg><span class="ms">sports_esports</span></span><span class="cm-n">04<i> / 05</i></span></div>
+          <h3 class="h3"><span lang="vi">Trong lúc <span class="x-w" data-x="w">chơi</span></span><span lang="en">While you <span class="x-w" data-x="w">play</span></span></h3>
           <p lang="vi">Không làm phiền giữ cuộc gọi và thông báo khỏi đè lên game. Khoá 60 Hz giữ màn hình ở 60 Hz; Wi-Fi độ trễ thấp bật chế độ Wi-Fi dành cho game có sẵn của Android. Cả ba tự bật khi game bạn chọn mở, tự tắt khi thoát. Màn hình AFK thì bạn mở khi cần treo máy.</p>
           <p lang="en">Do Not Disturb keeps calls and notifications from covering your game. 60 Hz lock holds the screen at 60 Hz; low-latency Wi-Fi turns on Android's own Wi-Fi mode for games. All three turn on when a game you picked opens and off when you leave. The AFK screen is yours to open when you leave the game running.</p>
-          <ul class="facts">
+          <ul class="cfacts">
             <li><span class="ms" aria-hidden="true">group</span><b><span lang="vi">Dành cho</span><span lang="en">Good for</span></b><span><span lang="vi">Chơi lâu, treo máy cày game, hay bị thông báo và cuộc gọi làm gián đoạn.</span><span lang="en">Long sessions, leaving a game running to farm, and anyone tired of pop-ups mid-match.</span></span></li>
             <li><span class="ms" aria-hidden="true">tune</span><b><span lang="vi">Cách dùng</span><span lang="en">How</span></b><span><span lang="vi">Bật công tắc một lần. AFK: màn hình đen, độ sáng về 0, chạm hai lần để mở lại.</span><span lang="en">Flip the switch once. AFK: a black screen at brightness 0, double-tap to bring it back.</span></span></li>
             <li><span class="ms" aria-hidden="true">verified_user</span><b><span lang="vi">Cần</span><span lang="en">Needs</span></b><span><span lang="vi">Không làm phiền: quyền Không làm phiền. AFK: quyền hiện trên app khác. 60 Hz và Wi-Fi: Shizuku.</span><span lang="en">Do Not Disturb: DND access. AFK: draw over other apps. 60 Hz and Wi-Fi: Shizuku.</span></span></li>
@@ -467,6 +504,13 @@
                   <img class="game-img" src="assets/polar.webp" alt="" width="1600" height="720" loading="lazy">
                   <div class="afk" aria-hidden="true"><span lang="vi">MÀN HÌNH AFK · GAME VẪN CHẠY</span><span lang="en">AFK SCREEN · GAME STILL RUNNING</span></div>
                 </div>
+              </div>
+              <!-- Nhật ký lệnh (#302, user: công tắc "như tính năng ảo, không có bằng chứng"): đúng lệnh / lời gọi API mà app
+                   chạy cho từng công tắc (AppControlRepository, Gpu3DRenderScaler, CryoZenRule, WifiLowLatency,
+                   OverlayMonitorService) + dòng đọc lại trạng thái hệ thống mà app dùng để kiểm. Không có số đo hứa hẹn. -->
+              <div class="pl-log" data-b="up">
+                <div class="pl-log-h"><span class="pl-dot" aria-hidden="true"></span><b><span lang="vi">Cryo vừa chạy</span><span lang="en">What Cryo just ran</span></b><small><span lang="vi">qua Shizuku</span><span lang="en">via Shizuku</span></small></div>
+                <ol class="pl-log-b" aria-hidden="true"></ol>
               </div>
               <div class="a-wrap a-wrap-play" data-b="right">
                 <div class="a-card play-card">
@@ -510,11 +554,13 @@
 
       <!-- 5. Báo cáo -->
       <article class="chap" data-screen="rep">
+        <span class="chap-bg" aria-hidden="true">05</span>
         <div class="chap-in">
-          <h3 class="h3"><span lang="vi">Báo cáo sau khi chơi</span><span lang="en">Play reports</span></h3>
+          <div class="cmk" aria-hidden="true"><span class="shape cm-shape" data-shape="2"><svg viewBox="0 0 100 100"><path/></svg><span class="ms">monitoring</span></span><span class="cm-n">05<i> / 05</i></span></div>
+          <h3 class="h3"><span lang="vi">Báo cáo <span class="x-t" data-x="t">sau khi chơi</span></span><span lang="en">Play <span class="x-t" data-x="t">reports</span></span></h3>
           <p lang="vi">Thoát game là có bản tóm tắt lần chơi: chơi bao lâu, pin nóng tới đâu, tốn bao nhiêu pin, Cryo đã làm gì, và so với lần trước. Lịch sử chỉ lưu trên máy bạn.</p>
           <p lang="en">Leave a game and you get a summary of the session: how long you played, how warm the battery got, how much battery it took, what Cryo did, and how it compares with last time. History stays on your phone.</p>
-          <ul class="facts">
+          <ul class="cfacts">
             <li><span class="ms" aria-hidden="true">group</span><b><span lang="vi">Dành cho</span><span lang="en">Good for</span></b><span><span lang="vi">Muốn biết game nào hao pin, nóng máy; so trước và sau khi đổi một thiết lập.</span><span lang="en">Finding out which games drain or heat the phone, and comparing before and after a setting change.</span></span></li>
             <li><span class="ms" aria-hidden="true">tune</span><b><span lang="vi">Cách dùng</span><span lang="en">How</span></b><span><span lang="vi">Chọn mức theo dõi: Cơ bản đo pin và nhiệt độ. Chi tiết, hoặc khi ô FPS trên cửa sổ nổi đang bật, đo thêm FPS và độ ổn định khung hình.</span><span lang="en">Pick a tracking level: Basic measures battery and temperature. Detailed, or the floating monitor's FPS cell, adds FPS and frame stability.</span></span></li>
             <li><span class="ms" aria-hidden="true">verified_user</span><b><span lang="vi">Cần</span><span lang="en">Needs</span></b><span><span lang="vi">Pin và nhiệt độ không cần Shizuku. FPS cần Shizuku.</span><span lang="en">Battery and temperature need nothing extra. FPS needs Shizuku.</span></span></li>
@@ -603,7 +649,7 @@
 </div>
 <div class="undo wrap">
   <div class="undo-copy">
-    <h2 id="undo-title" class="h2"><span lang="vi">Thoát game là mọi thứ về như cũ.</span><span lang="en">Leave the game and everything goes back.</span></h2>
+    <h2 id="undo-title" class="h2"><span lang="vi">Thoát game là mọi thứ về <span class="x-t" data-x="t">như cũ.</span></span><span lang="en">Leave the game and everything <span class="x-t" data-x="t">goes back.</span></span></h2>
     <p class="lead" lang="vi">Trước khi đổi độ phân giải màn hình, tần số quét hay Không làm phiền, Cryo ghi lại giá trị gốc rồi trả lại khi bạn tắt tính năng hoặc thoát game.</p>
     <p class="lead" lang="en">Cryo records screen resolution, refresh rate and Do Not Disturb before changing them, and restores them when you turn the feature off or leave the game.</p>
     <ul class="undo-list">
@@ -639,26 +685,26 @@
 <section class="shz" id="shizuku" aria-labelledby="shz-title" data-amb="p">
   <div class="wrap">
     <div class="shz-copy">
-      <h2 id="shz-title" class="h2"><span lang="vi">Vì sao cần Shizuku</span><span lang="en">Why Shizuku</span></h2>
+      <h2 id="shz-title" class="h2"><span lang="vi">Vì sao cần <span class="x-c" data-x="c">Shizuku</span></span><span lang="en">Why <span class="x-c" data-x="c">Shizuku</span></span></h2>
       <p class="lead" lang="vi">Android không cho một app thường đổi độ phân giải màn hình hay đóng băng app khác. Shizuku là ứng dụng miễn phí, mã nguồn mở, cấp quyền ADB shell cho ứng dụng mà không cần root. Cryo gửi lệnh qua đó.</p>
       <p class="lead" lang="en">Android does not let a regular app change the screen resolution or freeze other apps. Shizuku is a free, open-source app that gives apps ADB shell access without root. Cryo sends its commands through it.</p>
     </div>
     <ol class="steps">
       <li class="step">
         <span class="shape" data-shape="0" aria-hidden="true"><svg viewBox="0 0 100 100"><path/></svg><b>1</b></span>
-        <h3><span lang="vi">Cài và bật Shizuku</span><span lang="en">Install and start Shizuku</span></h3>
+        <h3><span lang="vi">Cài và bật <span class="x-c" data-x="c">Shizuku</span></span><span lang="en">Install and start <span class="x-c" data-x="c">Shizuku</span></span></h3>
         <p lang="vi">Cài từ Google Play, rồi khởi động bằng Gỡ lỗi không dây (Android 11 trở lên) hoặc lệnh ADB từ máy tính.</p>
         <p lang="en">Get it from Google Play, then start it with Wireless debugging (Android 11 and newer) or an ADB command from a computer.</p>
       </li>
       <li class="step">
         <span class="shape" data-shape="1" aria-hidden="true"><svg viewBox="0 0 100 100"><path/></svg><b>2</b></span>
-        <h3><span lang="vi">Cho Cryo dùng Shizuku</span><span lang="en">Let Cryo use Shizuku</span></h3>
+        <h3><span lang="vi">Cho <span class="x-w" data-x="w">Cryo</span> dùng Shizuku</span><span lang="en">Let <span class="x-w" data-x="w">Cryo</span> use Shizuku</span></h3>
         <p lang="vi">Trong Cryo, vào Thiết lập › Kết nối &amp; chạy nền, chạm dòng Shizuku và đồng ý.</p>
         <p lang="en">In Cryo, open Settings › Connection &amp; background, tap the Shizuku row and allow the request.</p>
       </li>
       <li class="step">
         <span class="shape" data-shape="2" aria-hidden="true"><svg viewBox="0 0 100 100"><path/></svg><b>3</b></span>
-        <h3><span lang="vi">Để máy không đóng Cryo giữa lúc chơi</span><span lang="en">Keep your phone from stopping Cryo mid-game</span></h3>
+        <h3><span lang="vi">Để máy <span class="x-t" data-x="t">không đóng</span> Cryo giữa lúc chơi</span><span lang="en">Keep your phone from <span class="x-t" data-x="t">stopping</span> Cryo mid-game</span></h3>
         <p lang="vi">Cho phép các dòng về pin và Tự khởi động bên dưới. Xong khi tab Tổng quan hiện Shizuku đã kết nối.</p>
         <p lang="en">Allow the battery rows and Autostart below it. You are done when the Overview tab says Shizuku connected.</p>
       </li>
@@ -679,10 +725,10 @@
 
 <!-- ============ Miễn phí & PRO, quyền riêng tư ============ -->
 <section class="price wrap" id="pricing" aria-labelledby="price-title" data-amb="s">
-  <h2 id="price-title" class="h2"><span lang="vi">Miễn phí, có quảng cáo. Hoặc PRO.</span><span lang="en">Free with ads. Or PRO.</span></h2>
+  <h2 id="price-title" class="h2"><span lang="vi">Miễn phí, có quảng cáo. Hoặc <span class="x-w" data-x="w">PRO.</span></span><span lang="en">Free with ads. Or <span class="x-w" data-x="w">PRO.</span></span></h2>
   <div class="plans">
     <div class="plan plan-free">
-      <h3><span lang="vi">Miễn phí</span><span lang="en">Free</span></h3>
+      <h3><span lang="vi"><span class="x-t" data-x="t">Miễn phí</span></span><span lang="en"><span class="x-t" data-x="t">Free</span></span></h3>
       <ul class="perks">
         <li><span class="ms" aria-hidden="true">check</span><span lang="vi">Mọi tính năng, có quảng cáo.</span><span lang="en">Every feature, with ads.</span></li>
         <li><span class="ms" aria-hidden="true">bolt</span><span lang="vi">Tích chọn một game, bật một tính năng hay đóng băng một app dùng một lượt trong số lượt miễn phí có hạn.</span><span lang="en">Ticking a game, switching on a feature or freezing an app uses one action from a limited free balance.</span></li>
@@ -694,7 +740,7 @@
       <span class="pro-shine" aria-hidden="true"></span>
       <div class="orbs" aria-hidden="true"><div class="orb o8" data-shape="sunny cookie9" data-c="tertiary primary" data-depth=".15" data-rot="-12"></div></div>
       <span class="shape pro-badge" data-shape="3" aria-hidden="true"><svg viewBox="0 0 100 100"><path/></svg><b>PRO</b></span>
-      <h3>Cryo PRO</h3>
+      <h3>Cryo <span class="x-w" data-x="w">PRO</span></h3>
       <ul class="perks">
         <li><span class="ms" aria-hidden="true">block</span><span lang="vi">Không quảng cáo.</span><span lang="en">No ads.</span></li>
         <li><span class="ms" aria-hidden="true">all_inclusive</span><span lang="vi">Không giới hạn lượt.</span><span lang="en">No action limit.</span></li>
@@ -703,7 +749,7 @@
     </div>
   </div>
   <div class="privacy" id="privacy">
-    <h3><span lang="vi">Không tài khoản, không đăng ký.</span><span lang="en">No account, no sign-up.</span></h3>
+    <h3><span lang="vi"><span class="x-c" data-x="c">Không tài khoản</span>, không đăng ký.</span><span lang="en"><span class="x-c" data-x="c">No account</span>, no sign-up.</span></h3>
     <p lang="vi">Bản thân Cryo giữ dữ liệu của nó trên máy bạn. Quảng cáo do Unity LevelPlay (ironSource) và Unity Ads phân phối; mục An toàn dữ liệu trên trang Google Play và Chính sách quyền riêng tư liệt kê điều đó kéo theo gì.</p>
     <p lang="en">Cryo itself keeps its data on your device. Ads come from Unity LevelPlay (ironSource) and Unity Ads; the Data safety section on Google Play and the privacy policy list what that involves.</p>
     <p class="links">
@@ -715,7 +761,7 @@
 
 <!-- ============ Câu hỏi ============ -->
 <section class="faq wrap" id="faq" aria-labelledby="faq-title" data-amb="p">
-  <h2 id="faq-title" class="h2"><span lang="vi">Câu hỏi hay gặp</span><span lang="en">Common questions</span></h2>
+  <h2 id="faq-title" class="h2"><span lang="vi">Câu hỏi <span class="x-t" data-x="t">hay gặp</span></span><span lang="en">Common <span class="x-t" data-x="t">questions</span></span></h2>
   <div class="qa">
     <details>
       <summary><span lang="vi">Cryo có làm game chạy nhanh hơn không?</span><span lang="en">Will Cryo make my games run faster?</span><span class="qa-ic" aria-hidden="true"><span class="ms">add</span></span></summary>
@@ -782,7 +828,7 @@
     <div class="orbs" aria-hidden="true"><div class="orb o9" data-shape="clover flower" data-c="primary tertiary" data-depth=".2" data-rot="20"></div></div>
     <span class="shape cm-ic" data-shape="1" aria-hidden="true"><svg viewBox="0 0 100 100"><path/></svg><span class="ms">forum</span></span>
     <div class="cm-tx">
-      <h2 id="community-title" class="cm-h"><span lang="vi">Cộng đồng Cryo trên Discord</span><span lang="en">Cryo community on Discord</span></h2>
+      <h2 id="community-title" class="cm-h"><span lang="vi">Cộng đồng Cryo trên <span class="x-w" data-x="w">Discord</span></span><span lang="en">Cryo community on <span class="x-w" data-x="w">Discord</span></span></h2>
       <p lang="vi">Gặp những người cùng dùng Cryo: hỏi đáp, chia sẻ thiết lập chạy tốt trên máy bạn, và góp ý tính năng tiếp theo.</p>
       <p lang="en">Meet other Cryo players: ask questions, share settings that work on your phone, and tell us what to build next.</p>
     </div>
@@ -791,7 +837,7 @@
 </section>
 
 <section class="end wrap" aria-labelledby="end-title" data-amb="t">
-  <h2 id="end-title" class="h2"><span lang="vi">Cryo có trên Google Play.</span><span lang="en">Cryo is on Google Play.</span></h2>
+  <h2 id="end-title" class="h2"><span lang="vi">Cryo có trên <span class="x-c" data-x="c">Google Play.</span></span><span lang="en">Cryo is on <span class="x-c" data-x="c">Google Play.</span></span></h2>
   <a class="play-badge" href="https://play.google.com/store/apps/details?id=com.astvn.cryo" target="_blank" rel="noopener">
     <img lang="vi" src="https://play.google.com/intl/en_us/badges/static/images/badges/vi_badge_web_generic.png" alt="Tải nội dung trên Google Play" width="646" height="250" loading="lazy">
     <img lang="en" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" width="646" height="250" loading="lazy">
