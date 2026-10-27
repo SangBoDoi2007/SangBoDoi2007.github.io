@@ -1271,6 +1271,158 @@
     });
   })();
 
+  /* ---------- Chương sáng lên: số nền + chữ nhấn của tên chương biến hình ---------- */
+  /* User #302 vòng 5: "lag và chậm quá". Bản cũ đổi trục phông bằng CSS steps(14)/steps(12) trong 1,1 s / 0,9 s: mỗi giá trị
+     trục mới là Chrome dựng một bản phông mới (đo: ~2–4 ms/khung trên máy tính, ×4 CPU ~16 ms), nên đã chia nấc — mà 13
+     nấc/giây thì giật. Nay:
+     - số nền là SVG vẽ từ nét thật của phông ở 9 mốc trục (assets/numerals.js), nội suy nét theo lò xo: mượt ở mọi tần số
+       quét, không dựng bản phông nào;
+     - chữ nhấn tên chương đi theo BẢNG nấc cố định: Chrome giữ bản phông đã dựng và dùng lại (đo: 31 nấc lần đầu 68 ms, lần
+       sau 6–11 ms); lúc rảnh dựng sẵn cả bảng bằng chữ ẩn nên lần đầu cũng rẻ. */
+  (function chapMorph() {
+    const chaps = $$('.chap'); if (!chaps.length) return;
+    const parts = [];
+
+    /* Số nền. Gốc toạ độ: đầu chữ số đầu, chân chữ; đơn vị phông (upm 2000), y hướng xuống. */
+    const NUM = window.CryoNum, G = NUM && NUM.g, K = NUM && NUM.k, UPM = 2000, LS = -0.05 * UPM;
+    /* Lò xo nảy quá 1 thì nét đi tiếp theo đoạn cuối (đậm/nghiêng thêm chút); dưới 0 thì giữ dáng mảnh nhất. */
+    const seg = (u) => { const f = clamp(u, 0, 1.08) * (K - 1), j = Math.min(Math.floor(f), K - 2); return [j, f - j]; };
+    const advAt = (g, j, t) => g.a[j] + (g.a[j + 1] - g.a[j]) * t;
+    const pathAt = (g, j, t, dx) => {
+      const A = g.p[j], B = g.p[j + 1]; let s = '', n = 0;
+      for (const c of g.c) {
+        s += c; if (c === 'Z') continue;
+        for (let q = c === 'Q' ? 2 : 1; q > 0; q--, n += 2) s += Math.round(A[n] + (B[n] - A[n]) * t + dx) + ' ' + Math.round(A[n + 1] + (B[n + 1] - A[n + 1]) * t) + ' ';
+      }
+      return s;
+    };
+    /* Khung vẽ chung cho mọi số, cả căn trái (máy tính) lẫn căn phải (điện thoại): quét mọi mốc + đoạn vượt của lò xo.
+       Số chương có dạng "0N" (01–05): mép trái lấy từ nét "0", phần nhô quá bước tiến lấy từ chữ số sau. Thêm số dạng
+       khác (vd. "10") thì phải quét thêm cặp đó — chương nào thiếu dữ liệu nét vẫn tự về số chữ cũ. */
+    let box = null;
+    if (G) {
+      let x0 = 0, x1 = 0, y0 = 0, y1 = 0, XR = 0;
+      const frames = (g) => g.p.concat([g.p[K - 1].map((v, i) => v + (v - g.p[K - 2][i]) * 0.64)]);
+      Object.keys(G).forEach((ch) => {
+        if (ch === '0') return;
+        const a = frames(G['0']), b = frames(G[ch]);
+        for (let j = 0; j <= K; j++) {
+          const jj = Math.min(j, K - 1), w0 = G['0'].a[jj] + LS, W = w0 + G[ch].a[jj] + LS;
+          XR = Math.max(XR, W);
+          a[j].forEach((v, i) => { if (i & 1) { y0 = Math.min(y0, v); y1 = Math.max(y1, v); } else x0 = Math.min(x0, v); });
+          b[j].forEach((v, i) => { if (i & 1) { y0 = Math.min(y0, v); y1 = Math.max(y1, v); } else x1 = Math.max(x1, v + w0 - W); });
+        }
+      });
+      const P = 60;
+      box = { x0: x0 - P, y0: y0 - P, x1: XR + x1 + P, y1: y1 + P, XR };
+    }
+    const em = (v) => (v / UPM).toFixed(4) + 'em';
+    const alignEnd = () => !deskMQ.matches;
+
+    /* Chữ nhấn tên chương: dáng thường (chương chưa tới) → dáng nhấn .x-c/.x-t/.x-w. Đọc từ CSS để một nguồn sự thật. */
+    const XN = 24, AX = ['wght', 'wdth', 'slnt', 'ROND'];
+    const fvOf = (cs) => { const o = { wght: parseFloat(cs.fontWeight) || 400, wdth: 100, slnt: 0, ROND: 0 }; cs.fontVariationSettings.replace(/["'](\w{4})["']\s+(-?[\d.]+)/g, (_, k, v) => { o[k] = +v; }); return o; };
+    /* Mẫu đo đặt trong một chương CHƯA sáng: chữ data-x ở đó mang đúng dáng thường của CSS (.js .chap:not(.chap-on) …);
+       ba chữ .x-* thì mang dáng nhấn. Lúc này chưa chương nào sáng (place() vừa gỡ, IO báo ở khung sau). */
+    const probe = d.createElement('span'); probe.className = 'h3'; probe.style.cssText = 'position:absolute;visibility:hidden;left:0;top:0';
+    probe.innerHTML = '<span data-x="p">a</span><span class="x-c">a</span><span class="x-t">a</span><span class="x-w">a</span>';
+    (chaps.find((c) => !c.classList.contains('chap-on')) || d.body).appendChild(probe);
+    const pcs = getComputedStyle(probe), pfs = parseFloat(pcs.fontSize) || 1, ps = getComputedStyle($('[data-x="p"]', probe));
+    const plain = fvOf(ps), plainLs = (parseFloat(ps.letterSpacing) || 0) / pfs;
+    const TB = {};
+    ['c', 't', 'w'].forEach((s) => {
+      const cs = getComputedStyle($('.x-' + s, probe)), e = fvOf(cs), ls = (parseFloat(cs.letterSpacing) || 0) / pfs;
+      TB[s] = [];
+      for (let k = 0; k <= XN; k++) {
+        const u = k / XN;
+        TB[s].push({
+          fv: AX.map((a) => "'" + a + "' " + +lerp(plain[a], e[a], u).toFixed(a === 'wght' ? 0 : 1)).join(', '),
+          ls: lerp(plainLs, ls, u).toFixed(4) + 'em',
+        });
+      }
+    });
+    probe.remove();
+
+    chaps.forEach((chap, i) => {
+      const p = { chap, on: chap.classList.contains('chap-on') };
+      /* Số nền SVG — thiếu dữ liệu nét cho chữ số nào thì giữ số chữ cũ (CSS steps). */
+      const bg = $('.chap-bg', chap), str = bg && bg.textContent.trim();
+      if (box && /^0[1-9]$/.test(str || '') && G[str[1]]) {
+        const svg = d.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('class', 'chap-num'); svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('focusable', 'false');
+        svg.setAttribute('viewBox', [box.x0, box.y0, box.x1 - box.x0, box.y1 - box.y0].join(' '));
+        svg.innerHTML = '<defs><linearGradient id="cn-g' + i + '" gradientUnits="userSpaceOnUse"><stop offset=".15" class="cn-a"/><stop offset=".6" class="cn-b"/><stop offset=".92" class="cn-c"/></linearGradient></defs><path fill="url(#cn-g' + i + ')"/>';
+        svg.style.cssText = '--w:' + em(box.x1 - box.x0) + ';--h:' + em(box.y1 - box.y0) + ';--x0:' + em(box.x0) + ';--y0:' + em(box.y0) + ';--xr:' + em(box.x1 - box.XR);
+        bg.after(svg); chap.classList.add('cn');
+        const path = $('path', svg), grad = $('linearGradient', svg), gs = [...str].map((c) => G[c]);
+        const width = (j, t) => gs.reduce((w, g) => w + advAt(g, j, t) + LS, 0);
+        let end = null;
+        const n = new Spring(p.on ? 1 : 0, 0.001, null);
+        n.owner = owner(() => {
+          const [j, t] = seg(n.x), e = alignEnd();
+          if (e !== end) {
+            /* Dải màu phủ hộp chữ cũ (165°, lề trong .1/.34em, cao 1,14em, chân chữ cách đỉnh hộp .96em) ở dáng đậm. */
+            end = e;
+            const W = width(K - 2, 1), ox = e ? box.XR - W : 0, bx = ox - 0.1 * UPM, bw = W + 0.44 * UPM, by = -0.96 * UPM, bh = 1.14 * UPM;
+            const sx = Math.sin(165 * Math.PI / 180), sy = -Math.cos(165 * Math.PI / 180), L = bw * Math.abs(sx) + bh * Math.abs(sy);
+            const cx = bx + bw / 2, cy = by + bh / 2;
+            grad.setAttribute('x1', (cx - sx * L / 2).toFixed(0)); grad.setAttribute('y1', (cy - sy * L / 2).toFixed(0));
+            grad.setAttribute('x2', (cx + sx * L / 2).toFixed(0)); grad.setAttribute('y2', (cy + sy * L / 2).toFixed(0));
+          }
+          let x = e ? box.XR - width(j, t) : 0, s = '';
+          gs.forEach((g) => { s += pathAt(g, j, t, x); x += advAt(g, j, t) + LS; });
+          path.setAttribute('d', s);
+        });
+        n.set(n.x);
+        p.num = n;
+        deskMQ.addEventListener('change', () => n.touch());
+      }
+      /* Chữ nhấn tên chương (cả hai thứ tiếng). Lò xo chạy liên tục, trục đổi theo nấc của bảng. */
+      const xs = $$('.h3 [data-x]', chap).filter((el) => TB[el.dataset.x]);
+      if (xs.length) {
+        xs.forEach((el) => el.classList.add('xm'));
+        let last = -1;
+        const h = new Spring(p.on ? 1 : 0, 0.001, null);
+        h.owner = owner(() => {
+          const k = Math.round(clamp(h.x, 0, 1) * XN); if (k === last) return; last = k;
+          xs.forEach((el) => { const v = TB[el.dataset.x][k]; el.style.fontVariationSettings = v.fv; el.style.letterSpacing = v.ls; });
+        });
+        h.set(h.x);
+        p.head = h; p.xs = xs;
+      }
+      p.go = (on) => {
+        if (p.num) p.num.to(on ? 1 : 0, on ? SPEC.m3SlowSpatial : SPEC.m3Spatial);
+        if (p.head) p.head.to(on ? 1 : 0, on ? SPEC.m3SlowSpatial : SPEC.m3Spatial);
+      };
+      parts.push(p);
+    });
+    const watch = new MutationObserver(() => parts.forEach((p) => {
+      const on = p.chap.classList.contains('chap-on');
+      if (on !== p.on) { p.on = on; p.go(on); }
+    }));
+    chaps.forEach((c) => watch.observe(c, { attributes: true, attributeFilter: ['class'] }));
+
+    /* Dựng sẵn các bản phông của bảng nấc lúc rảnh: mỗi nấc một chữ ẩn cùng cỡ (.h3) chứa đủ ký tự của các chữ nhấn (để
+       đủ cả bộ phông latin lẫn tiếng Việt). Vài nấc mỗi lượt rảnh, đọc offsetWidth để bố cục (= dựng phông) ngay lúc đó. */
+    if (reduced) return;
+    const styles = [...new Set(parts.flatMap((p) => (p.xs || []).map((el) => el.dataset.x)))];
+    const chars = [...new Set(parts.flatMap((p) => (p.xs || []).map((el) => el.textContent)).join('').replace(/\s/g, ''))].join('');
+    const jobs = styles.flatMap((s) => TB[s].map((v) => v.fv));
+    if (!jobs.length) return;
+    const idle = window.requestIdleCallback || ((f) => setTimeout(() => f({ timeRemaining: () => 0 }), 60));
+    const warm = d.createElement('div'); warm.className = 'xm-warm'; warm.setAttribute('aria-hidden', 'true');
+    const step = (dl) => {
+      if (!warm.isConnected) d.body.appendChild(warm);
+      do {
+        /* span (không phải i): <i> nghiêng mặc định → bản phông khác (nghiêng giả), không trúng bộ đệm. */
+        const el = d.createElement('span'); el.className = 'h3'; el.dataset.w = chars; el.style.fontVariationSettings = jobs.shift();
+        warm.appendChild(el); void warm.offsetWidth;
+      } while (jobs.length && dl.timeRemaining() > 4);
+      if (jobs.length) idle(step);
+    };
+    addEventListener('load', () => setTimeout(() => idle(step), 1200), { once: true });
+  })();
+
   /* Lớp hiệu ứng fx.js dùng chung lò xo, hình khối và trạng thái ngôn ngữ với trang. */
   window.CryoMotion = { Spring, SPEC, owner, mo, go, put, reduced, lang, refreshers, clamp, lerp, SHAPES, shapePts, morphPath, view, $, $$ };
 

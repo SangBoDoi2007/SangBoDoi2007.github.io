@@ -97,9 +97,16 @@ html[lang="vi"] :not(html)[lang="en"], html[lang="en"] :not(html)[lang="vi"] { d
 .x-t { font-variation-settings: 'wght' 160, 'wdth' 60, 'slnt' -10, 'ROND' 100; letter-spacing: -.02em; }
 .x-w { font-variation-settings: 'wght' 1000, 'wdth' 151, 'slnt' 0, 'ROND' 100; color: var(--primary); letter-spacing: -.03em; }
 /* Tên chương: chữ nhấn đứng như chữ thường khi chương chưa tới, "biến hình" sang dáng nhấn khi chương sáng lên (máy tính:
-   sân khấu; điện thoại: phần chữ tới giữa màn). 12 nấc, không đổi trục mỗi khung (xem .chap-bg). */
+   sân khấu; điện thoại: phần chữ tới giữa màn). Hai dòng dưới chỉ là đường DỰ PHÒNG khi không có JS (12 nấc CSS) —
+   bản chạy thật là site.js chapMorph (bảng nấc + lò xo, lớp .xm). */
 .js .chap .h3 [data-x] { transition: font-variation-settings 900ms steps(12, end), color 600ms ease, letter-spacing 900ms steps(12, end); }
 .js .chap:not(.chap-on) .h3 [data-x] { font-variation-settings: 'wght' 580, 'wdth' 100, 'slnt' 0, 'ROND' 100; color: inherit; letter-spacing: inherit; }
+/* site.js chapMorph lái trục + khoảng chữ theo bảng nấc cố định (inline style) — CSS chỉ còn chuyển màu. Các dòng trên là
+   đường dự phòng khi không có JS mới. */
+.js .chap .h3 [data-x].xm { transition: color 600ms ease; }
+/* Chữ ẩn dựng sẵn các bản phông của bảng nấc lúc rảnh (giữ trong DOM để Chrome không bỏ chúng khỏi bộ nhớ đệm). */
+.xm-warm { position: absolute; left: 0; top: 0; width: 0; height: 0; overflow: hidden; visibility: hidden; contain: strict; pointer-events: none; }
+.xm-warm span::before { content: attr(data-w); }
 .no-motion .chap .h3 [data-x] { transition: none; }
 .lead { font-size: clamp(1.08rem, 1rem + .35vw, 1.28rem); line-height: 1.55; color: var(--on-surface-v); max-width: 40em; text-wrap: pretty; }
 
@@ -324,21 +331,39 @@ html[lang="vi"] :not(html)[lang="en"], html[lang="en"] :not(html)[lang="vi"] { d
      cả trang +150 ms/giây bố cục). Chữ nền nhạt nên nấc không thấy giật. */
   transition: font-variation-settings 1100ms steps(14, end), opacity 700ms ease; }
 .chap.chap-on .chap-bg { font-variation-settings: 'wght' 900, 'wdth' 64, 'slnt' -10, 'ROND' 100; opacity: 1; }
+/* Số chương vẽ bằng SVG (#302 vòng 5, user: "lag và chậm"): nét thật của phông ở 9 mốc trục (assets/numerals.js), site.js
+   nội suy nét theo lò xo → mượt ở mọi tần số quét mà không dựng bản phông nào. Toạ độ neo đúng chỗ số chữ cũ: gốc chữ
+   cách mép trái chương -.06em, chân chữ cao hơn giữa chương .1355em (máy tính); điện thoại: đuôi số cách mép phải .32em,
+   chân chữ thấp hơn đỉnh chương .82em. --w/--h/--x0/--y0/--xr (em) do site.js đặt từ khung vẽ của dữ liệu nét. */
+.chap.cn .chap-bg { display: none; }
+.chap-num { position: absolute; z-index: -1; width: var(--w); height: var(--h); overflow: visible; pointer-events: none;
+  font-size: clamp(12rem, 25vw, 24rem); left: calc(-.06em + var(--x0)); top: 50%; margin-top: calc(-.1355em + var(--y0));
+  opacity: .38; transition: opacity 700ms ease; }
+.chap.chap-on .chap-num { opacity: 1; }
+.chap-num .cn-a { stop-color: var(--primary); stop-opacity: .26; }
+.chap-num .cn-b { stop-color: var(--tertiary); stop-opacity: .16; }
+.chap-num .cn-c { stop-color: var(--tertiary); stop-opacity: 0; }
 /* Quầng màu theo tông của chương sau cột chữ (cùng tông với quầng sau sân khấu bên phải), trôi chậm khi chương đang xem.
-   Chỉ transform/opacity → chạy trên bộ dựng hình, không đụng bố cục. */
+   Chỉ transform/opacity → chạy trên bộ dựng hình, không đụng bố cục. Lúc hiện ra phóng bằng thuộc tính `scale` RIÊNG,
+   trôi bằng `transform`: transition và animation cùng trên transform thì Chrome không đưa animation lên compositor, để nó
+   chạy ở luồng chính mãi (đo #302 vòng 5: 166 lần tính kiểu/giây khi đứng yên — điện thoại giữ mọi chương sáng nên cả mục
+   tính năng tốn liên tục; tách ra → 0). */
 .chap::before { content: ""; position: absolute; z-index: -2; left: -12%; top: 50%; width: min(78%, 760px); aspect-ratio: 1; pointer-events: none;
   background: radial-gradient(closest-side, color-mix(in oklab, var(--tone, var(--primary-c)) 46%, transparent), transparent 72%);
-  opacity: 0; transform: translate(0, -50%) scale(.8); transition: opacity 900ms ease, transform 1200ms cubic-bezier(.2,0,0,1); }
+  opacity: 0; translate: 0 -50%; scale: .8; transition: opacity 900ms ease, scale 1200ms cubic-bezier(.2,0,0,1); }
 .chap[data-screen="freeze"], .chap[data-screen="rep"] { --tone: var(--tertiary-c); }
 .chap[data-screen="mon"] { --tone: var(--secondary-c); }
-.chap.chap-on::before { opacity: 1; transform: translate(0, -50%) scale(1); animation: chapGlow 14s ease-in-out 1.2s infinite alternate; }
-@keyframes chapGlow { to { transform: translate(6%, -46%) scale(1.08) rotate(8deg); } }
+.chap.chap-on::before { opacity: 1; scale: 1; animation: chapGlow 14s ease-in-out 1.2s infinite alternate; }
+/* `translate` (-50%) áp SAU transform nên tổng dịch vẫn là (6%, -46%) như cũ. */
+@keyframes chapGlow { to { transform: translate(6%, 4%) scale(1.08) rotate(8deg); } }
 /* Câu chuyện đã cuộn khuất (máy tính: chương cuối vẫn "đang sáng") → quầng thôi trôi. */
 .story.off-view .chap::before { animation-play-state: paused; }
 .cmk { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
 .cm-shape { width: 52px; height: 52px; }
 .cm-shape path { transition: fill 420ms ease; }
-.cm-shape .ms { position: relative; font-size: 24px; color: var(--on-primary-c); font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; transition: color 420ms ease, font-variation-settings 420ms ease; }
+/* Trục biểu tượng đổi theo 4 nấc cố định (không mỗi khung): mỗi giá trị trục mới là một bản phông dựng mới; nấc cố định thì
+   dựng một lần rồi dùng lại. Nấc lẫn trong cú nảy cmPop nên không thấy. */
+.cm-shape .ms { position: relative; font-size: 24px; color: var(--on-primary-c); font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; transition: color 420ms ease, font-variation-settings 420ms steps(4, end); }
 .chap.chap-on .cm-shape path { fill: var(--primary); }
 .chap.chap-on .cm-shape .ms { color: var(--on-primary); font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; animation: cmPop 760ms var(--ease-spatial); }
 @keyframes cmPop { 0% { transform: scale(.6) rotate(-24deg); } 55% { transform: scale(1.14) rotate(6deg); } 100% { transform: none; } }
@@ -346,10 +371,11 @@ html[lang="vi"] :not(html)[lang="en"], html[lang="en"] :not(html)[lang="vi"] { d
 .cm-n i { font-style: normal; opacity: .55; }
 @media (max-width: 1023px) {
   .chap-bg { font-size: 9.5rem; top: 0; left: auto; right: -.02em; transform: translateY(-12%); }
+  .chap-num { font-size: 9.5rem; top: 0; left: auto; right: calc(.32em - var(--xr)); margin-top: calc(.82em + var(--y0)); }
   .chap::before { left: -30%; top: 12em; width: 130%; }
   .cm-shape { width: 44px; height: 44px; } .cm-shape .ms { font-size: 21px; }
 }
-.no-motion .chap-bg, .no-motion .cm-shape .ms, .no-motion .chap::before { transition: none; animation: none; }
+.no-motion .chap-bg, .no-motion .chap-num, .no-motion .cm-shape .ms, .no-motion .chap::before { transition: none; animation: none; }
 .chap-in .h3 { margin-bottom: 16px; }
 .chap-in > p { color: var(--on-surface-v); margin-bottom: 14px; text-wrap: pretty; }
 .try { display: flex; gap: 10px; align-items: flex-start; padding: 12px 16px; border-radius: 16px; background: var(--surface-c); font-size: 15px; line-height: 1.5; color: var(--on-surface) !important; }
@@ -1002,6 +1028,19 @@ html:not(.js) .sheet-body::after { opacity: 1; }
 .ks path { fill: var(--primary-c); }
 .kin-row:nth-child(2) .ks path { fill: var(--tertiary-c); }
 .ks.k1 path { fill: var(--primary); }
+/* Thị sai khối 3D + dải chữ theo cuộn bằng hoạt ảnh GẮN THANH CUỘN (#302 vòng 5): chạy trên compositor, khớp từng khung
+   cuộn kể cả 120 Hz. Bản JS theo sự kiện cuộn trễ một nhịp và thưa hơn nhịp cuộn của điện thoại → khối/dải chữ giật
+   ("web như 30 Hz"). fx.js đặt --pd (biên độ thị sai) và --kh/--kn (nửa dải, số vòng); trình duyệt chưa có
+   animation-timeline thì fx.js tự dời như cũ. scroll(root): .kin có overflow:hidden nên tự nó cũng là "vùng cuộn".
+   view-timeline-inset 0: mặc định dải view() trừ scroll-padding-top 88px của html → lệch công thức (đo: ~4%). */
+@supports (animation-timeline: view()) {
+  .orbs { view-timeline-name: --orbs; view-timeline-inset: 0; }
+  .js:not(.no-motion) .orb { animation: orbPar linear both; animation-timeline: --orbs; }
+  @keyframes orbPar { from { translate: 0 calc(-1 * var(--pd, 0px)); } to { translate: 0 var(--pd, 0px); } }
+  .js:not(.no-motion) .kin-track { animation: kinPar linear both; animation-timeline: scroll(root); animation-iteration-count: var(--kn, 1); }
+  .js:not(.no-motion) .kin-row[data-dir="-1"] .kin-track { animation-direction: reverse; }
+  @keyframes kinPar { from { translate: 0 0; } to { translate: calc(-1 * var(--kh, 0px)) 0; } }
+}
 
 /* ---------- Chữ tách (fx.js) ---------- */
 .sr { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

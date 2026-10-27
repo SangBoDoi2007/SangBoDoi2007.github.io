@@ -812,10 +812,19 @@
      lại bố cục giữa chừng mỗi khung — profiler đo ra ~25% một nhân lúc rê chuột. */
   let ptrX = 0, ptrY = 0, sY = scrollY;
   const ox = new Spring(0, 0.001, null), oy = new Spring(0, 0.001, null);
-  const geo = (ob) => { const r = ob.w.parentNode.getBoundingClientRect(); sY = scrollY; ob.hy = r.top + sY + r.height / 2; };
+  /* Thị sai theo CUỘN: trình duyệt có hoạt ảnh gắn thanh cuộn (animation-timeline) thì để CSS chạy (site.css orbPar,
+     compositor). Điện thoại cuộn trên luồng riêng; JS dời khối theo sự kiện cuộn luôn trễ một nhịp và thưa hơn nhịp cuộn
+     120 Hz → khối giật so với trang (user #302 vòng 5: "web trên Vivo cảm giác chỉ 30 Hz"). JS chỉ còn đặt biên độ --pd:
+     dịch = (tâm mục − tâm màn) × −0.22 × độ sâu, tuyến tính suốt dải view() "cover" dài (cao màn + cao mục) → hai đầu
+     ±0.11 × độ sâu × (cao màn + cao mục). */
+  const SDA = !!(window.CSS && CSS.supports && CSS.supports('animation-timeline: view()'));
+  const geo = (ob) => {
+    const r = ob.w.parentNode.getBoundingClientRect(); sY = scrollY; ob.hy = r.top + sY + r.height / 2;
+    if (SDA) ob.w.style.setProperty('--pd', (0.11 * ob.dep * (innerHeight + r.height)).toFixed(1) + 'px');
+  };
   const place = owner(() => orbs.forEach((ob) => {
     if (!ob.on) return;
-    const sy = (ob.hy - sY - innerHeight / 2) * -0.22 * ob.dep;
+    const sy = SDA ? 0 : (ob.hy - sY - innerHeight / 2) * -0.22 * ob.dep;
     ob.w.style.transform = 'translate3d(' + (ox.x * 44 * ob.dep).toFixed(1) + 'px,' + (oy.x * 32 * ob.dep + sy).toFixed(1) + 'px,0)';
   }));
   ox.owner = oy.owner = place;
@@ -824,7 +833,7 @@
       ptrX = e.clientX / innerWidth - 0.5; ptrY = e.clientY / innerHeight - 0.5;
       ox.to(ptrX, SPEC.gentle); oy.to(ptrY, SPEC.gentle);
     }, { passive: true });
-    if (!reduced) addEventListener('scroll', () => { sY = M.view.y; place.apply(); }, { passive: true });
+    if (!reduced && !SDA) addEventListener('scroll', () => { sY = M.view.y; place.apply(); }, { passive: true });
     const morph = (ob) => {
       ob.u.to(ob.u.t > 0.5 ? 0 : 1, SPEC.m3SlowSpatial);
       ob.rot.to(ob.rot.t + (ob.i % 2 ? -1 : 1) * (50 + ob.i * 17), SPEC.m3SlowSpatial);
@@ -867,14 +876,24 @@
       $('path', s).setAttribute('d', morphPath(A, A, 0, 50, 50, 48));
       s.classList.add('k' + (i % 3));
     });
-    const measure = () => rows.forEach((r) => {
-      r.half = r.loop.scrollWidth / 2 || 1;
-      r.loop.style.animationDuration = (r.half / 34).toFixed(1) + 's';
-    });
+    /* Dịch theo cuộn bằng hoạt ảnh gắn thanh cuộn của CSS khi có (site.css kinPar, compositor — xem thị sai khối 3D ở
+       trên: JS theo sự kiện cuộn thì dải chữ giật trên điện thoại). Dịch = vị trí cuộn × 0.42, quấn vòng theo nửa dải
+       (--kh) → số vòng trên cả dải cuộn --kn = 0.42 × quãng cuộn / nửa dải. JS chỉ còn nghiêng theo vận tốc. */
+    const SDA = !!(window.CSS && CSS.supports && CSS.supports('animation-timeline: view()'));
+    const measure = () => {
+      const range = Math.max(1, d.documentElement.scrollHeight - innerHeight);
+      rows.forEach((r) => {
+        r.half = r.loop.scrollWidth / 2 || 1;
+        r.loop.style.animationDuration = (r.half / 34).toFixed(1) + 's';
+        if (SDA) { r.tr.style.setProperty('--kh', r.half.toFixed(1) + 'px'); r.tr.style.setProperty('--kn', (0.42 * range / r.half).toFixed(3)); }
+      });
+    };
     measure();
     M.refreshers.push(measure);
     addEventListener('resize', later(measure, 150));
     (d.fonts && d.fonts.ready ? d.fonts.ready : Promise.resolve()).then(measure);
+    /* Trang cao lên/thấp xuống (mở câu hỏi, bảng thiết bị) thì quãng cuộn đổi → số vòng đổi theo. */
+    if (SDA && 'ResizeObserver' in window) new ResizeObserver(later(measure, 200)).observe(d.body);
     if (reduced) return;
     let on = false, raf = 0, t0 = 0, y = scrollY, lastY = y, vel = 0, quiet = 0;
     const mod = (a, n) => ((a % n) + n) % n;
@@ -887,7 +906,7 @@
       /* Cuộn nhanh thì chữ nghiêng nhẹ theo hướng cuộn — như chữ bị gió thổi; chỉ ghi transform. */
       const sk = clamp(-vel / 800, -4, 4);
       rows.forEach((r) => {
-        r.tr.style.transform = 'translate3d(' + (-mod(y * 0.42 * r.dir, r.half)).toFixed(2) + 'px,0,0) skewX(' + sk.toFixed(2) + 'deg)';
+        r.tr.style.transform = (SDA ? '' : 'translate3d(' + (-mod(y * 0.42 * r.dir, r.half)).toFixed(2) + 'px,0,0) ') + 'skewX(' + sk.toFixed(2) + 'deg)';
       });
       quiet = Math.abs(vel) < 4 && dy === 0 ? quiet + 1 : 0;
       raf = on && quiet < 20 ? requestAnimationFrame(frame) : 0;
