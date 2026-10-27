@@ -1,593 +1,1190 @@
 <!DOCTYPE html>
-<html lang="vi" class="scroll-smooth antialiased">
+<html lang="en" class="scroll-smooth antialiased">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cryo: Game Booster & GFX Tool — ASTVN Studios</title>
-  <meta name="description" content="Cryo: Game Booster & GFX Tool - Tối ưu độ phân giải bộ đệm render 49%, đóng băng tiến trình ngầm Task Manager và đo FPS thời gian thực qua Shizuku cho Android." />
-  
+  <title>Cryo: Game Mode &amp; FPS Meter — ASTVN Studios (com.astvn.cryo)</title>
+  <meta name="description" content="Cryo gives Android gamers ADB-level control without root via Shizuku: 30%–100% game render resolution scaling, 4-level background app freezer, Focus Mode, AFK black screen, and real-time FPS &amp; thermal floating monitor." />
+
+  <!-- Open Graph -->
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Cryo: Game Booster & GFX Tool — ASTVN Studios" />
-  <meta property="og:description" content="Tối ưu độ phân giải bộ đệm render 49%, giải phóng RAM với Task Manager và đo FPS thời gian thực không cần Root." />
-  <meta property="og:image" content="assets/banner.png" />
+  <meta property="og:title" content="Cryo: Game Mode &amp; FPS Meter — ASTVN Studios" />
+  <meta property="og:description" content="Game resolution changer (30%–100%), 4-level app freezer &amp; real-time FPS meter. Works through Shizuku, no root required." />
+  <meta property="og:image" content="https://sangbodoi2007.github.io/assets/banner.png" />
   <meta property="og:url" content="https://sangbodoi2007.github.io/" />
+  <link rel="icon" type="image/png" href="assets/icon.png" />
 
-  <!-- Fonts: Inter & JetBrains Mono -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  
-  <!-- Tailwind CSS & Lucide Icons -->
+  <!-- Google Fonts: Space Grotesk, Inter, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-
   <script>
     tailwind.config = {
       theme: {
         extend: {
-          fontFamily: {
-            sans: ['"Inter"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
-            mono: ['"JetBrains Mono"', 'monospace'],
-          },
           colors: {
-            app: {
-              black: '#07080a',
-              card: '#0f1015',
-              cardborder: '#1f2128',
-              muted: '#8b8f9e',
-              accent: '#3b82f6',
-              emerald: '#10b981',
-              cyan: '#06b6d4'
+            cryo: {
+              obsidian: '#05080E',
+              slate: '#0B111E',
+              ice: '#00E5FF',
+              sky: '#38BDF8',
+              amber: '#F59E0B',
+              emerald: '#10B981'
             }
           }
         }
       }
-    }
+    };
   </script>
 
-  <style>
-    /* Strict Raycast/Linear Surface Gradients */
-    body {
-      background-color: #07080a;
-      color: #e2e4ea;
-    }
-
-    .hairline-border {
-      border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    .hairline-border:hover {
-      border-color: rgba(255, 255, 255, 0.16);
-    }
-
-    .card-surface {
-      background: #0f1015;
-      border: 1px solid #1c1e26;
-      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .card-surface:hover {
-      border-color: #2e323e;
-      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.8);
-    }
-
-    /* Ambient Spotlight */
-    .hero-glow {
-      position: absolute;
-      top: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 1000px;
-      height: 550px;
-      background: radial-gradient(circle at 50% 20%, rgba(59, 130, 246, 0.12) 0%, rgba(16, 185, 129, 0.06) 35%, transparent 70%);
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    /* Smooth Range Slider */
-    input[type=range] {
-      -webkit-appearance: none;
-      background: #1c1e26;
-      height: 6px;
-      border-radius: 9999px;
-    }
-    input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      height: 20px;
-      width: 20px;
-      border-radius: 50%;
-      background: #3b82f6;
-      cursor: pointer;
-      box-shadow: 0 0 12px rgba(59, 130, 246, 0.6);
-    }
-  </style>
+  <!-- Cryo Telemetry Blueprint Stylesheet -->
+  <link rel="stylesheet" href="assets/cryo.css" />
 </head>
-<body class="selection:bg-blue-600 selection:text-white">
+<body class="selection:bg-[#00E5FF] selection:text-slate-950">
 
-  <!-- Ambient Glow -->
-  <div class="hero-glow"></div>
-
-  <!-- NAVIGATION -->
-  <header class="sticky top-0 z-50 backdrop-blur-xl bg-[#07080a]/80 border-b border-white/[0.06]">
-    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+  <!-- ========================================================================
+       1. STICKY TELEMETRY HEADER & ACTION BAR
+       ======================================================================== -->
+  <header class="sticky top-0 z-50 backdrop-blur-xl bg-[#05080E]/85 border-b border-sky-400/15">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
       
-      <!-- Brand -->
-      <a href="#" class="flex items-center gap-3 group">
-        <img src="assets/icon.png" alt="Cryo Logo" class="w-8 h-8 rounded-xl border border-white/10 group-hover:scale-105 transition-transform" />
-        <div class="flex items-center gap-2">
-          <span class="font-bold text-white text-base tracking-tight">Cryo</span>
-          <span class="text-[11px] font-mono text-zinc-500 uppercase tracking-widest px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 hidden sm:inline-block">ASTVN Studios</span>
+      <!-- Brand Identity -->
+      <a href="#" class="flex items-center gap-3 group min-w-0">
+        <div class="relative flex-shrink-0">
+          <img src="assets/icon.png" alt="Cryo Icon" class="w-9 h-9 rounded-xl border border-sky-400/30 shadow-[0_0_15px_rgba(0,229,255,0.2)] group-hover:scale-105 transition-transform" />
+          <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-[#05080E]"></span>
+        </div>
+        <div class="truncate">
+          <div class="flex items-center gap-2">
+            <span class="font-display font-bold text-white text-base sm:text-lg tracking-tight">CRYO</span>
+            <span class="text-[10px] font-mono-tech font-semibold text-[#00E5FF] px-1.5 py-0.5 rounded bg-sky-950/80 border border-sky-400/30">v1.0.67 · vc72</span>
+          </div>
+          <div class="text-[11px] font-mono-tech text-slate-400 hidden sm:block truncate"
+               data-en="ASTVN Studios · com.astvn.cryo"
+               data-vi="ASTVN Studios · com.astvn.cryo">ASTVN Studios · com.astvn.cryo</div>
         </div>
       </a>
 
-      <!-- Menu -->
-      <nav class="hidden md:flex items-center gap-8 text-xs font-medium text-zinc-400">
-        <a href="#resolution" class="hover:text-white transition-colors">Tối Ưu Độ Phân Giải</a>
-        <a href="#taskmanager" class="hover:text-white transition-colors">Task Manager & Đóng Băng</a>
-        <a href="#fpshud" class="hover:text-white transition-colors">Đo FPS Thực</a>
-        <a href="#ecosystem" class="hover:text-white transition-colors">Hệ Sinh Thái</a>
-        <a href="privacy.html" class="hover:text-white transition-colors">Quyền Riêng Tư</a>
+      <!-- Desktop Navigation -->
+      <nav class="hidden lg:flex items-center gap-6 text-xs font-mono-tech text-slate-300">
+        <a href="#sandbox" class="hover:text-[#00E5FF] transition-colors" data-en="01. LIVE SANDBOX" data-vi="01. BUỒNG LÁI THỬ">01. LIVE SANDBOX</a>
+        <a href="#under-the-hood" class="hover:text-[#00E5FF] transition-colors" data-en="02. SHIZUKU &amp; MECHANISM" data-vi="02. CƠ CHẾ &amp; SHIZUKU">02. SHIZUKU &amp; MECHANISM</a>
+        <a href="#bento-weapons" class="hover:text-[#00E5FF] transition-colors" data-en="03. 5 CORE SYSTEMS" data-vi="03. 5 VŨ KHÍ CỐT LÕI">03. 5 CORE SYSTEMS</a>
+        <a href="#focus-lab" class="hover:text-[#00E5FF] transition-colors" data-en="04. FOCUS LAB" data-vi="04. PHÒNG THỬ FOCUS">04. FOCUS LAB</a>
+        <a href="#privacy-pro" class="hover:text-[#00E5FF] transition-colors" data-en="05. PRIVACY &amp; PRO" data-vi="05. RIÊNG TƯ &amp; PRO">05. PRIVACY &amp; PRO</a>
       </nav>
 
-      <!-- CTA -->
-      <a href="https://play.google.com/store/apps/details?id=com.astvn.cryo" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-black font-semibold text-xs hover:bg-zinc-200 transition-all shadow-sm">
-        <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
-        <span>Google Play</span>
-      </a>
+      <!-- Language Switcher (EN / VI) + Google Play CTA -->
+      <div class="flex items-center gap-2.5 flex-shrink-0">
+        <div class="inline-flex items-center p-1 rounded-lg bg-[#0B111E] border border-slate-800" role="group" aria-label="Language Switcher">
+          <button type="button" id="lang-btn-en" class="lang-pill active">EN</button>
+          <button type="button" id="lang-btn-vi" class="lang-pill">VI</button>
+        </div>
+
+        <a href="https://play.google.com/store/apps/details?id=com.astvn.cryo" target="_blank" rel="noopener"
+           class="btn-kinetic btn-cryo-primary px-3.5 sm:px-4 py-2 rounded-lg text-xs font-mono-tech inline-flex items-center gap-2">
+          <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M3 20.5v-17c0-.83.94-1.3 1.6-.8l14 8.5c.6.37.6 1.23 0 1.6l-14 8.5c-.66.5-1.6.03-1.6-.8z"/></svg>
+          <span data-en="Google Play" data-vi="Tải trên Play">Google Play</span>
+        </a>
+      </div>
+
     </div>
   </header>
 
   <main class="relative z-10">
 
-    <!-- HERO SECTION -->
-    <section class="pt-20 sm:pt-28 pb-20 px-6 max-w-5xl mx-auto text-center">
+    <!-- ======================================================================
+         2. HERO SECTION + INTERACTIVE CRYO HARDWARE SANDBOX (TREND 01 + 10)
+         ====================================================================== -->
+    <section id="sandbox" class="pt-10 sm:pt-16 pb-16 px-4 sm:px-6 max-w-7xl mx-auto">
       
-      <!-- Announcement Pill -->
-      <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-zinc-900/90 border border-white/10 text-xs font-mono text-zinc-300 mb-8">
-        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span>Cryo v2.x · Độc quyền công nghệ Shizuku Buffer Scaler</span>
+      <!-- Top Blueprint Telemetry Metadata Strip -->
+      <div class="flex flex-wrap items-center justify-between gap-2 pb-6 border-b border-sky-400/10 text-[11px] font-mono-tech text-slate-400">
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-2 h-2 rounded-full bg-[#00E5FF] animate-pulse"></span>
+          <span data-en="SYS.SPEC // ANDROID 8.0+ (API 26–37) · SHIZUKU ADB BINDER"
+                data-vi="THÔNG SỐ // ANDROID 8.0+ (API 26–37) · SHIZUKU ADB BINDER">SYS.SPEC // ANDROID 8.0+ (API 26–37) · SHIZUKU ADB BINDER</span>
+        </div>
+        <div class="flex items-center gap-4">
+          <span class="text-emerald-400" data-en="● ZERO ROOT REQUIRED" data-vi="● KHÔNG CẦN ROOT">● ZERO ROOT REQUIRED</span>
+          <span class="hidden sm:inline text-slate-500">10 LANGUAGES · LOCAL-FIRST</span>
+        </div>
       </div>
 
-      <!-- Main Headline -->
-      <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.1] max-w-4xl mx-auto">
-        Tối ưu độ phân giải.<br />
-        <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-emerald-400">
-          Đóng băng tác vụ ngầm.
-        </span>
-      </h1>
-
-      <!-- Subheadline -->
-      <p class="mt-6 text-base sm:text-lg text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-        Công cụ tối ưu phần cứng chuyên sâu cho Android. Giảm tải tới <strong>51% diện tích render GPU</strong> với Chế độ Bộ đệm và giải phóng toàn bộ RAM nhàn rỗi thông qua <strong>Task Manager</strong> không cần Root.
-      </p>
-
-      <!-- Action Buttons -->
-      <div class="mt-10 flex flex-wrap justify-center gap-4">
-        <a href="https://play.google.com/store/apps/details?id=com.astvn.cryo" target="_blank" class="px-7 py-3.5 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-500 shadow-lg shadow-blue-600/25 transition-all flex items-center gap-2.5">
-          <i data-lucide="play" class="w-4 h-4 fill-current"></i>
-          <span>Cài đặt trên Google Play</span>
-        </a>
-
-        <a href="#resolution" class="px-7 py-3.5 rounded-xl bg-zinc-900 border border-white/10 text-zinc-300 font-semibold text-sm hover:text-white hover:bg-zinc-800 transition-all flex items-center gap-2">
-          <span>Xem cơ chế hoạt động</span>
-          <i data-lucide="arrow-down" class="w-4 h-4 text-zinc-500"></i>
-        </a>
+      <!-- Hero Copywriting -->
+      <div class="mt-8 mb-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
+        <div class="lg:col-span-8">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded bg-sky-950/70 border border-sky-400/30 text-[#00E5FF] text-xs font-mono-tech mb-4">
+            <span data-en="CRYO: GAME MODE &amp; FPS METER" data-vi="CRYO: CHẾ ĐỘ GAME &amp; ĐO FPS">CRYO: GAME MODE &amp; FPS METER</span>
+          </div>
+          <h1 class="font-display text-3xl sm:text-5xl lg:text-6xl font-bold text-white tracking-tight leading-[1.05]"
+              data-html="true"
+              data-en="ADB-Level Game Control.<br/><span class='text-[#00E5FF]'>Zero Root Required.</span>"
+              data-vi="Điều Khiển Game Cấp Độ ADB.<br/><span class='text-[#00E5FF]'>Hoàn Toàn Không Cần Root.</span>">
+            ADB-Level Game Control.<br/><span class="text-[#00E5FF]">Zero Root Required.</span>
+          </h1>
+        </div>
+        <div class="lg:col-span-4 flex flex-col justify-between gap-4">
+          <p class="text-slate-300 text-sm sm:text-base leading-relaxed"
+             data-en="Cryo gives Android gamers direct control over settings that normally require ADB commands: per-game render resolution (100% down to 30%), 4-level background app freezing, refresh rate lock, AFK black overlay, and real-time hardware telemetry via Shizuku."
+             data-vi="Cryo trao cho game thủ Android quyền điều khiển những thiết lập vốn phải dùng lệnh ADB: hạ độ phân giải kết xuất của game bạn chọn (100% xuống 30%), đóng băng ứng dụng chạy ngầm 4 cấp độ, khóa tần số quét, màn hình đen AFK và cửa sổ đo phần cứng thực tế qua Shizuku.">
+            Cryo gives Android gamers direct control over settings that normally require ADB commands: per-game render resolution (100% down to 30%), 4-level background app freezing, refresh rate lock, AFK black overlay, and real-time hardware telemetry via Shizuku.
+          </p>
+          <div class="flex flex-wrap items-center gap-3">
+            <a href="https://play.google.com/store/apps/details?id=com.astvn.cryo" target="_blank" rel="noopener"
+               class="btn-kinetic btn-cryo-primary px-5 py-3 rounded-xl text-xs sm:text-sm font-mono-tech inline-flex items-center gap-2.5">
+              <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M3 20.5v-17c0-.83.94-1.3 1.6-.8l14 8.5c.6.37.6 1.23 0 1.6l-14 8.5c-.66.5-1.6.03-1.6-.8z"/></svg>
+              <span data-en="Install on Google Play" data-vi="Cài đặt trên Google Play">Install on Google Play</span>
+            </a>
+            <a href="#under-the-hood"
+               class="btn-kinetic px-4 py-3 rounded-xl bg-[#0B111E] border border-slate-700 hover:border-[#00E5FF]/50 text-slate-200 text-xs sm:text-sm font-mono-tech inline-flex items-center gap-2">
+              <span data-en="How Shizuku Works" data-vi="Cơ chế Shizuku">How Shizuku Works</span>
+              <span>↓</span>
+            </a>
+          </div>
+        </div>
       </div>
 
-      <!-- Verified Metric Badges -->
-      <div class="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto text-left">
-        
-        <div class="p-5 rounded-2xl bg-[#0c0d12] border border-white/[0.06]">
-          <div class="text-2xl font-bold font-mono text-white">49% – 70%</div>
-          <div class="text-xs text-blue-400 font-medium mt-1">Diện tích render đồ họa</div>
-          <p class="text-[11px] text-zinc-500 mt-2">Cắt giảm hơn 50% gánh nặng render cho chip đồ họa.</p>
+      <!-- INTERACTIVE CRYO HARDWARE SANDBOX (Action-First Interface) -->
+      <div class="hw-panel rounded-2xl p-4 sm:p-6 lg:p-8 corner-brackets">
+        <span class="bracket-tl"></span>
+        <span class="bracket-br"></span>
+
+        <!-- Sandbox Header Bar -->
+        <div class="flex flex-wrap items-center justify-between gap-3 pb-4 mb-6 border-b border-slate-800/90">
+          <div class="flex flex-wrap items-center gap-2.5 min-w-0">
+            <span class="px-2 py-0.5 rounded text-[11px] font-mono-tech font-bold bg-[#00E5FF]/15 text-[#00E5FF] border border-[#00E5FF]/40 flex-shrink-0">INTERACTIVE SANDBOX</span>
+            <span class="text-xs font-mono-tech text-slate-300"
+                  data-en="Test Cryo's live controls below — drag the FPS monitor, slide render resolution, or double-tap AFK screen"
+                  data-vi="Bấm thử trực tiếp bên dưới — kéo thả cửa sổ FPS, kéo thanh độ phân giải hoặc chạm đúp màn hình AFK">
+              Test Cryo's live controls below — drag the FPS monitor, slide render resolution, or double-tap AFK screen
+            </span>
+          </div>
+
+          <!-- Shizuku Binder State Switch -->
+          <div class="flex items-center gap-2.5 bg-[#05080E] px-3 py-1.5 rounded-lg border border-slate-800">
+            <span class="text-xs font-mono-tech text-slate-300" data-en="Shizuku ADB Shell:" data-vi="Kết nối Shizuku:">Shizuku ADB Shell:</span>
+            <button type="button" id="sw-shizuku" role="switch" aria-checked="true" aria-label="Toggle Shizuku Connection" class="hw-switch"></button>
+          </div>
         </div>
 
-        <div class="p-5 rounded-2xl bg-[#0c0d12] border border-white/[0.06]">
-          <div class="text-2xl font-bold font-mono text-white">Deep Freeze</div>
-          <div class="text-xs text-emerald-400 font-medium mt-1">Task Manager đa cấp độ</div>
-          <p class="text-[11px] text-zinc-500 mt-2">Đóng băng tiến trình ngầm, tự động khôi phục khi thoát game.</p>
-        </div>
+        <!-- Sandbox Main Grid: Left Viewport (7 cols) + Right Control Deck (5 cols) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
 
-        <div class="p-5 rounded-2xl bg-[#0c0d12] border border-white/[0.06]">
-          <div class="text-2xl font-bold font-mono text-white">120.0 FPS</div>
-          <div class="text-xs text-indigo-400 font-medium mt-1">HUD đo đạc không trễ</div>
-          <p class="text-[11px] text-zinc-500 mt-2">Giám sát FPS, nhiệt độ và GPU với chi phí CPU dưới 0.5%.</p>
-        </div>
+          <!-- LEFT: SIMULATED ANDROID GAME VIEWPORT + FLOATING MONITOR (7 cols) -->
+          <div class="lg:col-span-7 min-w-0 flex flex-col justify-between">
+            <div id="sandbox-viewport" class="relative w-full h-[380px] sm:h-[440px] rounded-xl overflow-hidden bg-[#040812] border border-sky-400/25 shadow-inner select-none">
+              
+              <!-- Live HTML5 Canvas 2D Game Buffer Preview -->
+              <canvas id="sandbox-game-canvas" class="w-full h-full block" style="image-rendering: pixelated;"></canvas>
 
-        <div class="p-5 rounded-2xl bg-[#0c0d12] border border-white/[0.06]">
-          <div class="text-2xl font-bold font-mono text-white">Shizuku API</div>
-          <div class="text-xs text-amber-400 font-medium mt-1">Hoàn toàn không cần Root</div>
-          <p class="text-[11px] text-zinc-500 mt-2">Can thiệp hệ thống qua ADB Binder an toàn và bảo mật.</p>
-        </div>
+              <!-- Simulated Android System Status Bar (stays 100% sharp in Game Buffer mode!) -->
+              <div id="sandbox-sysui-bar" class="absolute top-0 inset-x-0 h-9 px-2.5 sm:px-3.5 bg-slate-950/75 backdrop-blur-md border-b border-white/10 flex items-center justify-between gap-2 text-[11px] font-mono-tech text-slate-200 z-10 transition-all overflow-hidden">
+                <div class="flex items-center gap-1.5 min-w-0 truncate">
+                  <span class="font-bold text-white whitespace-nowrap">Polar Run</span>
+                  <span id="sandbox-sysui-badge" class="text-[10px] font-mono-tech px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 truncate">
+                    System UI: 100% Sharp
+                  </span>
+                </div>
+                <div class="flex items-center gap-1 text-[10px] font-mono-tech flex-shrink-0">
+                  <span id="sb-ind-hz" class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 whitespace-nowrap">120Hz</span>
+                  <span id="sb-ind-wifi" class="hidden sm:inline-block px-1.5 py-0.5 rounded bg-sky-500/20 text-[#00E5FF] border border-sky-400/30 whitespace-nowrap">Wi-Fi LL</span>
+                  <span id="sb-ind-dnd" class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 whitespace-nowrap">DND</span>
+                </div>
+              </div>
 
+              <!-- DRAGGABLE CRYO FLOATING MONITOR OVERLAY -->
+              <div id="floating-monitor" class="floating-hud-window absolute rounded-2xl p-3 z-20" style="left: 16px; top: 48px; width: 248px;">
+                
+                <!-- Drag Handle / Pill Header -->
+                <div id="hud-drag-handle" class="flex items-center justify-between gap-2 cursor-grab">
+                  <div class="flex items-center gap-1.5 min-w-0">
+                    <span id="hud-status-dot" class="w-2 h-2 rounded-full bg-[#00E5FF] shadow-[0_0_8px_#00E5FF] flex-shrink-0"></span>
+                    <span id="hud-fps-num" class="text-lg font-mono-tech font-bold text-white tabular-nums">120</span>
+                    <span id="hud-fps-unit" class="text-xs font-mono-tech text-sky-300">FPS</span>
+                  </div>
+                  <button type="button" id="hud-collapse-btn" class="px-2 py-0.5 rounded-full text-[10px] font-mono-tech bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-600/60 transition-colors flex-shrink-0">
+                    ▲ Collapse
+                  </button>
+                </div>
+
+                <!-- Expanded Floating Monitor Body -->
+                <div id="hud-expanded-body" class="mt-2.5 pt-2 border-t border-slate-700/60 space-y-2">
+                  
+                  <!-- Active Focus Badge -->
+                  <div id="hud-focus-tag" class="px-2 py-0.5 rounded text-[10px] font-mono-tech font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30 truncate">
+                    ❄ Focus · 16 apps L2 · 4 apps L1
+                  </div>
+
+                  <!-- Downscale Status Line -->
+                  <div class="flex items-center justify-between text-[11px]">
+                    <span id="hud-mode-label" class="font-mono-tech text-emerald-400 font-semibold">Game buffer: 70%</span>
+                    <span class="text-[10px] font-mono-tech text-slate-400" data-en="Drag me" data-vi="Kéo thả">Drag me</span>
+                  </div>
+
+                  <!-- Live FPS Sparkline Graph -->
+                  <div id="hud-spark-container" class="pt-1">
+                    <div class="flex items-center justify-between text-[10px] font-mono-tech text-slate-300 mb-1">
+                      <span>FPS ↻</span>
+                      <span id="hud-avg-low" class="tabular-nums">avg 120 · 5% low 118</span>
+                    </div>
+                    <div class="relative h-10 w-full rounded bg-slate-950/80 border border-slate-800/90 overflow-hidden">
+                      <svg viewBox="0 0 216 38" class="w-full h-full preserve-3d">
+                        <defs>
+                          <linearGradient id="hudSparkGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#00E5FF" stop-opacity="0.38"/>
+                            <stop offset="100%" stop-color="#00E5FF" stop-opacity="0.0"/>
+                          </linearGradient>
+                        </defs>
+                        <path id="hud-spark-area" d="" fill="url(#hudSparkGrad)"></path>
+                        <path id="hud-spark-path" d="" fill="none" stroke="#00E5FF" stroke-width="1.8" stroke-linecap="round"></path>
+                      </svg>
+                      <div class="absolute bottom-0.5 inset-x-1.5 flex justify-between text-[9px] font-mono-tech text-slate-500">
+                        <span data-en="1 min ago" data-vi="1 phút trước">1 min ago</span>
+                        <span data-en="now" data-vi="bây giờ">now</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Hardware Telemetry Rows (CPU, GPU, RAM, BAT) -->
+                  <div class="space-y-1 text-[11px] font-mono-tech pt-1">
+                    <div id="hud-row-cpu" class="flex items-center justify-between border-b border-slate-800/70 pb-1">
+                      <span class="text-slate-400">CPU</span>
+                      <span id="hud-cpu-val" class="text-slate-100 tabular-nums">22%  2.38 GHz  38°</span>
+                    </div>
+                    <div id="hud-row-gpu" class="flex items-center justify-between border-b border-slate-800/70 pb-1">
+                      <span class="text-slate-400">GPU</span>
+                      <span id="hud-gpu-val" class="text-slate-100 tabular-nums">49%  524 MHz  37°</span>
+                    </div>
+                    <div class="flex items-center justify-between border-b border-slate-800/70 pb-1">
+                      <span class="text-slate-400">RAM</span>
+                      <span id="hud-ram-val" class="text-slate-100 tabular-nums">47%  5.8 GB</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-slate-400" data-en="BAT TEMP" data-vi="NHIỆT PIN">BAT TEMP</span>
+                      <span id="hud-bat-val" class="text-[#00E5FF] font-semibold tabular-nums">35.8°C</span>
+                    </div>
+                  </div>
+
+                  <!-- Floating Monitor Bottom Action Buttons -->
+                  <div class="pt-1.5 flex items-center gap-2">
+                    <button type="button" id="hud-screenoff-btn"
+                            class="flex-1 py-1.5 px-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] font-mono-tech font-semibold text-slate-200 transition-colors"
+                            data-en="📱 SCREEN OFF" data-vi="📱 TẮT MH">
+                      📱 SCREEN OFF
+                    </button>
+                    <button type="button" id="hud-optimize-btn"
+                            class="flex-1 py-1.5 px-2 rounded-lg bg-sky-400/20 hover:bg-sky-400/30 border border-sky-400/50 text-[10px] font-mono-tech font-bold text-[#00E5FF] transition-colors"
+                            data-en="⚡ 70% + L2" data-vi="⚡ TỐI ƯU">
+                      ⚡ 70% + L2
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- Bottom-Right Viewport Legend -->
+              <div class="absolute bottom-3 right-3 z-10 px-2.5 py-1 rounded bg-slate-950/80 border border-slate-800 text-[11px] font-mono-tech text-slate-300">
+                <span id="sandbox-area-saved">-51% pixels/frame</span>
+              </div>
+
+              <!-- AFK BLACK SCREEN OVERLAY (0% BRIGHTNESS — DOUBLE TAP TO WAKE) -->
+              <div id="sandbox-afk-overlay"
+                   class="absolute inset-0 z-30 bg-black flex flex-col items-center justify-center text-center p-6 opacity-0 pointer-events-none transition-opacity duration-300 cursor-pointer select-none">
+                <div class="w-12 h-12 rounded-2xl border border-slate-800 bg-slate-950 flex items-center justify-center text-[#00E5FF] mb-4 font-mono-tech text-sm">
+                  0%
+                </div>
+                <div class="font-mono-tech text-xs uppercase tracking-widest text-emerald-400 mb-1"
+                     data-en="● AFK OVERLAY ACTIVE (0% BRIGHTNESS)"
+                     data-vi="● MÀN HÌNH AFK ĐANG BẬT (ĐỘ SÁNG 0%)">
+                  ● AFK OVERLAY ACTIVE (0% BRIGHTNESS)
+                </div>
+                <p class="font-display text-lg sm:text-xl font-bold text-slate-200 max-w-md"
+                   data-en="Double-tap (or double-click) anywhere on this black screen to wake"
+                   data-vi="Chạm đúp (hoặc nhấp đúp chuột) vào khung đen này để bật sáng lại">
+                  Double-tap (or double-click) anywhere on this black screen to wake
+                </p>
+                <p class="text-xs font-mono-tech text-slate-500 mt-2 max-w-sm"
+                   data-en="The game keeps running underneath. Note: The game itself still uses battery; only the display panel draws less power."
+                   data-vi="Game vẫn đang chạy bên dưới. Lưu ý trung thực: bản thân game vẫn dùng pin, chỉ tấm nền màn hình bớt tiêu thụ điện.">
+                  The game keeps running underneath. Note: The game itself still uses battery; only the display panel draws less power.
+                </p>
+              </div>
+
+            </div>
+
+            <!-- Live ADB Command Terminal Output -->
+            <div class="mt-3 px-3.5 py-2.5 rounded-xl bg-[#05080E] border border-slate-800/90 flex items-center justify-between gap-3 overflow-hidden">
+              <div class="flex items-center gap-2 min-w-0 flex-1">
+                <span class="text-[10px] font-mono-tech font-bold px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-700 flex-shrink-0">ADB</span>
+                <code id="sandbox-adb-cmd" class="font-mono-tech text-xs text-[#00E5FF] truncate block min-w-0">
+                  $ adb shell "cmd game set --downscale 0.7 com.astvn.polarrun"
+                </code>
+              </div>
+              <span class="text-[10px] font-mono-tech text-slate-500 flex-shrink-0 hidden sm:inline">Shizuku IPC</span>
+            </div>
+          </div>
+
+          <!-- RIGHT: 3 CORE HARDWARE CONTROLS (5 cols) -->
+          <div class="lg:col-span-5 min-w-0 flex flex-col justify-between gap-4">
+
+            <!-- CONTROL 1: RENDER RESOLUTION SCALER (100% -> 30%, STEP 5%) -->
+            <div class="p-4 rounded-xl bg-[#070C17] border border-slate-800/90">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-mono-tech font-bold text-[#00E5FF]"
+                      data-en="01 // GAME RENDER RESOLUTION"
+                      data-vi="01 // ĐỘ PHÂN GIẢI KẾT XUẤT GAME">01 // GAME RENDER RESOLUTION</span>
+                <span id="sandbox-scale-value" class="text-2xl font-display font-bold text-white tabular-nums">70%</span>
+              </div>
+              <div id="sandbox-px-readout" class="text-xs font-mono-tech text-slate-400 mb-3 tabular-nums">
+                882 × 1960 px (49% pixel area)
+              </div>
+
+              <!-- Stepped Slider (30% to 100%, step 5%) -->
+              <input type="range" id="sandbox-res-slider" min="30" max="100" step="5" value="70"
+                     aria-label="Game Render Resolution Scale" class="cryo-slider my-2" />
+              <div class="flex justify-between text-[10px] font-mono-tech text-slate-500 mt-1 mb-3">
+                <span data-en="30% (Fewer pixels)" data-vi="30% (Ít điểm ảnh hơn)">30% (Fewer pixels)</span>
+                <span data-en="5% steps" data-vi="Bước nhảy 5%">5% steps</span>
+                <span data-en="100% (Native)" data-vi="100% (Độ nét gốc)">100% (Native)</span>
+              </div>
+
+              <!-- Quick Preset Buttons -->
+              <div class="flex items-center justify-between gap-1.5 mb-3">
+                <button type="button" data-scale-preset="30" class="preset-pill">30%</button>
+                <button type="button" data-scale-preset="50" class="preset-pill">50%</button>
+                <button type="button" data-scale-preset="70" class="preset-pill active">70%</button>
+                <button type="button" data-scale-preset="85" class="preset-pill">85%</button>
+                <button type="button" data-scale-preset="100" class="preset-pill">100%</button>
+              </div>
+
+              <!-- Mode Switcher: Game Buffer (A13+) vs Fullscreen (wm size) -->
+              <div class="flex items-center gap-2 pt-2 border-t border-slate-800/80">
+                <button type="button" id="mode-btn-buffer" class="mode-pill active"
+                        data-en="Game Buffer (A13+)" data-vi="Bộ đệm game (A13+)">Game Buffer (A13+)</button>
+                <button type="button" id="mode-btn-wm" class="mode-pill"
+                        data-en="Fullscreen (wm size)" data-vi="Toàn màn hình (wm size)">Fullscreen (wm size)</button>
+              </div>
+
+              <!-- Resolution Lock Sub-row (Applies to Fullscreen mode) -->
+              <div id="sandbox-reslock-row" class="mt-2.5 pt-2 border-t border-slate-800/50 flex items-center justify-between text-xs opacity-40 pointer-events-none transition-opacity">
+                <span class="font-mono-tech text-slate-300"
+                      data-en="Resolution Lock (Keep outside games)"
+                      data-vi="Khoá độ phân giải (Giữ cả ngoài game)">Resolution Lock (Keep outside games)</span>
+                <button type="button" id="sw-reslock" role="switch" aria-checked="false" aria-label="Resolution Lock" class="hw-switch"></button>
+              </div>
+            </div>
+
+            <!-- CONTROL 2: 4 FREEZE LEVELS (LIGHT / MEDIUM / STRONG / EXTREME) -->
+            <div class="p-4 rounded-xl bg-[#070C17] border border-slate-800/90">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-mono-tech font-bold text-emerald-400"
+                      data-en="02 // 4-LEVEL APP FREEZER"
+                      data-vi="02 // 4 MỨC ĐÓNG BĂNG ỨNG DỤNG">02 // 4-LEVEL APP FREEZER</span>
+                <span id="sandbox-freeze-ram" class="text-xs font-mono-tech font-bold text-[#00E5FF] tabular-nums">+1.6 GB RAM</span>
+              </div>
+
+              <div class="grid grid-cols-4 gap-1.5 mb-2.5">
+                <button type="button" id="freeze-btn-L1" class="freeze-btn py-2 px-1 rounded-lg border border-slate-800 bg-slate-900/70 text-center font-mono-tech text-xs text-slate-300">
+                  <div class="font-bold">L1</div>
+                  <div class="text-[10px] opacity-80" data-en="Light" data-vi="Nhẹ">Light</div>
+                </button>
+                <button type="button" id="freeze-btn-L2" class="freeze-btn active-L2 py-2 px-1 rounded-lg border border-slate-800 bg-slate-900/70 text-center font-mono-tech text-xs text-slate-300">
+                  <div class="font-bold">L2</div>
+                  <div class="text-[10px] opacity-80" data-en="Medium" data-vi="Vừa">Medium</div>
+                </button>
+                <button type="button" id="freeze-btn-L3" class="freeze-btn py-2 px-1 rounded-lg border border-slate-800 bg-slate-900/70 text-center font-mono-tech text-xs text-slate-300">
+                  <div class="font-bold">L3</div>
+                  <div class="text-[10px] opacity-80" data-en="Strong" data-vi="Mạnh">Strong</div>
+                </button>
+                <button type="button" id="freeze-btn-L4" class="freeze-btn py-2 px-1 rounded-lg border border-slate-800 bg-slate-900/70 text-center font-mono-tech text-xs text-slate-300">
+                  <div class="font-bold">L4</div>
+                  <div class="text-[10px] opacity-80" data-en="Extreme" data-vi="Tối đa">Extreme</div>
+                </button>
+              </div>
+
+              <div class="p-2.5 rounded-lg bg-[#05080E] border border-slate-800/80">
+                <div id="sandbox-freeze-title" class="text-xs font-mono-tech font-bold text-white">L2 · Medium (Close &amp; Hold)</div>
+                <p id="sandbox-freeze-desc" class="text-[11px] text-slate-400 mt-0.5 leading-snug">
+                  Closes the app + blocks background wakeup. If it restarts itself, Cryo closes it again.
+                </p>
+              </div>
+            </div>
+
+            <!-- CONTROL 3: GAME MODE HARDWARE SWITCHES -->
+            <div class="p-4 rounded-xl bg-[#070C17] border border-slate-800/90 space-y-2.5">
+              <div class="text-xs font-mono-tech font-bold text-sky-400 mb-1"
+                   data-en="03 // GAME MODE SWITCHES"
+                   data-vi="03 // CÔNG TẮC CHẾ ĐỘ GAME">03 // GAME MODE SWITCHES</div>
+
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-xs font-semibold text-white" data-en="AFK Black Screen (0% Brightness)" data-vi="Màn hình đen AFK (Độ sáng 0%)">AFK Black Screen (0% Brightness)</div>
+                  <div class="text-[11px] text-slate-400" data-en="Double-tap game screen to wake" data-vi="Chạm đúp vào khung game để bật lại">Double-tap game screen to wake</div>
+                </div>
+                <button type="button" id="sw-afk" role="switch" aria-checked="false" aria-label="AFK Black Screen" class="hw-switch"></button>
+              </div>
+
+              <div class="flex items-center justify-between pt-2 border-t border-slate-800/70">
+                <div>
+                  <div class="text-xs font-semibold text-white" data-en="60 Hz Refresh Rate Lock" data-vi="Khoá tần số quét 60 Hz">60 Hz Refresh Rate Lock</div>
+                  <div class="text-[11px] text-slate-400" data-en="Cap display at 60Hz while in-game" data-vi="Giới hạn màn hình ở 60Hz khi đang chơi">Cap display at 60Hz while in-game</div>
+                </div>
+                <button type="button" id="sw-60hz" role="switch" aria-checked="false" aria-label="60Hz Refresh Rate Lock" class="hw-switch"></button>
+              </div>
+
+              <div class="flex items-center justify-between pt-2 border-t border-slate-800/70">
+                <div>
+                  <div class="text-xs font-semibold text-white" data-en="Do Not Disturb (DND)" data-vi="Không làm phiền (DND)">Do Not Disturb (DND)</div>
+                  <div class="text-[11px] text-slate-400" data-en="Silence calls &amp; notifications while in-game" data-vi="Chặn cuộc gọi &amp; thông báo khi đang chơi">Silence calls &amp; notifications while in-game</div>
+                </div>
+                <button type="button" id="sw-dnd" role="switch" aria-checked="true" aria-label="Do Not Disturb" class="hw-switch"></button>
+              </div>
+
+              <div class="flex items-center justify-between pt-2 border-t border-slate-800/70">
+                <div>
+                  <div class="text-xs font-semibold text-white" data-en="Low-Latency Wi-Fi (Android 10+)" data-vi="Wi-Fi độ trễ thấp (Android 10+)">Low-Latency Wi-Fi (Android 10+)</div>
+                  <div class="text-[11px] text-slate-400" data-en="Android low-latency Wi-Fi mode (chip dependent)" data-vi="Chế độ Wi-Fi độ trễ thấp của Android (tuỳ chip)">Android low-latency Wi-Fi mode (chip dependent)</div>
+                </div>
+                <button type="button" id="sw-wifi" role="switch" aria-checked="true" aria-label="Low-Latency Wi-Fi" class="hw-switch"></button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
       </div>
 
     </section>
 
-    <!-- CORE FEATURE 1: TỐI ƯU ĐỘ PHÂN GIẢI & BỘ ĐỆM (RESOLUTION SCALER) -->
-    <section id="resolution" class="py-24 border-t border-white/[0.06] bg-[#090a0f]">
-      <div class="max-w-6xl mx-auto px-6">
+    <!-- ======================================================================
+         3. THE TL;DR EXPERIENCE & PROGRESSIVE DISCLOSURE DRAWER (TREND 03)
+         ====================================================================== -->
+    <section id="under-the-hood" class="py-12 px-4 sm:px-6 max-w-7xl mx-auto">
+      
+      <!-- Layer 1: 4-Card Single-Scan TL;DR Bar -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          
-          <!-- Explanation Column (7 cols) -->
-          <div class="lg:col-span-7">
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-mono font-medium text-blue-400 bg-blue-950/60 border border-blue-800/40 mb-4">
-              <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
-              TÍNH NĂNG CỐT LÕI #1
-            </div>
-            
-            <h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
-              Chế Độ Bộ Đệm Màn Hình.<br />
-              <span class="text-blue-400">Giảm tải 51% render GPU, giữ trọn vẹn 120 FPS.</span>
-            </h2>
-
-            <p class="mt-4 text-zinc-400 text-sm sm:text-base leading-relaxed">
-              Các tựa game 3D đồ họa nặng như <em>Roblox, Genshin Impact, PUBG hay Liên Quân</em> thường làm GPU quá tải dẫn đến hiện tượng bóp xung nhịp (thermal throttling) và tụt khung hình thảm hại.
-            </p>
-
-            <p class="mt-3 text-zinc-400 text-sm sm:text-base leading-relaxed">
-              Cryo giải quyết triệt để vấn đề này từ gốc rễ: <strong>Hạ tỷ lệ pixel render xuống 70% (0.7x0.7 = 49% diện tích điểm ảnh)</strong>. GPU chỉ cần dựng một nửa số điểm ảnh, giải phóng tài nguyên tức thì, trong khi thuật toán hiển thị của máy vẫn giữ nguyên độ nét cho các nút bấm và thanh điều hướng hệ thống.
-            </p>
-
-            <!-- Technical Keypoints -->
-            <div class="mt-8 space-y-3 font-mono text-xs text-zinc-300">
-              <div class="flex items-center gap-3 p-3 rounded-xl bg-[#0f1015] border border-white/[0.06]">
-                <i data-lucide="check" class="w-4 h-4 text-blue-400 flex-shrink-0"></i>
-                <span>Giảm nhiệt độ máy từ 3°C – 6°C trong các trận combat kéo dài</span>
-              </div>
-              <div class="flex items-center gap-3 p-3 rounded-xl bg-[#0f1015] border border-white/[0.06]">
-                <i data-lucide="check" class="w-4 h-4 text-blue-400 flex-shrink-0"></i>
-                <span>Tăng độ ổn định khung hình (Frametime consistency) lên đến 98%</span>
-              </div>
-              <div class="flex items-center gap-3 p-3 rounded-xl bg-[#0f1015] border border-white/[0.06]">
-                <i data-lucide="check" class="w-4 h-4 text-blue-400 flex-shrink-0"></i>
-                <span>Tự động trả lại độ phân giải gốc ngay khi đóng game</span>
-              </div>
-            </div>
-
-            <!-- Interactive Benchmark Widget -->
-            <div class="mt-8 p-6 rounded-2xl bg-[#0c0d12] border border-white/[0.08]">
-              <div class="flex items-center justify-between text-xs font-mono mb-2">
-                <span class="text-zinc-400">Thử nghiệm mức tinh chỉnh:</span>
-                <span id="slider-scale-text" class="text-blue-400 font-bold">70% (Tỷ lệ khuyến nghị)</span>
-              </div>
-              <input type="range" id="res-slider" min="50" max="100" value="70" step="5" class="w-full my-2" oninput="updateResCalc(this.value)" />
-              <div class="grid grid-cols-2 gap-4 mt-4 text-center">
-                <div class="p-3 rounded-xl bg-zinc-900 border border-white/[0.04]">
-                  <div class="text-[11px] text-zinc-500 font-mono">Diện tích Render</div>
-                  <div id="calc-area" class="text-xl font-bold font-mono text-white mt-0.5">49%</div>
-                </div>
-                <div class="p-3 rounded-xl bg-zinc-900 border border-white/[0.04]">
-                  <div class="text-[11px] text-zinc-500 font-mono">Tải GPU Giảm Thiểu</div>
-                  <div id="calc-gpu" class="text-xl font-bold font-mono text-emerald-400 mt-0.5">-51%</div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          <!-- Product Image Column (5 cols) -->
-          <div class="lg:col-span-5 flex justify-center">
-            <div class="relative group max-w-[340px]">
-              <div class="absolute -inset-2 bg-gradient-to-tr from-blue-600/30 to-emerald-500/20 rounded-[44px] blur-xl opacity-60 group-hover:opacity-100 transition-opacity"></div>
-              <div class="relative rounded-[38px] overflow-hidden border border-white/10 shadow-2xl bg-black">
-                <img src="assets/shot_resolution.png" alt="Cryo Resolution Tuner 49%" class="w-full h-auto object-cover" />
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-      </div>
-    </section>
-
-    <!-- CORE FEATURE 2: TASK MANAGER & APP FREEZE ENGINE -->
-    <section id="taskmanager" class="py-24 border-t border-white/[0.06]">
-      <div class="max-w-6xl mx-auto px-6">
-        
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          
-          <!-- Image Column (5 cols) -->
-          <div class="lg:col-span-5 flex justify-center order-2 lg:order-1">
-            <div class="relative group max-w-[340px]">
-              <div class="absolute -inset-2 bg-gradient-to-tr from-emerald-600/30 to-indigo-500/20 rounded-[44px] blur-xl opacity-60 group-hover:opacity-100 transition-opacity"></div>
-              <div class="relative rounded-[38px] overflow-hidden border border-white/10 shadow-2xl bg-black">
-                <img src="assets/shot_manager.png" alt="Cryo Task Manager & App Freeze" class="w-full h-auto object-cover" />
-              </div>
-            </div>
-          </div>
-
-          <!-- Explanation Column (7 cols) -->
-          <div class="lg:col-span-7 order-1 lg:order-2">
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-mono font-medium text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 mb-4">
-              <i data-lucide="layers" class="w-3.5 h-3.5"></i>
-              TÍNH NĂNG CỐT LÕI #2
-            </div>
-
-            <h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
-              Task Manager Chuyên Sâu.<br />
-              <span class="text-emerald-400">Đóng băng tiến trình ngầm, dồn 100% RAM cho game.</span>
-            </h2>
-
-            <p class="mt-4 text-zinc-400 text-sm sm:text-base leading-relaxed">
-              Các ứng dụng mạng xã hội, nhắn tin hay tác vụ hệ thống liên tục chạy ngầm, âm thầm tiêu thụ bộ nhớ RAM và đánh thức CPU ngay trong lúc bạn đang combat.
-            </p>
-
-            <p class="mt-3 text-zinc-400 text-sm sm:text-base leading-relaxed">
-              <strong>Cryo Task Manager</strong> cung cấp cơ chế đóng băng sâu (Freeze Engine) với nhiều cấp độ:
-            </p>
-
-            <div class="mt-6 space-y-4">
-              <div class="p-4 rounded-xl card-surface">
-                <div class="flex items-center justify-between font-mono text-xs font-bold text-white mb-1">
-                  <span>Cấp 1: Rã đông trả app về đúng trạng thái</span>
-                  <span class="text-emerald-400">Tự động</span>
-                </div>
-                <p class="text-xs text-zinc-400">Không làm mất dữ liệu phiên làm việc, app khôi phục ngay khi bạn tắt game.</p>
-              </div>
-
-              <div class="p-4 rounded-xl card-surface">
-                <div class="flex items-center justify-between font-mono text-xs font-bold text-white mb-1">
-                  <span>Cấp 2: Đóng băng ứng dụng hệ thống an toàn</span>
-                  <span class="text-blue-400">Shizuku Powered</span>
-                </div>
-                <p class="text-xs text-zinc-400">Tạm tắt các app cài sẵn ngốn tài nguyên mà không lo gỡ nhầm file hệ thống gây lỗi máy.</p>
-              </div>
-
-              <div class="p-4 rounded-xl card-surface">
-                <div class="flex items-center justify-between font-mono text-xs font-bold text-white mb-1">
-                  <span>Cấp 3: Ổ "Treo Game AFK"</span>
-                  <span class="text-indigo-400">Tiện ích đặc quyền</span>
-                </div>
-                <p class="text-xs text-zinc-400">Treo game ngầm với mức tiêu thụ điện năng tối thiểu mà không bị Android tự động kill app.</p>
-              </div>
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-    </section>
-
-    <!-- CORE FEATURE 3: REALTIME FPS HUD -->
-    <section id="fpshud" class="py-24 border-t border-white/[0.06] bg-[#090a0f]">
-      <div class="max-w-6xl mx-auto px-6">
-        
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          
-          <div class="lg:col-span-7">
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-mono font-medium text-indigo-400 bg-indigo-950/60 border border-indigo-800/40 mb-4">
-              <i data-lucide="gauge" class="w-3.5 h-3.5"></i>
-              TÍNH NĂNG CỐT LÕI #3
-            </div>
-
-            <h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
-              Đo Khung Hình HUD Chuẩn Xác.<br />
-              <span class="text-indigo-400">Giám sát FPS, CPU, GPU & Nhiệt độ tức thì.</span>
-            </h2>
-
-            <p class="mt-4 text-zinc-400 text-sm sm:text-base leading-relaxed">
-              Cửa sổ nổi Floating HUD của Cryo được tối ưu hóa đặc biệt bằng <em>SurfaceView</em> và đọc trực tiếp từ subsystem của Android:
-            </p>
-
-            <ul class="mt-6 space-y-3 text-xs sm:text-sm text-zinc-300 font-mono">
-              <li class="flex items-center gap-3">
-                <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-                <span><strong>Độ trễ tiệm cận 0ms:</strong> Tần số GPU không còn hiện giá trị cũ khi game đối xung.</span>
-              </li>
-              <li class="flex items-center gap-3">
-                <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-                <span><strong>Thiết kế siêu nhỏ gọn:</strong> Không che khuất tầm nhìn, không cản trở thao tác ngón tay.</span>
-              </li>
-              <li class="flex items-center gap-3">
-                <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-                <span><strong>Cảnh báo nhiệt độ pin:</strong> Tự động đổi màu cảnh báo khi thiết bị vượt ngưỡng an toàn.</span>
-              </li>
-            </ul>
-
-            <div class="mt-8 flex gap-4">
-              <a href="https://play.google.com/store/apps/details?id=com.astvn.cryo" target="_blank" class="px-6 py-3 rounded-xl bg-white text-black font-semibold text-xs hover:bg-zinc-200 transition-all">
-                Trải nghiệm ngay trên thiết bị
-              </a>
-            </div>
-          </div>
-
-          <div class="lg:col-span-5 flex justify-center">
-            <div class="relative group max-w-[340px]">
-              <div class="absolute -inset-2 bg-gradient-to-tr from-indigo-600/30 to-blue-500/20 rounded-[44px] blur-xl opacity-60 group-hover:opacity-100 transition-opacity"></div>
-              <div class="relative rounded-[38px] overflow-hidden border border-white/10 shadow-2xl bg-black">
-                <img src="assets/shot_fps.png" alt="Cryo Realtime Ingame FPS HUD" class="w-full h-auto object-cover" />
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-      </div>
-    </section>
-
-    <!-- ADDITIONAL CRAFTSMANSHIP (AURA SHADER & GAMING HUB) -->
-    <section class="py-20 border-t border-white/[0.06]">
-      <div class="max-w-6xl mx-auto px-6">
-        
-        <div class="text-center max-w-2xl mx-auto mb-14">
-          <span class="text-xs font-mono font-semibold text-zinc-500 uppercase tracking-widest">Chi Tiết Tinh Tế</span>
-          <h2 class="text-2xl sm:text-3xl font-extrabold text-white mt-2">Trải nghiệm thị giác xứng tầm</h2>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
-          <div class="p-8 rounded-3xl card-surface">
-            <div class="w-10 h-10 rounded-xl bg-cyan-950/70 border border-cyan-800/40 flex items-center justify-center text-cyan-400 mb-6">
-              <i data-lucide="sparkles" class="w-5 h-5"></i>
-            </div>
-            <h3 class="text-xl font-bold text-white mb-2">Shader Hào Quang Aurora (Aura Studio)</h3>
-            <p class="text-zinc-400 text-sm leading-relaxed mb-4">
-              Điểm nhấn thị giác độc quyền: Hiệu ứng ánh sáng hào quang viền game chuyển động theo thuật toán flow-field, tùy biến với 54 tham số vi chỉnh màu sắc mà không tốn xung nhịp GPU.
-            </p>
-            <div class="text-xs font-mono text-cyan-400">Chi phí GPU đo kiểm: ≤ +0.1ms</div>
-          </div>
-
-          <div class="p-8 rounded-3xl card-surface">
-            <div class="w-10 h-10 rounded-xl bg-blue-950/70 border border-blue-800/40 flex items-center justify-center text-blue-400 mb-6">
-              <i data-lucide="gamepad-2" class="w-5 h-5"></i>
-            </div>
-            <h3 class="text-xl font-bold text-white mb-2">Gaming Space Hub</h3>
-            <p class="text-zinc-400 text-sm leading-relaxed mb-4">
-              Không gian quản lý game tập trung, tự động nhận diện game đã cài đặt và cấu hình sẵn mức tăng tốc chuyên biệt cho từng tựa game riêng lẻ.
-            </p>
-            <div class="text-xs font-mono text-blue-400">Khởi chạy tức thì 1 chạm</div>
-          </div>
-
-        </div>
-
-      </div>
-    </section>
-
-    <!-- ECOSYSTEM & FUTURE PORTFOLIO -->
-    <section id="ecosystem" class="py-24 border-t border-white/[0.06] bg-[#090a0f]">
-      <div class="max-w-6xl mx-auto px-6">
-        
-        <div class="flex flex-col md:flex-row md:items-end justify-between mb-16">
-          <div>
-            <span class="text-xs font-mono font-semibold text-blue-400 uppercase tracking-widest">Hệ Sinh Thái Phần Mềm</span>
-            <h2 class="text-3xl font-extrabold text-white mt-2">Dự Án Của ASTVN Studios</h2>
-          </div>
-          <p class="text-zinc-400 text-sm max-w-md mt-4 md:mt-0 font-normal">
-            Bên cạnh công cụ tăng tốc Cryo, ASTVN Studios liên tục nghiên cứu phát triển các ứng dụng di động hiệu năng cao và các tựa game độc lập mới.
+        <div class="hw-panel rounded-xl p-5 reticle-box">
+          <div class="text-[11px] font-mono-tech text-[#00E5FF] font-bold mb-1">TL;DR // 01</div>
+          <div class="font-display text-lg font-bold text-white">NO ROOT REQUIRED</div>
+          <p class="text-xs text-slate-400 mt-1.5 leading-relaxed"
+             data-en="Executes real system commands through Shizuku's open-source ADB binder. Guided 1-time Wireless Debugging setup on Android 11+."
+             data-vi="Thực thi lệnh hệ thống thật qua Shizuku ADB Binder mã nguồn mở. Hướng dẫn kích hoạt Gỡ lỗi không dây 1 lần trên Android 11+.">
+            Executes real system commands through Shizuku's open-source ADB binder. Guided 1-time Wireless Debugging setup on Android 11+.
           </p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
-          <!-- Cryo Card -->
-          <div class="p-7 rounded-3xl card-surface flex flex-col justify-between border-blue-500/30">
-            <div>
-              <div class="flex items-center justify-between mb-4">
-                <span class="px-2.5 py-1 rounded text-[11px] font-mono font-bold bg-blue-950 text-blue-400 border border-blue-800/40">TIỆN ÍCH / TỐI ƯU</span>
-                <span class="text-xs text-emerald-400 font-mono font-semibold">● Đang hoạt động</span>
+        <div class="hw-panel rounded-xl p-5 reticle-box">
+          <div class="text-[11px] font-mono-tech text-[#00E5FF] font-bold mb-1">TL;DR // 02</div>
+          <div class="font-display text-lg font-bold text-white">30%–100% RENDER SCALE</div>
+          <p class="text-xs text-slate-400 mt-1.5 leading-relaxed"
+             data-en="Adjust game render resolution in 5% steps. Game Buffer mode (Android 13+) scales only the game so system UI stays razor-sharp."
+             data-vi="Hạ độ phân giải kết xuất từng bước 5% cho các game đã chọn. Chế độ Bộ đệm game (Android 13+) chỉ hạ riêng game, UI hệ thống vẫn nét căng.">
+            Adjust game render resolution in 5% steps. Game Buffer mode (Android 13+) scales only the game so system UI stays razor-sharp.
+          </p>
+        </div>
+
+        <div class="hw-panel rounded-xl p-5 reticle-box">
+          <div class="text-[11px] font-mono-tech text-emerald-400 font-bold mb-1">TL;DR // 03</div>
+          <div class="font-display text-lg font-bold text-white">100% REVERSIBLE</div>
+          <p class="text-xs text-slate-400 mt-1.5 leading-relaxed"
+             data-en="Records original resolution, refresh rate &amp; DND before changing them. Restores automatically on game exit, reboot, or uninstall."
+             data-vi="Ghi lại độ phân giải, tần số quét và DND gốc trước khi đổi. Tự động hoàn tác ngay khi thoát game, khởi động lại hoặc gỡ cài đặt.">
+            Records original resolution, refresh rate &amp; DND before changing them. Restores automatically on game exit, reboot, or uninstall.
+          </p>
+        </div>
+
+        <div class="hw-panel rounded-xl p-5 reticle-box">
+          <div class="text-[11px] font-mono-tech text-sky-400 font-bold mb-1">TL;DR // 04</div>
+          <div class="font-display text-lg font-bold text-white">ZERO ACCOUNT · LOCAL</div>
+          <p class="text-xs text-slate-400 mt-1.5 leading-relaxed"
+             data-en="No sign-up, no cloud login. Your game list, pinned apps, and session history stay on your device. Honest telemetry — never faked."
+             data-vi="Không tài khoản, không đăng nhập. Danh sách game, ứng dụng ghim và lịch sử phiên chơi lưu trên máy bạn. Số liệu trung thực 100%.">
+            No sign-up, no cloud login. Your game list, pinned apps, and session history stay on your device. Honest telemetry — never faked.
+          </p>
+        </div>
+
+      </div>
+
+      <!-- Layer 2 Trigger: Expandable Deep-Dive Engineering Drawer -->
+      <div class="mt-6">
+        <button type="button" id="tldr-drawer-trigger"
+                class="w-full py-4 px-6 rounded-xl bg-[#0B111E] hover:bg-[#111C33] border border-sky-400/25 flex items-center justify-between gap-4 transition-all group">
+          <div class="flex items-center gap-3 text-left">
+            <span class="px-2 py-0.5 rounded text-[11px] font-mono-tech font-bold bg-[#00E5FF]/15 text-[#00E5FF] border border-[#00E5FF]/30">DEEP DIVE</span>
+            <span class="font-display font-bold text-sm sm:text-base text-white group-hover:text-[#00E5FF] transition-colors"
+                  data-en="How it works under the hood: Game Buffer vs. wm size, 3-Step Shizuku Setup &amp; Undo Ledger"
+                  data-vi="Xem cơ chế hoạt động cấp hệ thống: Bộ đệm Game vs. wm size, 3 bước cài Shizuku &amp; Cơ chế hoàn tác">
+              How it works under the hood: Game Buffer vs. wm size, 3-Step Shizuku Setup &amp; Undo Ledger
+            </span>
+          </div>
+          <span id="tldr-drawer-chevron" class="font-mono-tech text-[#00E5FF] text-sm transition-transform duration-300">▼</span>
+        </button>
+
+        <!-- Collapsible Drawer Content -->
+        <div id="tldr-drawer-content" class="drawer-collapse mt-3">
+          <div class="drawer-inner">
+            <div class="hw-panel rounded-2xl p-6 sm:p-8 border-sky-400/30">
+              
+              <!-- Drawer Sub-Navigation Tabs -->
+              <div class="flex flex-wrap gap-2 pb-6 border-b border-slate-800">
+                <button type="button" data-hood-tab="buffer-vs-wm"
+                        class="px-3.5 py-2 rounded-lg text-xs font-mono-tech font-bold bg-[#00E5FF] text-slate-950 shadow-sm transition-all"
+                        data-en="1. Game Buffer (A13+) vs Fullscreen (wm size)"
+                        data-vi="1. Bộ đệm Game (A13+) vs Toàn màn hình (wm size)">
+                  1. Game Buffer (A13+) vs Fullscreen (wm size)
+                </button>
+                <button type="button" data-hood-tab="shizuku-setup"
+                        class="px-3.5 py-2 rounded-lg text-xs font-mono-tech text-slate-400 bg-slate-900/90 border border-slate-800 hover:text-white transition-all"
+                        data-en="2. 3-Step Shizuku Setup (Wireless Debugging)"
+                        data-vi="2. 3 bước kích hoạt Shizuku (Gỡ lỗi không dây)">
+                  2. 3-Step Shizuku Setup (Wireless Debugging)
+                </button>
+                <button type="button" data-hood-tab="safety-ledger"
+                        class="px-3.5 py-2 rounded-lg text-xs font-mono-tech text-slate-400 bg-slate-900/90 border border-slate-800 hover:text-white transition-all"
+                        data-en="3. SystemStateGuard &amp; 100% Reversible Safety"
+                        data-vi="3. SystemStateGuard &amp; Bảo vệ hoàn tác 100%">
+                  3. SystemStateGuard &amp; 100% Reversible Safety
+                </button>
               </div>
-              <h3 class="text-lg font-bold text-white mb-2">Cryo: Game Booster & GFX Tool</h3>
-              <p class="text-zinc-400 text-sm leading-relaxed">
-                Tối ưu độ phân giải 49%, đóng băng app Task Manager và đo FPS 120Hz chuyên sâu.
-              </p>
-            </div>
-            <div class="mt-8 pt-4 border-t border-white/[0.06] flex items-center justify-between">
-              <span class="text-xs text-zinc-500 font-mono">com.astvn.cryo</span>
-              <a href="https://play.google.com/store/apps/details?id=com.astvn.cryo" target="_blank" class="text-xs font-bold text-blue-400 hover:underline flex items-center gap-1">
-                Google Play <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
-              </a>
-            </div>
-          </div>
 
-          <!-- Project Glitch Card -->
-          <div class="p-7 rounded-3xl card-surface flex flex-col justify-between">
-            <div>
-              <div class="flex items-center justify-between mb-4">
-                <span class="px-2.5 py-1 rounded text-[11px] font-mono font-bold bg-zinc-900 text-zinc-400 border border-zinc-800">TRÒ CHƠI DI ĐỘNG</span>
-                <span class="text-xs text-amber-400 font-mono font-semibold">● Đang phát triển</span>
+              <!-- TAB PANEL 1: GAME BUFFER VS FULLSCREEN WM SIZE -->
+              <div data-hood-panel="buffer-vs-wm" class="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="p-5 rounded-xl bg-[#05080E] border border-emerald-500/30">
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-mono-tech font-bold text-emerald-400" data-en="RECOMMENDED ON ANDROID 13+" data-vi="KHUYÊN DÙNG TRÊN ANDROID 13+">RECOMMENDED ON ANDROID 13+</span>
+                    <code class="text-[11px] font-mono-tech text-slate-400">cmd game downscale</code>
+                  </div>
+                  <h3 class="font-display text-xl font-bold text-white mb-2"
+                      data-en="Game Mode Buffer Scaling"
+                      data-vi="Chế độ Bộ đệm game (Game Buffer)">Game Mode Buffer Scaling</h3>
+                  <p class="text-xs sm:text-sm text-slate-300 leading-relaxed"
+                     data-en="Uses Android's native GameManager service to resize only the target game's internal surface buffer (from 100% down to 30% in 5% steps). Your status bar, notifications, keyboard, and floating monitor remain at 100% native sharpness."
+                     data-vi="Sử dụng dịch vụ GameManager gốc của Android để thu nhỏ riêng bộ đệm bề mặt của tựa game được chọn (từ 100% xuống 30%, bước nhảy 5%). Thanh trạng thái, thông báo, bàn phím và cửa sổ nổi vẫn giữ nguyên độ nét 100%.">
+                    Uses Android's native GameManager service to resize only the target game's internal surface buffer (from 100% down to 30% in 5% steps). Your status bar, notifications, keyboard, and floating monitor remain at 100% native sharpness.
+                  </p>
+                  <div class="mt-4 pt-3 border-t border-slate-800/80 text-xs font-mono-tech text-slate-400"
+                       data-en="✓ Persists across phone reboots &amp; game updates (Cryo re-applies when Shizuku connects)"
+                       data-vi="✓ Giữ nguyên sau khi khởi động lại máy hoặc cập nhật game (Cryo tự ghi lại khi Shizuku kết nối)">
+                    ✓ Persists across phone reboots &amp; game updates (Cryo re-applies when Shizuku connects)
+                  </div>
+                </div>
+
+                <div class="p-5 rounded-xl bg-[#05080E] border border-sky-500/30">
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-mono-tech font-bold text-sky-400" data-en="ANDROID 8.0+ &amp; UNREAL/UNITY ENGINES" data-vi="ANDROID 8.0+ &amp; GAME KHOÁ BỘ ĐỆM">ANDROID 8.0+ &amp; UNREAL/UNITY ENGINES</span>
+                    <code class="text-[11px] font-mono-tech text-slate-400">wm size + wm density</code>
+                  </div>
+                  <h3 class="font-display text-xl font-bold text-white mb-2"
+                      data-en="Fullscreen Mode + Resolution Lock"
+                      data-vi="Chế độ Toàn màn hình + Khoá độ phân giải">Fullscreen Mode + Resolution Lock</h3>
+                  <p class="text-xs sm:text-sm text-slate-300 leading-relaxed"
+                     data-en="Changes the display resolution (wm size) while a selected game is on screen. For games that read screen size only once at startup, enable Resolution Lock to keep the scaled resolution active outside games too."
+                     data-vi="Đổi độ phân giải màn hình (wm size) trong lúc game bạn chọn đang mở. Với những game chỉ đọc kích thước màn hình lúc mới khởi động, tính năng Khoá độ phân giải giúp giữ mức đó cả ngoài game.">
+                    Changes the display resolution (wm size) while a selected game is on screen. For games that read screen size only once at startup, enable Resolution Lock to keep the scaled resolution active outside games too.
+                  </p>
+                  <div class="mt-4 pt-3 border-t border-slate-800/80 text-xs font-mono-tech text-amber-300/90"
+                       data-en="Note: How much frame rate or temperature changes depends on the game and phone; many games cap their own FPS."
+                       data-vi="Lưu ý: Khung hình hay nhiệt độ thay đổi bao nhiêu tuỳ thuộc vào game và máy; nhiều game tự giới hạn FPS.">
+                    Note: How much frame rate or temperature changes depends on the game and phone; many games cap their own FPS.
+                  </div>
+                </div>
               </div>
-              <h3 class="text-lg font-bold text-white mb-2">Project: Glitch</h3>
-              <p class="text-zinc-400 text-sm leading-relaxed">
-                Tựa game indie di động mang cơ chế gameplay giải đố sáng tạo, tối ưu khung hình mượt mà cho mọi thiết bị Android.
-              </p>
-            </div>
-            <div class="mt-8 pt-4 border-t border-white/[0.06] flex items-center justify-between">
-              <span class="text-xs text-zinc-500 font-mono">ASTVN Games</span>
-              <span class="text-xs text-zinc-500 italic">Sắp công bố</span>
+
+              <!-- TAB PANEL 2: 3-STEP SHIZUKU WIRELESS DEBUGGING SETUP -->
+              <div data-hood-panel="shizuku-setup" class="hidden pt-6">
+                <div class="mb-4 text-xs sm:text-sm text-slate-300"
+                     data-en="Why Shizuku? Android blocks normal apps from resizing game buffers, stopping background packages, or reading kernel CPU/GPU load. Shizuku is a free, open-source bridge that grants ADB shell privileges directly on your phone without Root:"
+                     data-vi="Vì sao cần Shizuku? Android chặn ứng dụng thường thay đổi độ phân giải, dừng ứng dụng khác hoặc đọc tải CPU/GPU. Shizuku là ứng dụng miễn phí, mã nguồn mở giúp cấp quyền ADB shell ngay trên điện thoại mà không cần Root:">
+                  Why Shizuku? Android blocks normal apps from resizing game buffers, stopping background packages, or reading kernel CPU/GPU load. Shizuku is a free, open-source bridge that grants ADB shell privileges directly on your phone without Root:
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div class="p-4 rounded-xl bg-[#05080E] border border-slate-800">
+                    <div class="text-xs font-mono-tech text-[#00E5FF] font-bold mb-1">STEP 01 // ANDROID 11+</div>
+                    <h4 class="font-display font-bold text-white text-base mb-1" data-en="Enable Wireless Debugging" data-vi="Bật Gỡ lỗi không dây">Enable Wireless Debugging</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed"
+                       data-en="Open Developer Options → Wireless Debugging → Pair device with pairing code. Enter the 6-digit code into the Shizuku notification."
+                       data-vi="Mở Tuỳ chọn nhà phát triển → Gỡ lỗi không dây → Ghép nối thiết bị bằng mã ghép nối. Nhập mã 6 số vào thông báo của Shizuku.">
+                      Open Developer Options → Wireless Debugging → Pair device with pairing code. Enter the 6-digit code into the Shizuku notification.
+                    </p>
+                  </div>
+                  <div class="p-4 rounded-xl bg-[#05080E] border border-slate-800">
+                    <div class="text-xs font-mono-tech text-[#00E5FF] font-bold mb-1">STEP 02 // START SERVICE</div>
+                    <h4 class="font-display font-bold text-white text-base mb-1" data-en="Tap 'Start' in Shizuku" data-vi="Bấm 'Bắt đầu' trong Shizuku">Tap 'Start' in Shizuku</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed"
+                       data-en="Shizuku starts a local ADB server in seconds. (Note: On some phones, Shizuku needs to be started again after a phone reboot.)"
+                       data-vi="Shizuku khởi chạy dịch vụ ADB cục bộ trong vài giây. (Lưu ý: Trên một số máy, bạn cần bật lại Shizuku sau khi khởi động lại điện thoại.)">
+                      Shizuku starts a local ADB server in seconds. (Note: On some phones, Shizuku needs to be started again after a phone reboot.)
+                    </p>
+                  </div>
+                  <div class="p-4 rounded-xl bg-[#05080E] border border-slate-800">
+                    <div class="text-xs font-mono-tech text-emerald-400 font-bold mb-1">STEP 03 // AUTHORIZE CRYO</div>
+                    <h4 class="font-display font-bold text-white text-base mb-1" data-en="Grant Permission in Cryo" data-vi="Cấp quyền cho Cryo">Grant Permission in Cryo</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed"
+                       data-en="Open Cryo and tap Allow on the Shizuku prompt. All resolution, freeze, and FPS telemetry controls unlock immediately."
+                       data-vi="Mở Cryo và bấm Cho phép ở hộp thoại Shizuku. Toàn bộ tính năng chỉnh độ phân giải, đóng băng và đo FPS sẽ mở khoá ngay lập tức.">
+                      Open Cryo and tap Allow on the Shizuku prompt. All resolution, freeze, and FPS telemetry controls unlock immediately.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- TAB PANEL 3: SYSTEMSTATEGUARD & BOOTRECOVERYRECEIVER -->
+              <div data-hood-panel="safety-ledger" class="hidden pt-6">
+                <div class="p-5 rounded-xl bg-[#05080E] border border-emerald-500/30 space-y-3">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-mono-tech font-bold text-emerald-400">SYSTEMSTATEGUARD.KT + FREEZELEDGER.KT</span>
+                    <span class="text-xs font-mono-tech text-slate-400">ANDROID_BOOT_COMPLETED</span>
+                  </div>
+                  <h4 class="font-display text-lg font-bold text-white"
+                      data-en="Write-Ahead Undo Ledger: Every Change Can Be Undone"
+                      data-vi="Sổ ghi hoàn tác an toàn: Mọi thay đổi đều được trả về nguyên trạng">
+                    Write-Ahead Undo Ledger: Every Change Can Be Undone
+                  </h4>
+                  <p class="text-xs sm:text-sm text-slate-300 leading-relaxed"
+                     data-en="Before overriding screen resolution (wm size / density), refresh rate, or Do Not Disturb, Cryo writes your original factory values to a persistent local ledger. When you leave the game or toggle a feature off, Cryo restores them immediately. If your battery dies or the phone restarts mid-game, BootRecoveryReceiver restores your display and unfreezes apps as soon as Cryo runs again with Shizuku. Even uninstalling Cryo while Shizuku is active triggers automatic cleanup."
+                     data-vi="Trước khi thay đổi độ phân giải (wm size / density), tần số quét hay Không làm phiền, Cryo luôn ghi giá trị gốc của máy vào sổ lưu cục bộ. Khi bạn thoát game hoặc tắt tính năng, Cryo khôi phục lại ngay lập tức. Nếu máy sập nguồn hoặc khởi động lại giữa trận, BootRecoveryReceiver sẽ tự động trả lại hiển thị gốc và rã đông ứng dụng ngay khi chạy lại cùng Shizuku. Kể cả khi gỡ cài đặt Cryo lúc Shizuku đang chạy, ứng dụng cũng tự rã đông và trả lại mọi thiết lập.">
+                    Before overriding screen resolution (wm size / density), refresh rate, or Do Not Disturb, Cryo writes your original factory values to a persistent local ledger. When you leave the game or toggle a feature off, Cryo restores them immediately. If your battery dies or the phone restarts mid-game, BootRecoveryReceiver restores your display and unfreezes apps as soon as Cryo runs again with Shizuku. Even uninstalling Cryo while Shizuku is active triggers automatic cleanup.
+                  </p>
+                </div>
+              </div>
+
             </div>
           </div>
+        </div>
+      </div>
 
-          <!-- Future Card -->
-          <div class="p-7 rounded-3xl card-surface border-dashed border-zinc-800 flex flex-col items-center justify-center text-center">
-            <div class="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 mb-3">
-              <i data-lucide="plus" class="w-5 h-5"></i>
-            </div>
-            <h4 class="font-bold text-zinc-300 text-sm">Dự Án Kế Tiếp</h4>
-            <p class="text-xs text-zinc-500 mt-1 max-w-[200px]">Sẵn sàng bổ sung các sản phẩm phần mềm tiếp theo vào danh mục.</p>
+    </section>
+
+    <!-- ======================================================================
+         4. VARIABLE TYPOGRAPHY & MAXIMALIST TECHNICAL SPECS (TREND 08)
+         ====================================================================== -->
+    <section class="py-12 px-4 sm:px-6 max-w-7xl mx-auto">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4">
+        
+        <div class="spec-card lg:col-span-3 hw-panel rounded-2xl p-6 flex flex-col justify-between">
+          <div class="flex items-center justify-between gap-2 text-xs font-mono-tech text-slate-400">
+            <span>SPEC // 01 · SCALER</span>
+            <span class="text-[#00E5FF]">STEP 5%</span>
           </div>
+          <div class="spec-giant text-4xl sm:text-5xl lg:text-[42px] xl:text-[48px] text-slate-200 my-4 whitespace-nowrap">30%–100%</div>
+          <p class="text-xs font-mono-tech text-slate-400"
+             data-en="At 70% scale, your GPU draws only 49% of native pixels per frame (0.7 × 0.7)."
+             data-vi="Ở mức 70%, GPU chỉ phải vẽ 49% diện tích điểm ảnh mỗi khung hình (0.7 × 0.7).">
+            At 70% scale, your GPU draws only 49% of native pixels per frame (0.7 × 0.7).
+          </p>
+        </div>
 
+        <div class="spec-card lg:col-span-3 hw-panel rounded-2xl p-6 flex flex-col justify-between">
+          <div class="flex items-center justify-between gap-2 text-xs font-mono-tech text-slate-400">
+            <span>SPEC // 02 · FREEZE</span>
+            <span class="text-emerald-400">L1–L4</span>
+          </div>
+          <div class="spec-giant text-4xl sm:text-5xl lg:text-[42px] xl:text-[48px] text-slate-200 my-4 whitespace-nowrap">4 LEVELS</div>
+          <p class="text-xs font-mono-tech text-slate-400"
+             data-en="Light • Medium • Strong • Extreme background package control."
+             data-vi="Nhẹ • Vừa • Mạnh • Tối đa: 4 cấp độ kiểm soát tiến trình nền.">
+            Light • Medium • Strong • Extreme background package control.
+          </p>
+        </div>
+
+        <div class="spec-card lg:col-span-3 hw-panel rounded-2xl p-6 flex flex-col justify-between">
+          <div class="flex items-center justify-between gap-2 text-xs font-mono-tech text-slate-400">
+            <span>SPEC // 03 · AFK MODE</span>
+            <span class="text-sky-400">OLED / LCD</span>
+          </div>
+          <div class="spec-giant text-4xl sm:text-5xl lg:text-[42px] xl:text-[48px] text-slate-200 my-4 whitespace-nowrap">0% LUX</div>
+          <p class="text-xs font-mono-tech text-slate-400"
+             data-en="Black overlay at brightness 0 while the game keeps running; double-tap to wake."
+             data-vi="Lớp phủ đen độ sáng 0 trong khi game vẫn chạy; chạm đúp để bật sáng.">
+            Black overlay at brightness 0 while the game keeps running; double-tap to wake.
+          </p>
+        </div>
+
+        <div class="spec-card lg:col-span-3 hw-panel rounded-2xl p-6 flex flex-col justify-between">
+          <div class="flex items-center justify-between gap-2 text-xs font-mono-tech text-slate-400">
+            <span>SPEC // 04 · DISPLAY</span>
+            <span class="text-amber-400">REFRESH</span>
+          </div>
+          <div class="spec-giant text-4xl sm:text-5xl lg:text-[42px] xl:text-[48px] text-slate-200 my-4 whitespace-nowrap">60Hz</div>
+          <p class="text-xs font-mono-tech text-slate-400"
+             data-en="Hardware refresh rate lock while your chosen game is on screen."
+             data-vi="Khóa tần số quét 60Hz trong lúc tựa game bạn chọn đang mở.">
+            Hardware refresh rate lock while your chosen game is on screen.
+          </p>
         </div>
 
       </div>
     </section>
 
-    <!-- DEVELOPER IDENTITY & COMPLIANCE (XÁC MINH PLAY STORE & ADMOB) -->
-    <section class="py-20 border-t border-white/[0.06]">
-      <div class="max-w-6xl mx-auto px-6">
-        <div class="p-8 sm:p-10 rounded-3xl bg-[#0c0d12] border border-white/[0.08]">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            
-            <div>
-              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-mono font-medium text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 mb-3">
-                <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
-                Hồ Sơ Nhà Phát Triển Đã Xác Minh
-              </div>
-              <h3 class="text-2xl font-bold text-white mb-2">ASTVN Studios</h3>
-              <p class="text-zinc-400 text-sm leading-relaxed mb-6">
-                Trang web này phục vụ mục đích công bố sản phẩm, cung cấp chính sách bảo mật theo tiêu chuẩn của Google Play và xác thực minh bạch hồ sơ phân phối quảng cáo số.
-              </p>
-              <div class="space-y-1.5 text-xs font-mono text-zinc-400">
-                <div><span class="text-zinc-500">Đại diện:</span> <strong class="text-zinc-300">TRẦN MINH SANG</strong></div>
-                <div><span class="text-zinc-500">Địa chỉ:</span> Đà Giang, Tà Hine, Lâm Đồng, Việt Nam</div>
-                <div><span class="text-zinc-500">Hỗ trợ:</span> <a href="mailto:astvncryo.support@gmail.com" class="text-blue-400 hover:underline">astvncryo.support@gmail.com</a></div>
-              </div>
-            </div>
+    <!-- ======================================================================
+         5. BENTO BLUEPRINT GRID: THE 5 CORE WEAPONS OF CRYO
+         ====================================================================== -->
+    <section id="bento-weapons" class="py-16 px-4 sm:px-6 max-w-7xl mx-auto">
+      
+      <div class="mb-12">
+        <div class="text-xs font-mono-tech text-[#00E5FF] uppercase tracking-widest mb-2"
+             data-en="SYSTEM ARCHITECTURE // 5 CORE MODULES"
+             data-vi="KIẾN TRÚC HỆ THỐNG // 5 VŨ KHÍ CỐT LÕI">SYSTEM ARCHITECTURE // 5 CORE MODULES</div>
+        <h2 class="font-display text-3xl sm:text-4xl font-bold text-white"
+            data-en="Built on Verified Android System APIs. Zero Placebo."
+            data-vi="Xây Dựng Trên API Hệ Thống Android Thực Tế. Không Ảo Giác.">
+          Built on Verified Android System APIs. Zero Placebo.
+        </h2>
+      </div>
 
-            <div class="flex flex-col sm:flex-row gap-4 md:justify-end">
-              <a href="privacy.html" class="px-5 py-3.5 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs font-semibold hover:border-white/20 transition-all flex items-center justify-center gap-2">
-                <i data-lucide="shield" class="w-4 h-4 text-emerald-400"></i>
-                <span>Chính sách quyền riêng tư</span>
-              </a>
-              <a href="app-ads.txt" target="_blank" class="px-5 py-3.5 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs font-semibold hover:border-white/20 transition-all flex items-center justify-center gap-2">
-                <i data-lucide="file-code" class="w-4 h-4 text-blue-400"></i>
-                <span>Hồ sơ app-ads.txt</span>
-              </a>
-            </div>
+      <!-- Asymmetrical Bento Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
+        <!-- WEAPON 01: GAME RENDER RESOLUTION (7 cols) -->
+        <div class="lg:col-span-7 hw-panel rounded-2xl p-6 sm:p-8 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-4">
+              <span class="px-2.5 py-1 rounded text-xs font-mono-tech font-bold bg-[#00E5FF]/15 text-[#00E5FF] border border-[#00E5FF]/30">
+                MODULE 01 // GFX RENDER SCALER
+              </span>
+              <span class="text-xs font-mono-tech text-slate-400">100% → 30% (5% STEPS)</span>
+            </div>
+            <h3 class="font-display text-2xl sm:text-3xl font-bold text-white mb-3"
+                data-en="Game Render Resolution (GFX Tool)"
+                data-vi="Độ Phân Giải Kết Xuất Của Game (GFX Tool)">Game Render Resolution (GFX Tool)</h3>
+            <p class="text-sm text-slate-300 leading-relaxed mb-6"
+               data-en="Pick one render scale for the games you tick, from 100% down to 30% in 5% steps. Choose Game Buffer mode (recommended on Android 13+) so only the game renders at a lower resolution while the rest of your phone stays sharp, or Fullscreen mode (wm size) with optional Resolution Lock."
+               data-vi="Chọn một tỉ lệ kết xuất cho những game bạn tích chọn, từ 100% xuống 30%, mỗi bước 5%. Dùng Chế độ Bộ đệm game (nên dùng trên Android 13+) để chỉ hạ riêng game trong khi phần còn lại của máy vẫn nét, hoặc Chế độ Toàn màn hình (wm size) kèm Khoá độ phân giải.">
+              Pick one render scale for the games you tick, from 100% down to 30% in 5% steps. Choose Game Buffer mode (recommended on Android 13+) so only the game renders at a lower resolution while the rest of your phone stays sharp, or Fullscreen mode (wm size) with optional Resolution Lock.
+            </p>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center pt-4 border-t border-slate-800/80">
+            <ul class="space-y-2.5 text-xs font-mono-tech text-slate-300">
+              <li class="flex items-start gap-2">
+                <span class="text-[#00E5FF]">■</span>
+                <span data-en="Game Buffer (Android 13+): isolated per-game surface scaling"
+                      data-vi="Bộ đệm game (Android 13+): hạ độ phân giải riêng cho game">Game Buffer (Android 13+): isolated per-game surface scaling</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-[#00E5FF]">■</span>
+                <span data-en="Fullscreen (wm size) + Resolution Lock outside games"
+                      data-vi="Toàn màn hình (wm size) + Khoá độ phân giải cả ngoài game">Fullscreen (wm size) + Resolution Lock outside games</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-[#00E5FF]">■</span>
+                <span data-en="Auto re-applies after phone restart or game update"
+                      data-vi="Tự ghi lại sau khi khởi động lại máy hoặc game cập nhật">Auto re-applies after phone restart or game update</span>
+              </li>
+            </ul>
+            <div class="flex justify-center">
+              <img src="assets/ui_resolution.png" alt="Cryo Game Resolution UI Card" class="max-h-56 w-auto rounded-xl border border-slate-700/70 shadow-lg" loading="lazy" />
+            </div>
           </div>
         </div>
+
+        <!-- WEAPON 03: FPS METER & FLOATING MONITOR (5 cols) -->
+        <div class="lg:col-span-5 hw-panel rounded-2xl p-6 sm:p-8 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-4">
+              <span class="px-2.5 py-1 rounded text-xs font-mono-tech font-bold bg-sky-500/15 text-sky-300 border border-sky-400/30">
+                MODULE 03 // TELEMETRY HUD
+              </span>
+              <span class="text-xs font-mono-tech text-emerald-400" data-en="HONEST READOUT" data-vi="SỐ LIỆU THẬT">HONEST READOUT</span>
+            </div>
+            <h3 class="font-display text-2xl font-bold text-white mb-3"
+                data-en="FPS Meter &amp; Floating Monitor"
+                data-vi="Đo FPS &amp; Cửa Sổ Nổi">FPS Meter &amp; Floating Monitor</h3>
+            <p class="text-sm text-slate-300 leading-relaxed mb-4"
+               data-en="A compact window over your game with the metrics you choose: FPS, CPU &amp; GPU load, free RAM, and CPU/GPU/battery temperature. Without Shizuku, the FPS cell clearly states it needs Shizuku, and values a phone does not expose are hidden — never guessed."
+               data-vi="Cửa sổ nhỏ đè lên game với các chỉ số bạn chọn: FPS, tải CPU &amp; GPU, RAM trống, nhiệt độ CPU, GPU và pin. Khi chưa có Shizuku, ô FPS ghi rõ cần Shizuku; chỉ số nào máy không cho đọc thì Cryo ẩn đi chứ tuyệt đối không đoán mò.">
+              A compact window over your game with the metrics you choose: FPS, CPU &amp; GPU load, free RAM, and CPU/GPU/battery temperature. Without Shizuku, the FPS cell clearly states it needs Shizuku, and values a phone does not expose are hidden — never guessed.
+            </p>
+          </div>
+          <div class="flex justify-center pt-3 border-t border-slate-800/80">
+            <img src="assets/ui_device.png" alt="Cryo Floating Monitor &amp; Device Telemetry" class="max-h-60 w-auto rounded-xl border border-slate-700/70 shadow-lg" loading="lazy" />
+          </div>
+        </div>
+
+        <!-- WEAPON 02: 4-LEVEL APP FREEZER (6 cols) -->
+        <div class="lg:col-span-6 hw-panel rounded-2xl p-6 sm:p-8 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-4">
+              <span class="px-2.5 py-1 rounded text-xs font-mono-tech font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-400/30">
+                MODULE 02 // FREEZE ENGINE
+              </span>
+              <span class="text-xs font-mono-tech text-slate-400">L1 · L2 · L3 · L4</span>
+            </div>
+            <h3 class="font-display text-2xl font-bold text-white mb-3"
+                data-en="Freeze Background Apps &amp; One-Tap Thaw"
+                data-vi="Đóng Băng Ứng Dụng Ngầm &amp; Rã Đông 1 Chạm">Freeze Background Apps &amp; One-Tap Thaw</h3>
+            <p class="text-sm text-slate-300 leading-relaxed mb-5"
+               data-en="Inspect running apps and their live RAM footprint, then freeze each at one of 4 levels: Light (blocks background work), Medium (force stop), Strong (paused until unfrozen), or Extreme (disabled &amp; hidden from launcher). Background system services with no launcher icon are safely limited to temporary stop."
+               data-vi="Xem ứng dụng đang chạy và lượng RAM tiêu thụ, đóng băng từng ứng dụng ở 1 trong 4 mức: Nhẹ (chặn chạy ngầm), Vừa (buộc dừng), Mạnh (tạm dừng cho tới khi rã đông) và Tối đa (tắt &amp; ẩn khỏi màn hình chính). Dịch vụ hệ thống không biểu tượng chỉ được dừng tạm để đảm bảo an toàn.">
+              Inspect running apps and their live RAM footprint, then freeze each at one of 4 levels: Light (blocks background work), Medium (force stop), Strong (paused until unfrozen), or Extreme (disabled &amp; hidden from launcher). Background system services with no launcher icon are safely limited to temporary stop.
+            </p>
+          </div>
+          <div class="grid grid-cols-2 gap-3 pt-4 border-t border-slate-800/80 items-center">
+            <img src="assets/ui_freeze.png" alt="Cryo 4 Freeze Levels" class="w-full h-auto rounded-xl border border-slate-700/70" loading="lazy" />
+            <img src="assets/ui_app_detail.png" alt="Cryo App Detail &amp; Pin" class="w-full h-auto rounded-xl border border-slate-700/70" loading="lazy" />
+          </div>
+        </div>
+
+        <!-- WEAPON 04: GAME MODE SWITCHES (6 cols) -->
+        <div class="lg:col-span-6 hw-panel rounded-2xl p-6 sm:p-8 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-4">
+              <span class="px-2.5 py-1 rounded text-xs font-mono-tech font-bold bg-amber-500/15 text-amber-300 border border-amber-400/30">
+                MODULE 04 // IN-GAME SWITCHES
+              </span>
+              <span class="text-xs font-mono-tech text-slate-400">AFK · 60HZ · DND · WI-FI</span>
+            </div>
+            <h3 class="font-display text-2xl font-bold text-white mb-3"
+                data-en="Game Mode Hardware Switches"
+                data-vi="Bộ Công Tắc Chế Độ Game">Game Mode Hardware Switches</h3>
+            <p class="text-sm text-slate-300 leading-relaxed mb-5"
+               data-en="Automate in-game comfort and display rules the moment a selected game launches: AFK Black Screen (0% brightness overlay while the game keeps running; double-tap to wake), 60Hz Refresh Rate Lock, Do Not Disturb, and Android 10+ Low-Latency Wi-Fi mode."
+               data-vi="Tự động kích hoạt các công tắc phần cứng ngay khi tựa game bạn chọn mở lên: Màn hình đen AFK (lớp phủ đen độ sáng 0 trong khi game vẫn chạy; chạm đúp để bật lại), Khoá 60Hz, Không làm phiền (DND) và Wi-Fi độ trễ thấp (Android 10+).">
+              Automate in-game comfort and display rules the moment a selected game launches: AFK Black Screen (0% brightness overlay while the game keeps running; double-tap to wake), 60Hz Refresh Rate Lock, Do Not Disturb, and Android 10+ Low-Latency Wi-Fi mode.
+            </p>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center pt-4 border-t border-slate-800/80">
+            <img src="assets/ui_during_game.png" alt="Cryo Game Mode Switches" class="w-full max-w-[240px] mx-auto h-auto rounded-xl border border-slate-700/70" loading="lazy" />
+            <div class="space-y-2.5 text-xs font-mono-tech text-slate-300">
+              <div class="p-3 rounded-lg bg-[#05080E] border border-slate-800">
+                <strong class="text-white block mb-0.5" data-en="Smart Mid-Game Pinning" data-vi="Đề xuất Ghim thông minh">Smart Mid-Game Pinning</strong>
+                <span class="text-slate-400" data-en="Reopen an app mid-game? Cryo offers to pin it so Focus Mode skips it next time." data-vi="Mở lại ứng dụng giữa lúc chơi? Cryo sẽ đề xuất ghim để Focus Mode chừa ra.">Reopen an app mid-game? Cryo offers to pin it so Focus Mode skips it next time.</span>
+              </div>
+              <div class="p-3 rounded-lg bg-[#05080E] border border-slate-800">
+                <strong class="text-white block mb-0.5" data-en="Safe Exclusions" data-vi="Tự động chừa ứng dụng hệ thống">Safe Exclusions</strong>
+                <span class="text-slate-400" data-en="Automatically skips the active game, live wallpaper, OEM game tools &amp; chosen messaging apps." data-vi="Tự chừa ứng dụng đang hiện, hình nền động, công cụ game của hãng và app nhắn tin bạn chọn.">Automatically skips the active game, live wallpaper, OEM game tools &amp; chosen messaging apps.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         6. INTERACTIVE LABS: FOCUS MODE PINNING & SESSION REPORT (TREND 09)
+         ====================================================================== -->
+    <section id="focus-lab" class="py-12 px-4 sm:px-6 max-w-7xl mx-auto">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- INTERACTIVE FOCUS MODE & PIN APPS SIMULATOR (7 cols) -->
+        <div class="lg:col-span-7 hw-panel rounded-2xl p-6 sm:p-8 flex flex-col justify-between">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <div>
+                <span class="text-xs font-mono-tech font-bold text-[#00E5FF]"
+                      data-en="INTERACTIVE LAB // FOCUS MODE &amp; PIN APPS"
+                      data-vi="PHÒNG THỬ TƯƠNG TÁC // FOCUS MODE &amp; GHIM ỨNG DỤNG">INTERACTIVE LAB // FOCUS MODE &amp; PIN APPS</span>
+                <h3 class="font-display text-2xl font-bold text-white mt-1"
+                    data-en="Pin Essential Apps. Freeze the Rest in 1 Tap."
+                    data-vi="Ghim Ứng Dụng Quan Trọng. Đóng Băng Phần Còn Lại 1 Chạm.">
+                  Pin Essential Apps. Freeze the Rest in 1 Tap.
+                </h3>
+              </div>
+              <button type="button" id="focus-lab-trigger" class="btn-kinetic btn-cryo-primary px-4 py-2.5 rounded-xl font-mono-tech text-xs font-bold">
+                ❄ Trigger Focus Mode (Enter Game)
+              </button>
+            </div>
+
+            <p class="text-xs sm:text-sm text-slate-300 mb-4"
+               data-en="Try pinning/unpinning apps below (like Messages, Alarm, or Banking), then click 'Trigger Focus Mode' to see how Cryo freezes unpinned background RAM hogs when a game starts and thaws them when you leave."
+               data-vi="Bấm ghim hoặc bỏ ghim thử các ứng dụng bên dưới (như Tin nhắn, Báo thức, Ngân hàng), sau đó bấm 'Kích hoạt Focus Mode' để xem Cryo đóng băng các app chạy ngầm chưa ghim và rã đông ngay khi thoát game.">
+              Try pinning/unpinning apps below (like Messages, Alarm, or Banking), then click 'Trigger Focus Mode' to see how Cryo freezes unpinned background RAM hogs when a game starts and thaws them when you leave.
+            </p>
+
+            <!-- Dynamic App Grid populated by cryo.js -->
+            <div id="focus-lab-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 my-4"></div>
+          </div>
+
+          <div class="pt-3 border-t border-slate-800 flex items-center justify-between">
+            <span id="focus-lab-summary" class="text-xs font-mono-tech text-slate-400">
+              Status: Focus Mode Standby. Pin your essential apps, then trigger Focus Mode to test.
+            </span>
+          </div>
+        </div>
+
+        <!-- WEAPON 05: INTERACTIVE SESSION REPORT CARD (5 cols) -->
+        <div class="lg:col-span-5 hw-panel rounded-2xl p-6 sm:p-8 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-3">
+              <span class="text-xs font-mono-tech font-bold text-emerald-400"
+                    data-en="MODULE 05 // SESSION REPORTS"
+                    data-vi="MODULE 05 // BÁO CÁO LẦN CHƠI">MODULE 05 // SESSION REPORTS</span>
+              <div class="flex items-center gap-1">
+                <button type="button" id="rep-mode-basic" class="preset-pill" data-en="Basic (5s)" data-vi="Cơ bản (5s)">Basic (5s)</button>
+                <button type="button" id="rep-mode-detailed" class="preset-pill active" data-en="Detailed (+FPS)" data-vi="Chi tiết (+FPS)">Detailed (+FPS)</button>
+              </div>
+            </div>
+
+            <h3 class="font-display text-2xl font-bold text-white mb-2"
+                data-en="Post-Match Session Telemetry"
+                data-vi="Báo Cáo Thông Số Sau Mỗi Trận Đấu">Post-Match Session Telemetry</h3>
+            <p class="text-xs text-slate-400 mb-4"
+               data-en="Sampled every 5 seconds: play time, peak battery temperature, battery %, power draw, and (with FPS cell on) average &amp; 5% low FPS."
+               data-vi="Lấy mẫu mỗi 5 giây: thời gian chơi, nhiệt độ pin cao nhất, % pin đã dùng, công suất và (khi bật ô FPS) FPS trung bình &amp; 5% thấp nhất.">
+              Sampled every 5 seconds: play time, peak battery temperature, battery %, power draw, and (with FPS cell on) average &amp; 5% low FPS.
+            </p>
+
+            <!-- Preset Session Switcher -->
+            <div class="flex flex-wrap gap-1.5 mb-4">
+              <button type="button" data-session-idx="0" class="preset-pill active">Polar Run</button>
+              <button type="button" data-session-idx="1" class="preset-pill">Tactical MOBA</button>
+              <button type="button" data-session-idx="2" class="preset-pill">Open-World RPG</button>
+            </div>
+
+            <!-- Simulated Cryo v2 Session Report Sheet -->
+            <div class="p-4 rounded-xl bg-[#05080E] border border-slate-800 space-y-3">
+              <div class="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+                <div>
+                  <div id="rep-game-name" class="font-display font-bold text-white text-base">Polar Run</div>
+                  <div id="rep-game-scale" class="text-[11px] font-mono-tech text-[#00E5FF]">70% (Game Buffer)</div>
+                </div>
+                <div class="text-right">
+                  <div class="text-[10px] font-mono-tech text-slate-400" data-en="PLAY TIME" data-vi="THỜI GIAN CHƠI">PLAY TIME</div>
+                  <div id="rep-play-time" class="font-display font-bold text-lg text-white tabular-nums">28 min 14 s</div>
+                </div>
+              </div>
+
+              <!-- Metrics 2x2 Grid -->
+              <div class="grid grid-cols-2 gap-2.5">
+                <div class="p-3 rounded-lg bg-[#0B111E] border border-slate-800/90">
+                  <div class="text-[10px] font-mono-tech text-slate-400" data-en="BATTERY PEAK" data-vi="NHIỆT ĐỘ PIN CAO NHẤT">BATTERY PEAK</div>
+                  <div id="rep-peak-temp" class="font-mono-tech font-bold text-lg text-white tabular-nums mt-0.5">36.4 °C</div>
+                  <div id="rep-temp-sub" class="text-[10px] font-mono-tech text-slate-400 mt-0.5">Low 33.8 °C · avg 35.6 °C</div>
+                </div>
+                <div class="p-3 rounded-lg bg-[#0B111E] border border-slate-800/90">
+                  <div class="text-[10px] font-mono-tech text-slate-400" data-en="BATTERY USED &amp; POWER" data-vi="PIN ĐÃ DÙNG &amp; CÔNG SUẤT">BATTERY USED &amp; POWER</div>
+                  <div class="flex items-baseline gap-2 mt-0.5">
+                    <span id="rep-bat-used" class="font-mono-tech font-bold text-lg text-white tabular-nums">6%</span>
+                    <span id="rep-power-draw" class="text-xs font-mono-tech text-sky-400 tabular-nums">2.85 W</span>
+                  </div>
+                  <div class="text-[10px] font-mono-tech text-slate-400 mt-0.5" data-en="While on battery" data-vi="Khi dùng pin">While on battery</div>
+                </div>
+              </div>
+
+              <!-- FPS Summary + Sparkline -->
+              <div id="rep-fps-card" class="p-3 rounded-lg bg-[#0B111E] border border-slate-800/90 transition-opacity">
+                <div class="flex items-center justify-between mb-1.5">
+                  <div>
+                    <span class="text-[10px] font-mono-tech text-slate-400 block" data-en="SESSION FRAME RATE (SHIZUKU)" data-vi="KHUNG HÌNH PHIÊN CHƠI (SHIZUKU)">SESSION FRAME RATE (SHIZUKU)</span>
+                    <span id="rep-avg-fps" class="font-mono-tech font-bold text-base text-[#00E5FF] tabular-nums">119 FPS</span>
+                  </div>
+                  <span id="rep-low-fps" class="text-xs font-mono-tech text-emerald-400 tabular-nums">5% low: 112 FPS</span>
+                </div>
+                <svg viewBox="0 0 320 56" class="w-full h-12">
+                  <defs>
+                    <linearGradient id="repSparkGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#00E5FF" stop-opacity="0.32"/>
+                      <stop offset="100%" stop-color="#00E5FF" stop-opacity="0.0"/>
+                    </linearGradient>
+                  </defs>
+                  <path id="rep-sparkline-area" d="" fill="url(#repSparkGrad)"></path>
+                  <path id="rep-sparkline-path" d="" fill="none" stroke="#00E5FF" stroke-width="2" stroke-linecap="round"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         7. PRIVACY TRANSPARENCY & FREE vs. CRYO PRO MODEL
+         ====================================================================== -->
+    <section id="privacy-pro" class="py-16 px-4 sm:px-6 max-w-7xl mx-auto">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+
+        <!-- PRIVACY & DATA SAFETY TRANSPARENCY (5 cols) -->
+        <div class="lg:col-span-5 hw-panel rounded-2xl p-6 sm:p-8 flex flex-col justify-between">
+          <div>
+            <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded text-xs font-mono-tech font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 mb-4">
+              <span data-en="GOOGLE PLAY DATA SAFETY COMPLIANT" data-vi="TUÂN THỦ AN TOÀN DỮ LIỆU GOOGLE PLAY">GOOGLE PLAY DATA SAFETY COMPLIANT</span>
+            </div>
+            <h3 class="font-display text-2xl sm:text-3xl font-bold text-white mb-3"
+                data-en="Zero Account. Local-First Privacy."
+                data-vi="Không Tài Khoản. Dữ Liệu Lưu Cục Bộ.">Zero Account. Local-First Privacy.</h3>
+            <p class="text-sm text-slate-300 leading-relaxed mb-4"
+               data-en="Cryo requires no registration, no email sign-up, and no cloud account. Your game configurations, pinned apps, undo ledger, and session reports are stored on your device."
+               data-vi="Cryo không yêu cầu đăng ký tài khoản, không cần đăng nhập email hay đám mây. Cấu hình game, danh sách ứng dụng đã ghim, sổ hoàn tác và báo cáo phiên chơi đều được lưu trực tiếp trên thiết bị của bạn.">
+              Cryo requires no registration, no email sign-up, and no cloud account. Your game configurations, pinned apps, undo ledger, and session reports are stored on your device.
+            </p>
+            <div class="p-4 rounded-xl bg-[#05080E] border border-slate-800 space-y-2 text-xs text-slate-300">
+              <div class="font-mono-tech font-bold text-white"
+                   data-en="Ad Networks &amp; app-ads.txt Verification"
+                   data-vi="Mạng Quảng Cáo &amp; Xác Thực app-ads.txt">Ad Networks &amp; app-ads.txt Verification</div>
+              <p class="text-slate-400 leading-relaxed"
+                 data-en="To keep Cryo free to download, ads are served via Unity LevelPlay (ironSource) and Unity Ads (with Google UMP GDPR consent support). Full seller verification is published at our root /app-ads.txt."
+                 data-vi="Để duy trì Cryo miễn phí tải về, quảng cáo được phân phối qua Unity LevelPlay (ironSource) và Unity Ads (hỗ trợ biểu mẫu đồng ý GDPR của Google UMP). Hồ sơ xác minh nhà xuất bản được công khai minh bạch tại /app-ads.txt.">
+                To keep Cryo free to download, ads are served via Unity LevelPlay (ironSource) and Unity Ads (with Google UMP GDPR consent support). Full seller verification is published at our root /app-ads.txt.
+              </p>
+            </div>
+          </div>
+
+          <div class="mt-6 pt-4 border-t border-slate-800 flex flex-wrap gap-3">
+            <a href="privacy.html" class="btn-kinetic px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-mono-tech font-semibold text-[#00E5FF] inline-flex items-center gap-2">
+              <span data-en="Read Full Privacy Policy (/privacy.html)" data-vi="Xem Chính Sách Quyền Riêng Tư (/privacy.html)">Read Full Privacy Policy (/privacy.html)</span>
+              <span>→</span>
+            </a>
+            <a href="app-ads.txt" target="_blank" rel="noopener" class="btn-kinetic px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-mono-tech text-slate-300 inline-flex items-center gap-2">
+              <span>/app-ads.txt</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- FREE vs. CRYO PRO HONEST COMPARISON (7 cols) -->
+        <div class="lg:col-span-7 hw-panel rounded-2xl p-6 sm:p-8 flex flex-col justify-between">
+          <div>
+            <div class="text-xs font-mono-tech font-bold text-[#00E5FF] mb-2"
+                 data-en="TRANSPARENT MONETIZATION // FREE VS. CRYO PRO"
+                 data-vi="MÔ HÌNH MINH BẠCH // BẢN MIỄN PHÍ &amp; CRYO PRO">TRANSPARENT MONETIZATION // FREE VS. CRYO PRO</div>
+            <h3 class="font-display text-2xl sm:text-3xl font-bold text-white mb-6"
+                data-en="Every Feature Works on Free. Go PRO for Unlimited Actions &amp; Zero Ads."
+                data-vi="Mọi Tính Năng Đều Dùng Được Ở Bản Miễn Phí. Lên PRO Để Gỡ Quảng Cáo &amp; Không Giới Hạn Lượt.">
+              Every Feature Works on Free. Go PRO for Unlimited Actions &amp; Zero Ads.
+            </h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              <!-- FREE TIER -->
+              <div class="p-5 rounded-xl bg-[#05080E] border border-slate-800 flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="font-display text-xl font-bold text-white" data-en="Cryo Free" data-vi="Cryo Miễn Phí">Cryo Free</span>
+                    <span class="px-2.5 py-0.5 rounded text-xs font-mono-tech bg-slate-800 text-slate-300">$0 · Google Play</span>
+                  </div>
+                  <p class="text-xs text-slate-400 leading-relaxed mb-4"
+                     data-en="Full access to resolution scaling, all 4 freeze levels, Focus Mode, and the floating FPS monitor using a free action balance."
+                     data-vi="Trải nghiệm đầy đủ chỉnh độ phân giải, 4 mức đóng băng, Focus Mode và cửa sổ nổi đo FPS bằng số lượt thao tác miễn phí có sẵn.">
+                    Full access to resolution scaling, all 4 freeze levels, Focus Mode, and the floating FPS monitor using a free action balance.
+                  </p>
+                  <ul class="space-y-2 text-xs font-mono-tech text-slate-300">
+                    <li data-en="• Ticking a game, toggling a feature, or freezing an app uses 1 action from your free balance"
+                        data-vi="• Tích chọn game, bật tính năng hoặc đóng băng app dùng 1 lượt miễn phí">• Ticking a game, toggling a feature, or freezing an app uses 1 action from your free balance</li>
+                    <li data-en="• Watch a short rewarded video anytime to refill actions"
+                        data-vi="• Xem video có thưởng bất cứ lúc nào để cộng thêm lượt">• Watch a short rewarded video anytime to refill actions</li>
+                    <li data-en="• Unfreezing apps &amp; restoring system settings is ALWAYS free (never costs an action)"
+                        data-vi="• Rã đông ứng dụng &amp; khôi phục thiết lập gốc LUÔN miễn phí (không tốn lượt)">• Unfreezing apps &amp; restoring system settings is ALWAYS free (never costs an action)</li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- CRYO PRO TIER -->
+              <div class="p-5 rounded-xl bg-gradient-to-b from-sky-950/40 to-[#05080E] border border-[#00E5FF]/50 flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="font-display text-xl font-bold text-white">Cryo PRO</span>
+                    <span class="px-2.5 py-0.5 rounded text-xs font-mono-tech font-bold bg-[#00E5FF] text-slate-950"
+                          data-en="Play Billing" data-vi="Nâng cấp trong App">Play Billing</span>
+                  </div>
+                  <p class="text-xs text-slate-300 leading-relaxed mb-4"
+                     data-en="Unlocked directly via Google Play Billing tied to your Play Store account — no external login needed."
+                     data-vi="Mở khoá trực tiếp qua Google Play Billing gắn với tài khoản Cửa hàng Play của bạn — không cần đăng nhập ngoài.">
+                    Unlocked directly via Google Play Billing tied to your Play Store account — no external login needed.
+                  </p>
+                  <ul class="space-y-2 text-xs font-mono-tech text-slate-100">
+                    <li class="text-[#00E5FF]" data-en="✓ Unlimited actions — toggle, scale &amp; freeze without limits"
+                        data-vi="✓ Không giới hạn lượt thao tác — bật tắt, chỉnh độ phân giải &amp; đóng băng thoải mái">✓ Unlimited actions — toggle, scale &amp; freeze without limits</li>
+                    <li class="text-[#00E5FF]" data-en="✓ 100% Ad-Free — all banner, interstitial &amp; rewarded ads removed"
+                        data-vi="✓ Gỡ 100% quảng cáo — không còn quảng cáo biểu ngữ hay xen kẽ">✓ 100% Ad-Free — all banner, interstitial &amp; rewarded ads removed</li>
+                    <li data-en="✓ Automatic restore across reinstalls via Google Play Billing"
+                        data-vi="✓ Tự động khôi phục quyền PRO khi cài lại máy qua Google Play">✓ Automatic restore across reinstalls via Google Play Billing</li>
+                  </ul>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="mt-6 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-4">
+            <span class="text-xs font-mono-tech text-slate-400"
+                  data-en="Available in 10 languages: EN · VI · RU · PT · ES · ID · TR · TH · AR · FA"
+                  data-vi="Hỗ trợ 10 ngôn ngữ: EN · VI · RU · PT · ES · ID · TR · TH · AR · FA">
+              Available in 10 languages: EN · VI · RU · PT · ES · ID · TR · TH · AR · FA
+            </span>
+            <a href="https://play.google.com/store/apps/details?id=com.astvn.cryo" target="_blank" rel="noopener"
+               class="btn-kinetic btn-cryo-primary px-5 py-2.5 rounded-xl text-xs font-mono-tech inline-flex items-center gap-2">
+              <span data-en="Download Cryo on Google Play" data-vi="Tải Cryo trên Google Play">Download Cryo on Google Play</span>
+              <span>↗</span>
+            </a>
+          </div>
+        </div>
+
       </div>
     </section>
 
   </main>
 
-  <!-- FOOTER -->
-  <footer class="border-t border-white/[0.06] py-10 bg-black text-zinc-500 text-xs">
-    <div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-6">
+  <!-- ========================================================================
+       8. GOOGLE PLAY CONSOLE VERIFIED FOOTER & TRADEMARK DISCLAIMER
+       ======================================================================== -->
+  <footer class="border-t border-sky-400/15 bg-[#030509] py-12 px-4 sm:px-6 text-xs text-slate-400">
+    <div class="max-w-7xl mx-auto space-y-8">
       
-      <div class="flex items-center gap-3">
-        <span class="font-bold text-white tracking-wider">ASTVN STUDIOS</span>
-        <span>·</span>
-        <span>© 2026 ASTVN Studios. Đã đăng ký bản quyền.</span>
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-8 justify-between">
+        
+        <!-- Brand & Play Store Developer Info -->
+        <div class="md:col-span-6 space-y-2.5">
+          <div class="flex items-center gap-3">
+            <img src="assets/icon.png" alt="Cryo Icon" class="w-7 h-7 rounded-lg border border-sky-400/30" />
+            <span class="font-display font-bold text-white text-base">ASTVN STUDIOS</span>
+            <span class="text-[10px] font-mono-tech px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                  data-en="Verified Play Store Developer"
+                  data-vi="Nhà phát triển Google Play đã xác minh">Verified Play Store Developer</span>
+          </div>
+          <p class="text-slate-400 max-w-md leading-relaxed"
+             data-en="Official product portal and Google Play Store developer contact page for Cryo: Game Mode &amp; FPS Meter (com.astvn.cryo)."
+             data-vi="Trang thông tin chính thức và liên hệ nhà phát triển trên Cửa hàng Google Play của ứng dụng Cryo: Chế độ game &amp; đo FPS (com.astvn.cryo).">
+            Official product portal and Google Play Store developer contact page for Cryo: Game Mode &amp; FPS Meter (com.astvn.cryo).
+          </p>
+          <div class="font-mono-tech text-[11px] text-slate-400 space-y-1 pt-1">
+            <div><span class="text-slate-500" data-en="Developer:" data-vi="Nhà phát triển:">Developer:</span> <strong class="text-slate-200">ASTVN Studios (Trần Minh Sang)</strong></div>
+            <div><span class="text-slate-500" data-en="Play Store Contact Email:" data-vi="Email liên hệ Cửa hàng Play:">Play Store Contact Email:</span> <a href="mailto:hoten2817@gmail.com" class="text-[#00E5FF] hover:underline">hoten2817@gmail.com</a> · <a href="mailto:astvncryo.support@gmail.com" class="text-[#00E5FF] hover:underline">astvncryo.support@gmail.com</a></div>
+            <div><span class="text-slate-500" data-en="Address:" data-vi="Địa chỉ:">Address:</span> Đà Giang, Tà Hine, Lâm Đồng, Việt Nam</div>
+          </div>
+        </div>
+
+        <!-- Compliance & Store Links -->
+        <div class="md:col-span-6 flex flex-col sm:flex-row md:justify-end gap-8 font-mono-tech">
+          <div class="space-y-2">
+            <div class="text-white font-bold uppercase tracking-wider text-[11px]" data-en="Product" data-vi="Sản phẩm">Product</div>
+            <ul class="space-y-1.5">
+              <li><a href="https://play.google.com/store/apps/details?id=com.astvn.cryo" target="_blank" rel="noopener" class="hover:text-[#00E5FF] transition-colors">Google Play Store ↗</a></li>
+              <li><a href="#sandbox" class="hover:text-[#00E5FF] transition-colors" data-en="Interactive Sandbox" data-vi="Buồng lái giả lập">Interactive Sandbox</a></li>
+              <li><a href="#under-the-hood" class="hover:text-[#00E5FF] transition-colors" data-en="Shizuku Setup Guide" data-vi="Hướng dẫn Shizuku">Shizuku Setup Guide</a></li>
+              <li><a href="#focus-lab" class="hover:text-[#00E5FF] transition-colors">Focus Mode Lab</a></li>
+            </ul>
+          </div>
+          <div class="space-y-2">
+            <div class="text-white font-bold uppercase tracking-wider text-[11px]" data-en="Compliance &amp; Legal" data-vi="Pháp lý &amp; Tuân thủ">Compliance &amp; Legal</div>
+            <ul class="space-y-1.5">
+              <li><a href="privacy.html" class="text-[#00E5FF] hover:underline" data-en="Privacy Policy (/privacy.html)" data-vi="Chính sách quyền riêng tư (/privacy.html)">Privacy Policy (/privacy.html)</a></li>
+              <li><a href="app-ads.txt" target="_blank" rel="noopener" class="hover:text-[#00E5FF] transition-colors">app-ads.txt (LevelPlay / Unity / Google)</a></li>
+              <li><a href="mailto:hoten2817@gmail.com" class="hover:text-[#00E5FF] transition-colors">hoten2817@gmail.com</a></li>
+              <li><a href="https://github.com/SangBoDoi2007" target="_blank" rel="noopener" class="hover:text-[#00E5FF] transition-colors">GitHub (@SangBoDoi2007)</a></li>
+            </ul>
+          </div>
+        </div>
+
       </div>
 
-      <div class="flex items-center gap-6 font-medium">
-        <a href="https://play.google.com/store/apps/details?id=com.astvn.cryo" target="_blank" class="hover:text-zinc-300 transition-colors">Google Play</a>
-        <a href="privacy.html" class="hover:text-zinc-300 transition-colors">Privacy Policy</a>
-        <a href="app-ads.txt" class="hover:text-zinc-300 transition-colors font-mono">app-ads.txt</a>
-        <a href="https://github.com/SangBoDoi2007" target="_blank" class="hover:text-zinc-300 transition-colors flex items-center gap-1.5">
-          <i data-lucide="github" class="w-3.5 h-3.5"></i> GitHub
-        </a>
+      <!-- Mandatory Trademark Disclaimer -->
+      <div class="pt-6 border-t border-slate-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-[11px] font-mono-tech text-slate-500">
+        <p data-en="Disclaimer: Cryo is an independent utility developed by ASTVN Studios and is not affiliated with any game publisher or with Shizuku. Android is a trademark of Google LLC. All trademarks belong to their respective owners."
+           data-vi="Tuyên bố miễn trừ trách nhiệm: Cryo là tiện ích độc lập phát triển bởi ASTVN Studios và không liên kết với bất kỳ nhà phát hành trò chơi nào hay với Shizuku. Mọi nhãn hiệu thuộc về chủ sở hữu tương ứng.">
+          Disclaimer: Cryo is an independent utility developed by ASTVN Studios and is not affiliated with any game publisher or with Shizuku. Android is a trademark of Google LLC. All trademarks belong to their respective owners.
+        </p>
+        <div class="flex-shrink-0 text-slate-400">© 2026 ASTVN Studios</div>
       </div>
 
     </div>
   </footer>
 
-  <script>
-    lucide.createIcons();
-
-    // INTERACTIVE RESOLUTION BENCHMARK CALCULATOR
-    function updateResCalc(val) {
-      const scale = parseInt(val) / 100;
-      const area = Math.round(scale * scale * 100);
-      const gpuSaved = 100 - area;
-
-      document.getElementById('slider-scale-text').innerText = val + '% ' + (val == '70' ? '(Tỷ lệ khuyến nghị)' : '');
-      document.getElementById('calc-area').innerText = area + '%';
-      document.getElementById('calc-gpu').innerText = '-' + gpuSaved + '%';
-    }
-  </script>
+  <!-- Interactive Sandbox & Bilingual Controller -->
+  <script src="assets/cryo.js"></script>
 </body>
 </html>

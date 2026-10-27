@@ -1,0 +1,426 @@
+/* ==========================================================================
+   CRYO: GAME MODE & FPS METER — OFFICIAL TELEMETRY & BLUEPRINT SYSTEM (2026)
+   ASTVN Studios · com.astvn.cryo
+   Design Language:
+   - Trend 10: Future-Past Aesthetics (Cyber-Hardware / Telemetry Blueprint HUD)
+   - Trend 01: Action-First Interactive Hardware Sandbox
+   - Trend 03: Progressive Disclosure (TL;DR + Deep-Dive System Drawers)
+   - Trend 08: Variable Typography & Maximalist Technical Specs
+   - Trend 09: Kinetic Mechanical Micro-Interactions
+   ========================================================================== */
+
+:root {
+  --bg-obsidian: #05080E;
+  --bg-slate: #0B111E;
+  --bg-panel: #0D1526;
+  --bg-elevated: #111C33;
+  --cryo-ice: #00E5FF;
+  --cryo-sky: #38BDF8;
+  --thermal-amber: #F59E0B;
+  --focus-emerald: #10B981;
+  --danger-rose: #F43F5E;
+  --text-primary: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  --grid-line: rgba(56, 189, 248, 0.07);
+  --grid-line-strong: rgba(56, 189, 248, 0.16);
+  --border-subtle: rgba(148, 163, 184, 0.12);
+  --ease-mechanical: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  background-color: var(--bg-obsidian);
+  color: var(--text-primary);
+  scroll-behavior: smooth;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body {
+  background-color: var(--bg-obsidian);
+  color: var(--text-primary);
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+  /* Blueprint 1px Technical Grid */
+  background-image:
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-position: center top;
+}
+
+/* Blueprint Intersection Crosshairs (+) */
+.blueprint-crosshairs {
+  background-image:
+    radial-gradient(circle at 24px 24px, rgba(0, 229, 255, 0.22) 1px, transparent 1.5px),
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* Typography & Tabular Numerals */
+.font-display {
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: -0.03em;
+}
+
+.font-mono-tech {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hardware Blueprint Surface & Corner Reticles */
+.hw-panel {
+  position: relative;
+  background: linear-gradient(180deg, rgba(11, 17, 30, 0.92) 0%, rgba(5, 8, 14, 0.96) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.14);
+  box-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.85), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  transition: border-color 0.28s var(--ease-mechanical), transform 0.28s var(--ease-mechanical), box-shadow 0.28s var(--ease-mechanical);
+}
+
+.hw-panel:hover {
+  border-color: rgba(0, 229, 255, 0.32);
+}
+
+/* Corner Crosshair Reticles (+) */
+.reticle-box {
+  position: relative;
+}
+.reticle-box::before,
+.reticle-box::after {
+  content: "+";
+  position: absolute;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  line-height: 1;
+  color: rgba(0, 229, 255, 0.45);
+  pointer-events: none;
+  z-index: 5;
+}
+.reticle-box::before {
+  top: 6px;
+  left: 8px;
+}
+.reticle-box::after {
+  bottom: 6px;
+  right: 8px;
+}
+
+/* Corner L-Brackets for Technical Cards */
+.corner-brackets {
+  position: relative;
+}
+.corner-brackets > .bracket-tl,
+.corner-brackets > .bracket-br {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+  z-index: 4;
+}
+.corner-brackets > .bracket-tl {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid var(--cryo-ice);
+  border-left: 2px solid var(--cryo-ice);
+}
+.corner-brackets > .bracket-br {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid var(--cryo-ice);
+  border-right: 2px solid var(--cryo-ice);
+}
+
+/* Kinetic Mechanical Button */
+.btn-kinetic {
+  transition: transform 0.22s var(--ease-mechanical), box-shadow 0.22s var(--ease-mechanical), background-color 0.22s var(--ease-mechanical), border-color 0.22s var(--ease-mechanical);
+  will-change: transform;
+}
+.btn-kinetic:hover {
+  transform: translateY(-1.5px);
+}
+.btn-kinetic:active {
+  transform: translateY(1px) scale(0.985);
+}
+
+.btn-cryo-primary {
+  background: linear-gradient(135deg, #00E5FF 0%, #38BDF8 100%);
+  color: #030712;
+  font-weight: 700;
+  box-shadow: 0 0 24px -4px rgba(0, 229, 255, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+.btn-cryo-primary:hover {
+  box-shadow: 0 0 32px -2px rgba(0, 229, 255, 0.68), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+/* Mechanical Hardware Toggle Switch (Trend 09) */
+.hw-switch {
+  position: relative;
+  width: 48px;
+  height: 26px;
+  border-radius: 999px;
+  background: #090E1A;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  cursor: pointer;
+  transition: background-color 0.28s var(--ease-mechanical), border-color 0.28s var(--ease-mechanical), box-shadow 0.28s var(--ease-mechanical);
+  flex-shrink: 0;
+  padding: 0;
+}
+.hw-switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #64748B;
+  transition: transform 0.28s var(--ease-mechanical), background-color 0.28s var(--ease-mechanical), box-shadow 0.28s var(--ease-mechanical);
+}
+.hw-switch[aria-checked="true"] {
+  background: rgba(0, 229, 255, 0.16);
+  border-color: var(--cryo-ice);
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.25), inset 0 0 8px rgba(0, 229, 255, 0.15);
+}
+.hw-switch[aria-checked="true"]::after {
+  transform: translateX(22px);
+  background: var(--cryo-ice);
+  box-shadow: 0 0 10px var(--cryo-ice);
+}
+
+/* Custom Stepped Range Slider (30% - 100%, step 5%) */
+.cryo-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  background: #070C17;
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+}
+.cryo-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--cryo-ice);
+  border: 2px solid #05080E;
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.65);
+  cursor: grab;
+  transition: transform 0.18s var(--ease-mechanical), box-shadow 0.18s var(--ease-mechanical);
+}
+.cryo-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 22px rgba(0, 229, 255, 0.9);
+}
+.cryo-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(0.95);
+}
+.cryo-slider::-moz-range-thumb {
+  width: 24px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--cryo-ice);
+  border: 2px solid #05080E;
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.65);
+  cursor: grab;
+  transition: transform 0.18s var(--ease-mechanical), box-shadow 0.18s var(--ease-mechanical);
+}
+
+/* Floating Monitor Overlay inside Hero Sandbox */
+.floating-hud-window {
+  background: rgba(14, 21, 35, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(0, 229, 255, 0.12);
+  user-select: none;
+  touch-action: none;
+  transition: width 0.26s var(--ease-mechanical), border-color 0.26s var(--ease-mechanical), box-shadow 0.26s var(--ease-mechanical);
+}
+.floating-hud-window.dragging {
+  border-color: var(--cryo-ice);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.9), 0 0 20px rgba(0, 229, 255, 0.35);
+  cursor: grabbing !important;
+}
+
+/* Maximalist Spec Numbers (Trend 08) */
+.spec-giant {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  line-height: 0.92;
+  letter-spacing: -0.045em;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.35s var(--ease-mechanical), text-shadow 0.35s var(--ease-mechanical), transform 0.35s var(--ease-mechanical);
+}
+.spec-card.in-view .spec-giant {
+  color: #FFFFFF;
+  text-shadow: 0 0 32px rgba(0, 229, 255, 0.35);
+}
+
+/* Progressive Disclosure Drawer Animation (Trend 03) */
+.drawer-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.4s var(--ease-mechanical), opacity 0.32s var(--ease-mechanical);
+}
+.drawer-collapse.open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.drawer-inner {
+  overflow: hidden;
+}
+
+/* Freeze Level Pill Active States */
+.freeze-btn {
+  transition: all 0.22s var(--ease-mechanical);
+}
+.freeze-btn.active-L1 {
+  border-color: #10B981;
+  background: rgba(16, 185, 129, 0.12);
+  color: #ECFDF5;
+  box-shadow: 0 0 18px -4px rgba(16, 185, 129, 0.35);
+}
+.freeze-btn.active-L2 {
+  border-color: #38BDF8;
+  background: rgba(56, 189, 248, 0.14);
+  color: #F0F9FF;
+  box-shadow: 0 0 18px -4px rgba(56, 189, 248, 0.38);
+}
+.freeze-btn.active-L3 {
+  border-color: #00E5FF;
+  background: rgba(0, 229, 255, 0.16);
+  color: #ECFEFF;
+  box-shadow: 0 0 20px -4px rgba(0, 229, 255, 0.45);
+}
+.freeze-btn.active-L4 {
+  border-color: #F43F5E;
+  background: rgba(244, 63, 94, 0.15);
+  color: #FFF1F2;
+  box-shadow: 0 0 20px -4px rgba(244, 63, 94, 0.42);
+}
+
+/* Instant Zero-FOUC Interactive Control Pills */
+.preset-pill {
+  padding: 0.25rem 0.625rem;
+  border-radius: 0.375rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: #94A3B8;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid #1E293B;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-mechanical);
+}
+.preset-pill:hover {
+  color: #FFFFFF;
+  border-color: rgba(56, 189, 248, 0.45);
+}
+.preset-pill.active {
+  background: var(--cryo-ice);
+  color: #020617;
+  font-weight: 700;
+  border-color: var(--cryo-ice);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
+}
+
+.mode-pill {
+  flex: 1 1 0%;
+  padding: 0.4rem 0.625rem;
+  border-radius: 0.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: #94A3B8;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid #1E293B;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-mechanical);
+  text-align: center;
+}
+.mode-pill:hover {
+  color: #E2E8F0;
+}
+.mode-pill.active {
+  background: rgba(14, 165, 233, 0.18);
+  color: var(--cryo-ice);
+  font-weight: 600;
+  border-color: rgba(0, 229, 255, 0.5);
+}
+
+.lang-pill {
+  padding: 0.25rem 0.625rem;
+  border-radius: 0.375rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: #94A3B8;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-mechanical);
+}
+.lang-pill:hover {
+  color: #FFFFFF;
+}
+.lang-pill.active {
+  background: var(--cryo-ice);
+  color: #020617;
+  font-weight: 700;
+}
+
+/* App Pin & Freeze Simulation States */
+.app-sim-item {
+  transition: all 0.28s var(--ease-mechanical);
+}
+.app-sim-item.is-frozen {
+  opacity: 0.45;
+  filter: saturate(0.2);
+  border-color: rgba(0, 229, 255, 0.35);
+  background: rgba(5, 8, 14, 0.85);
+}
+.app-sim-item.is-pinned {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.06);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #05080E;
+}
+::-webkit-scrollbar-thumb {
+  background: #1E293B;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #38BDF8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

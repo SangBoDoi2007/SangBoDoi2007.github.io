@@ -1,144 +1,235 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en" class="scroll-smooth antialiased">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chính Sách Quyền Riêng Tư | ASTVN Studios</title>
-  <meta name="description" content="Chính sách quyền riêng tư của ASTVN Studios cho ứng dụng Cryo: Game Booster & GFX Tool và các sản phẩm khác.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy | Cryo: Game Mode &amp; FPS Meter — ASTVN Studios</title>
+  <meta name="description" content="Official Privacy Policy &amp; Google Play Data Safety disclosure of ASTVN Studios for Cryo: Game Mode &amp; FPS Meter (com.astvn.cryo)." />
+  <link rel="icon" type="image/png" href="assets/icon.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet" />
+
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-            mono: ['"JetBrains Mono"', 'monospace'],
-          }
-        }
-      }
-    }
-  </script>
+  <link rel="stylesheet" href="assets/cryo.css" />
 </head>
-<body class="bg-[#080c15] text-slate-300 font-sans antialiased selection:bg-cyan-500 selection:text-black">
-  <div class="max-w-4xl mx-auto px-6 py-16">
-    <!-- Breadcrumb / Back -->
-    <a href="index.html" class="inline-flex items-center text-sm font-semibold text-cyan-400 hover:text-cyan-300 mb-8 transition-colors">
-      &larr; Quay lại trang chủ ASTVN Studios
-    </a>
+<body class="selection:bg-[#00E5FF] selection:text-slate-950">
 
-    <!-- Title -->
-    <header class="border-b border-slate-800 pb-8 mb-10">
-      <div class="inline-block px-3 py-1 rounded-md text-xs font-semibold bg-cyan-950 text-cyan-400 border border-cyan-800 mb-4">
-        Chính sách tuân thủ Google Play
+  <!-- STICKY HEADER -->
+  <header class="sticky top-0 z-50 backdrop-blur-xl bg-[#05080E]/85 border-b border-sky-400/15">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+      <a href="index.html" class="flex items-center gap-3 group">
+        <img src="assets/icon.png" alt="Cryo Icon" class="w-8 h-8 rounded-xl border border-sky-400/30" />
+        <div>
+          <span class="font-display font-bold text-white text-base tracking-tight">CRYO</span>
+          <span class="text-xs font-mono-tech text-slate-400 ml-2"
+                data-en="← Back to ASTVN Studios Home"
+                data-vi="← Quay lại trang chủ ASTVN Studios">← Back to ASTVN Studios Home</span>
+        </div>
+      </a>
+
+      <div class="flex items-center gap-2.5">
+        <div class="inline-flex items-center p-1 rounded-lg bg-[#0B111E] border border-slate-800" role="group" aria-label="Language Switcher">
+          <button type="button" id="lang-btn-en" class="lang-pill active">EN</button>
+          <button type="button" id="lang-btn-vi" class="lang-pill">VI</button>
+        </div>
+        <a href="https://play.google.com/store/apps/details?id=com.astvn.cryo" target="_blank" rel="noopener"
+           class="btn-kinetic btn-cryo-primary px-3.5 py-2 rounded-lg text-xs font-mono-tech">
+          Google Play
+        </a>
       </div>
-      <h1 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">Chính Sách Quyền Riêng Tư</h1>
-      <p class="text-slate-400 text-sm mt-3">Cập nhật lần cuối: Tháng 10, 2026 · Nhà phát triển: <strong class="text-white">ASTVN Studios</strong></p>
-    </header>
+    </div>
+  </header>
 
-    <!-- Main Content -->
-    <div class="space-y-8 text-sm sm:text-base leading-relaxed text-slate-300">
-      <section>
-        <h2 class="text-xl font-bold text-white mb-3 flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
-          1. Giới thiệu tổng quan
+  <main class="max-w-4xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+    
+    <!-- Header Banner -->
+    <div class="hw-panel rounded-2xl p-6 sm:p-8 mb-8 corner-brackets">
+      <span class="bracket-tl"></span>
+      <span class="bracket-br"></span>
+      <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded text-xs font-mono-tech font-bold bg-sky-950 text-[#00E5FF] border border-sky-400/30 mb-4"
+           data-en="GOOGLE PLAY DATA SAFETY &amp; PRIVACY COMPLIANCE"
+           data-vi="CHÍNH SÁCH TUÂN THỦ GOOGLE PLAY &amp; AN TOÀN DỮ LIỆU">
+        GOOGLE PLAY DATA SAFETY &amp; PRIVACY COMPLIANCE
+      </div>
+      <h1 class="font-display text-3xl sm:text-4xl font-bold text-white tracking-tight"
+          data-en="Privacy Policy"
+          data-vi="Chính Sách Quyền Riêng Tư">Privacy Policy</h1>
+      <p class="text-slate-400 text-xs sm:text-sm font-mono-tech mt-3"
+         data-en="Last Updated: October 2026 · Developer: ASTVN Studios · App: Cryo: Game Mode &amp; FPS Meter (com.astvn.cryo)"
+         data-vi="Cập nhật lần cuối: Tháng 10, 2026 · Nhà phát triển: ASTVN Studios · Ứng dụng: Cryo: Chế độ game &amp; đo FPS (com.astvn.cryo)">
+        Last Updated: October 2026 · Developer: ASTVN Studios · App: Cryo: Game Mode &amp; FPS Meter (com.astvn.cryo)
+      </p>
+    </div>
+
+    <!-- Legal Sections -->
+    <div class="space-y-6 text-sm sm:text-base leading-relaxed text-slate-300">
+
+      <!-- Section 1 -->
+      <section class="hw-panel rounded-2xl p-6">
+        <h2 class="font-display text-xl font-bold text-white mb-3 flex items-center gap-2.5">
+          <span class="w-2 h-2 rounded-full bg-[#00E5FF]"></span>
+          <span data-en="1. Overview" data-vi="1. Giới thiệu tổng quan">1. Overview</span>
         </h2>
-        <p>
-          Chào mừng bạn đến với <strong>ASTVN Studios</strong> ("chúng tôi"). Chúng tôi phát triển ứng dụng <strong>Cryo: Game Booster & GFX Tool</strong> cũng như các ứng dụng và trò chơi di động khác. Chính sách này mô tả cách chúng tôi thu thập, sử dụng và bảo vệ thông tin khi bạn tải xuống và sử dụng các sản phẩm của chúng tôi.
+        <p data-en="Welcome to ASTVN Studios ('we', 'us', or 'our'). We develop Cryo: Game Mode &amp; FPS Meter (formerly Cryo: Game Booster &amp; GFX Tool, package com.astvn.cryo) as well as other mobile utilities and games. This Privacy Policy explains how information is handled, processed, and protected when you download and use our products."
+           data-vi="Chào mừng bạn đến với ASTVN Studios ('chúng tôi'). Chúng tôi phát triển ứng dụng Cryo: Chế độ game &amp; đo FPS (Cryo: Game Mode &amp; FPS Meter / trước đây là Cryo: Game Booster &amp; GFX Tool, mã gói com.astvn.cryo) cũng như các ứng dụng và trò chơi di động khác. Chính sách này mô tả cách chúng tôi thu thập, sử dụng và bảo vệ thông tin khi bạn tải xuống và sử dụng các sản phẩm của chúng tôi.">
+          Welcome to ASTVN Studios ("we", "us", or "our"). We develop Cryo: Game Mode &amp; FPS Meter (formerly Cryo: Game Booster &amp; GFX Tool, package com.astvn.cryo) as well as other mobile utilities and games. This Privacy Policy explains how information is handled, processed, and protected when you download and use our products.
         </p>
       </section>
 
-      <section>
-        <h2 class="text-xl font-bold text-white mb-3 flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
-          2. Thu thập và Sử dụng Dữ liệu
+      <!-- Section 2 -->
+      <section class="hw-panel rounded-2xl p-6">
+        <h2 class="font-display text-xl font-bold text-white mb-3 flex items-center gap-2.5">
+          <span class="w-2 h-2 rounded-full bg-[#00E5FF]"></span>
+          <span data-en="2. Data Collection and Local Processing" data-vi="2. Thu thập và Sử dụng Dữ liệu">2. Data Collection and Local Processing</span>
         </h2>
-        <p class="mb-3">
-          <strong>Chúng tôi cam kết KHÔNG thu thập, lưu trữ hoặc chia sẻ thông tin nhận dạng cá nhân nhạy cảm</strong> (như tên họ thực, số CMND/CCCD, tài khoản ngân hàng, danh bạ, vị trí GPS chính xác hay nội dung tin nhắn của bạn).
+        <p class="mb-3 font-semibold text-white"
+           data-en="We require NO user account or sign-up, and we DO NOT collect, store, or share sensitive personal identity information (such as your real name, national ID, bank accounts, contacts, exact GPS location, or personal messages)."
+           data-vi="Chúng tôi KHÔNG yêu cầu tạo tài khoản hay đăng nhập, và cam kết KHÔNG thu thập, lưu trữ hoặc chia sẻ thông tin nhận dạng cá nhân nhạy cảm (như tên họ thực, số CMND/CCCD, tài khoản ngân hàng, danh bạ, vị trí GPS chính xác hay nội dung tin nhắn của bạn).">
+          We require NO user account or sign-up, and we DO NOT collect, store, or share sensitive personal identity information (such as your real name, national ID, bank accounts, contacts, exact GPS location, or personal messages).
         </p>
-        <p class="mb-2">Ứng dụng Cryo chỉ xử lý cục bộ trên thiết bị của bạn các thông tin kỹ thuật phục vụ mục đích tối ưu hóa hiệu năng game:</p>
-        <ul class="list-disc list-inside space-y-1.5 pl-3 text-slate-400">
-          <li><strong>Thông số phần cứng cục bộ:</strong> Mức sử dụng CPU, GPU, RAM, nhiệt độ pin và tốc độ khung hình (FPS) để hiển thị đồng hồ đo thời gian thực.</li>
-          <li><strong>Danh sách gói ứng dụng (Installed Packages):</strong> Để nhận diện các tựa game đã cài đặt và đưa vào Game Hub cho người dùng quản lý. Dữ liệu này chỉ lưu trong bộ nhớ máy của bạn.</li>
-          <li><strong>Cấu hình màn hình & đồ họa:</strong> Tần số quét (Refresh Rate) và độ phân giải màn hình thông qua quyền hệ thống/Shizuku theo yêu cầu chủ động từ người dùng.</li>
+        <p class="mb-2"
+           data-en="Cryo processes technical telemetry locally on your device solely to execute its core features:"
+           data-vi="Ứng dụng Cryo chỉ xử lý cục bộ trên thiết bị của bạn các thông tin kỹ thuật phục vụ mục đích thực thi tính năng cốt lõi:">
+          Cryo processes technical telemetry locally on your device solely to execute its core features:
+        </p>
+        <ul class="list-disc list-inside space-y-2 pl-2 text-slate-300 text-sm">
+          <li data-en="Local Hardware Telemetry: CPU/GPU load, free RAM, battery temperature, power draw, and frame rate (FPS) to display the real-time floating monitor and post-session reports on your phone. Values a device does not expose are hidden, not guessed."
+              data-vi="Thông số phần cứng cục bộ: Mức sử dụng CPU/GPU, RAM trống, nhiệt độ pin, công suất tiêu thụ và tốc độ khung hình (FPS) để hiển thị cửa sổ đo thời gian thực và báo cáo sau lần chơi ngay trên máy bạn. Chỉ số nào máy không cho đọc sẽ được ẩn đi chứ không đoán.">
+            Local Hardware Telemetry: CPU/GPU load, free RAM, battery temperature, power draw, and frame rate (FPS) to display the real-time floating monitor and post-session reports on your phone. Values a device does not expose are hidden, not guessed.
+          </li>
+          <li data-en="Launchable Apps &amp; Running Processes: Used locally to let you pick games for your Gaming Space, pin important apps (such as messaging, alarms, or banking), and freeze background apps via Shizuku. This list never leaves your device."
+              data-vi="Danh sách ứng dụng &amp; tiến trình đang chạy: Dùng cục bộ để bạn chọn game vào Không gian chơi game, ghim các ứng dụng quan trọng (tin nhắn, báo thức, ngân hàng) và đóng băng ứng dụng chạy ngầm qua Shizuku. Dữ liệu này chỉ lưu trong bộ nhớ máy của bạn.">
+            Launchable Apps &amp; Running Processes: Used locally to let you pick games for your Gaming Space, pin important apps (such as messaging, alarms, or banking), and freeze background apps via Shizuku. This list never leaves your device.
+          </li>
+          <li data-en="Display &amp; System Settings Ledger: Records original screen resolution, refresh rate, and Do Not Disturb state locally so Cryo can restore them automatically when you leave a game or restart your phone."
+              data-vi="Cấu hình màn hình &amp; sổ hoàn tác hệ thống: Ghi lại độ phân giải màn hình, tần số quét và trạng thái Không làm phiền gốc trên máy để tự động trả lại khi bạn thoát game hoặc khởi động lại điện thoại.">
+            Display &amp; System Settings Ledger: Records original screen resolution, refresh rate, and Do Not Disturb state locally so Cryo can restore them automatically when you leave a game or restart your phone.
+          </li>
         </ul>
       </section>
 
-      <section>
-        <h2 class="text-xl font-bold text-white mb-3 flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
-          3. Các Quyền Ứng Dụng Yêu Cầu (App Permissions)
+      <!-- Section 3 -->
+      <section class="hw-panel rounded-2xl p-6">
+        <h2 class="font-display text-xl font-bold text-white mb-3 flex items-center gap-2.5">
+          <span class="w-2 h-2 rounded-full bg-[#00E5FF]"></span>
+          <span data-en="3. App Permissions Requested" data-vi="3. Các Quyền Ứng Dụng Yêu Cầu (App Permissions)">3. App Permissions Requested</span>
         </h2>
-        <p class="mb-2">Cryo yêu cầu một số quyền đặc thù của hệ điều hành Android nhằm thực hiện các chức năng cốt lõi:</p>
-        <ul class="list-disc list-inside space-y-1.5 pl-3 text-slate-400">
-          <li><strong>SYSTEM_ALERT_WINDOW (Hiển thị trên ứng dụng khác):</strong> Để hiển thị cửa sổ nổi (Floating HUD / FPS Monitor) khi bạn đang chơi game.</li>
-          <li><strong>PACKAGE_USAGE_STATS (Truy cập dữ liệu sử dụng):</strong> Để phát hiện khi nào game được mở và kích hoạt chế độ tăng tốc phù hợp.</li>
-          <li><strong>Shizuku / ADB Permission (Tùy chọn):</strong> Cho phép người dùng áp dụng các tinh chỉnh hệ thống nâng cao (như thay đổi độ phân giải bộ đệm) hoàn toàn an toàn mà không cần Root.</li>
-          <li><strong>POST_NOTIFICATIONS:</strong> Để duy trì dịch vụ nền hiển thị thông báo trạng thái tăng tốc và nhiệt độ thiết bị.</li>
+        <p class="mb-2"
+           data-en="Cryo requests specific Android permissions strictly required for its user-facing features:"
+           data-vi="Cryo yêu cầu một số quyền đặc thù của hệ điều hành Android nhằm thực hiện các chức năng cốt lõi do người dùng chủ động bật:">
+          Cryo requests specific Android permissions strictly required for its user-facing features:
+        </p>
+        <ul class="list-disc list-inside space-y-2 pl-2 text-slate-300 text-sm font-mono-tech">
+          <li data-en="SYSTEM_ALERT_WINDOW (Display over other apps): Displays the Floating Monitor (FPS / temperature / RAM HUD) and the AFK 0% brightness black overlay over your game."
+              data-vi="SYSTEM_ALERT_WINDOW (Hiển thị trên ứng dụng khác): Để hiển thị cửa sổ nổi (Floating Monitor đo FPS / nhiệt độ / RAM) và lớp phủ màn hình đen AFK khi bạn đang chơi game.">
+            SYSTEM_ALERT_WINDOW (Display over other apps): Displays the Floating Monitor (FPS / temperature / RAM HUD) and the AFK 0% brightness black overlay over your game.
+          </li>
+          <li data-en="PACKAGE_USAGE_STATS (Usage Access): Detects when a game you picked comes to the screen so Cryo can apply and restore per-game settings automatically."
+              data-vi="PACKAGE_USAGE_STATS (Truy cập dữ liệu sử dụng): Để phát hiện khi nào game bạn chọn mở lên màn hình nhằm tự động bật chế độ game và khôi phục khi thoát.">
+            PACKAGE_USAGE_STATS (Usage Access): Detects when a game you picked comes to the screen so Cryo can apply and restore per-game settings automatically.
+          </li>
+          <li data-en="Shizuku / ADB Shell Permission (Required for system controls): Executes non-root ADB shell commands for render resolution scaling (cmd game / wm size), background app freezing, refresh rate lock, and FPS/CPU/GPU telemetry."
+              data-vi="Shizuku / ADB Permission (Bắt buộc cho tính năng hệ thống): Cho phép thực thi lệnh ADB shell không cần Root để chỉnh độ phân giải (cmd game / wm size), đóng băng ứng dụng ngầm, khoá tần số quét và đọc chỉ số FPS/CPU/GPU.">
+            Shizuku / ADB Shell Permission (Required for system controls): Executes non-root ADB shell commands for render resolution scaling (cmd game / wm size), background app freezing, refresh rate lock, and FPS/CPU/GPU telemetry.
+          </li>
+          <li data-en="POST_NOTIFICATIONS &amp; FOREGROUND_SERVICE: Keeps the active monitoring service alive while you play and provides quick recovery controls."
+              data-vi="POST_NOTIFICATIONS &amp; FOREGROUND_SERVICE: Duy trì dịch vụ cửa sổ nổi khi đang chơi game và hiển thị thông báo điều khiển nhanh.">
+            POST_NOTIFICATIONS &amp; FOREGROUND_SERVICE: Keeps the active monitoring service alive while you play and provides quick recovery controls.
+          </li>
+          <li data-en="RECEIVE_BOOT_COMPLETED: Restores original screen resolution, refresh rate, and Do Not Disturb after an unexpected reboot."
+              data-vi="RECEIVE_BOOT_COMPLETED: Tự động khôi phục độ phân giải gốc, tần số quét và Không làm phiền nếu máy khởi động lại giữa trận.">
+            RECEIVE_BOOT_COMPLETED: Restores original screen resolution, refresh rate, and Do Not Disturb after an unexpected reboot.
+          </li>
         </ul>
       </section>
 
-      <section>
-        <h2 class="text-xl font-bold text-white mb-3 flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
-          4. Quảng Cáo & Dịch Vụ Bên Thứ Ba (Third-Party Services)
+      <!-- Section 4 -->
+      <section class="hw-panel rounded-2xl p-6">
+        <h2 class="font-display text-xl font-bold text-white mb-3 flex items-center gap-2.5">
+          <span class="w-2 h-2 rounded-full bg-[#00E5FF]"></span>
+          <span data-en="4. Advertising, Play Billing &amp; Third-Party Services" data-vi="4. Quảng Cáo, Thanh Toán &amp; Dịch Vụ Bên Thứ Ba">4. Advertising, Play Billing &amp; Third-Party Services</span>
         </h2>
-        <p class="mb-3">
-          Để duy trì dự án và cung cấp ứng dụng miễn phí, chúng tôi tích hợp các mạng lưới quảng cáo uy tín tuân thủ chính sách của Google Play, bao gồm:
+        <p class="mb-3"
+           data-en="To maintain development and offer Cryo for free, we integrate Google Play-compliant third-party SDKs:"
+           data-vi="Để duy trì dự án và cung cấp ứng dụng miễn phí, chúng tôi tích hợp các dịch vụ bên thứ ba tuân thủ chính sách của Google Play, bao gồm:">
+          To maintain development and offer Cryo for free, we integrate Google Play-compliant third-party SDKs:
         </p>
-        <ul class="list-disc list-inside space-y-1.5 pl-3 text-slate-400">
-          <li><strong>Google AdMob</strong> (<a href="https://policies.google.com/technologies/ads" target="_blank" class="text-cyan-400 underline">Chính sách của Google</a>)</li>
-          <li><strong>Unity Ads / LevelPlay (ironSource)</strong></li>
+        <ul class="list-disc list-inside space-y-1.5 pl-2 text-slate-300 text-sm">
+          <li><strong>Unity LevelPlay (ironSource) &amp; Unity Ads</strong> — <span data-en="Ad mediation and rewarded/banner ad delivery" data-vi="Phân phối quảng cáo biểu ngữ và video có thưởng">Ad mediation and rewarded/banner ad delivery</span></li>
+          <li><strong>Google User Messaging Platform (UMP) &amp; AdMob Identifiers</strong> (<a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener" class="text-[#00E5FF] underline">Google Ads Policy</a>)</li>
+          <li><strong>Google Play Billing &amp; Google Play Block Store</strong> — <span data-en="Processes Cryo PRO purchases (ad-free &amp; unlimited actions) and preserves free action quota across reinstalls" data-vi="Xử lý nâng cấp Cryo PRO (gỡ quảng cáo &amp; không giới hạn lượt) và lưu số lượt thao tác miễn phí qua Play Block Store">Processes Cryo PRO purchases (ad-free &amp; unlimited actions) and preserves free action quota across reinstalls</span></li>
         </ul>
-        <p class="mt-3">
-          Các đối tác quảng cáo có thể sử dụng mã nhận dạng quảng cáo (Google Advertising ID - GAID) ẩn danh để phân phối quảng cáo phù hợp và chống gian lận. Bạn có thể đặt lại hoặc tắt cá nhân hóa quảng cáo trong phần <em>Cài đặt thiết bị &rarr; Google &rarr; Quảng cáo</em> bất cứ lúc nào.
+        <p class="mt-3 text-sm text-slate-400"
+           data-en="Advertising partners may use the anonymous Google Advertising ID (GAID), App Set ID, coarse location (from IP), and device diagnostics for ad delivery, frequency capping, and fraud prevention. You can reset or delete your Advertising ID anytime in Android Settings → Google → Ads."
+           data-vi="Các đối tác quảng cáo có thể sử dụng mã nhận dạng quảng cáo (Google Advertising ID - GAID), App Set ID và thông tin chẩn đoán cơ bản để phân phối quảng cáo phù hợp và chống gian lận. Bạn có thể đặt lại hoặc xoá mã quảng cáo trong Cài đặt thiết bị → Google → Quảng cáo bất cứ lúc nào.">
+          Advertising partners may use the anonymous Google Advertising ID (GAID), App Set ID, coarse location (from IP), and device diagnostics for ad delivery, frequency capping, and fraud prevention. You can reset or delete your Advertising ID anytime in Android Settings → Google → Ads.
         </p>
-        <p class="mt-2 text-xs text-slate-500 font-mono">
-          Trang web chính thức của chúng tôi cung cấp hồ sơ xác minh minh bạch tại <a href="app-ads.txt" class="text-cyan-400 underline">app-ads.txt</a>.
-        </p>
-      </section>
-
-      <section>
-        <h2 class="text-xl font-bold text-white mb-3 flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
-          5. Bảo Mật Dữ Liệu
-        </h2>
-        <p>
-          Chúng tôi rất coi trọng việc bảo vệ thông tin. Mọi cấu hình tinh chỉnh và thiết lập cá nhân của Cryo đều được lưu giữ an toàn trong bộ nhớ nội bộ (Internal Storage) được mã hóa của hệ điều hành Android và không được tải lên bất kỳ máy chủ bên ngoài nào.
+        <p class="mt-2 text-xs text-slate-400 font-mono-tech">
+          <span data-en="Our authorized seller verification file is publicly hosted at:" data-vi="Hồ sơ xác minh nhà xuất bản quảng cáo chính thức tại:">Our authorized seller verification file is publicly hosted at:</span>
+          <a href="app-ads.txt" class="text-[#00E5FF] underline ml-1">https://sangbodoi2007.github.io/app-ads.txt</a>
         </p>
       </section>
 
-      <section>
-        <h2 class="text-xl font-bold text-white mb-3 flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
-          6. Trẻ Em & Tuân Thủ COPPA
+      <!-- Section 5 -->
+      <section class="hw-panel rounded-2xl p-6">
+        <h2 class="font-display text-xl font-bold text-white mb-3 flex items-center gap-2.5">
+          <span class="w-2 h-2 rounded-full bg-[#00E5FF]"></span>
+          <span data-en="5. Data Security &amp; Retention" data-vi="5. Bảo Mật Dữ Liệu">5. Data Security &amp; Retention</span>
         </h2>
-        <p>
-          Ứng dụng của chúng tôi không hướng đến đối tượng trẻ em dưới 13 tuổi và không cố ý thu thập bất kỳ thông tin nào từ trẻ em. Nếu phát hiện vi phạm vô ý, chúng tôi sẽ ngay lập tức xử lý và xóa bỏ các liên kết liên quan.
+        <p data-en="All personal configurations, game lists, and session histories created inside Cryo are stored in Android's sandboxed internal storage on your device and are never uploaded to any ASTVN Studios server. Clearing app data or uninstalling Cryo deletes this local data immediately."
+           data-vi="Chúng tôi rất coi trọng việc bảo vệ thông tin. Mọi cấu hình tinh chỉnh, danh sách game và lịch sử phiên chơi của Cryo đều được lưu giữ an toàn trong bộ nhớ nội bộ (Internal Storage) của hệ điều hành Android trên máy bạn và không được tải lên bất kỳ máy chủ riêng nào của ASTVN Studios. Xoá dữ liệu ứng dụng hoặc gỡ cài đặt Cryo sẽ xoá toàn bộ dữ liệu cục bộ này ngay lập tức.">
+          All personal configurations, game lists, and session histories created inside Cryo are stored in Android's sandboxed internal storage on your device and are never uploaded to any ASTVN Studios server. Clearing app data or uninstalling Cryo deletes this local data immediately.
         </p>
       </section>
 
-      <section>
-        <h2 class="text-xl font-bold text-white mb-3 flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
-          7. Thông Tin Liên Hệ
+      <!-- Section 6 -->
+      <section class="hw-panel rounded-2xl p-6">
+        <h2 class="font-display text-xl font-bold text-white mb-3 flex items-center gap-2.5">
+          <span class="w-2 h-2 rounded-full bg-[#00E5FF]"></span>
+          <span data-en="6. Children's Privacy &amp; COPPA Compliance" data-vi="6. Trẻ Em &amp; Tuân Thủ COPPA">6. Children's Privacy &amp; COPPA Compliance</span>
         </h2>
-        <p class="mb-3">Nếu bạn có bất kỳ thắc mắc, phản hồi hoặc yêu cầu nào về Chính sách quyền riêng tư này, vui lòng liên hệ với chúng tôi qua:</p>
-        <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 text-sm space-y-1.5 font-mono">
+        <p data-en="Our application is not directed to children under the age of 13, and we do not knowingly collect any personal information from children. If any unintentional collection is discovered, we will immediately take action to remove such data."
+           data-vi="Ứng dụng của chúng tôi không hướng đến đối tượng trẻ em dưới 13 tuổi và không cố ý thu thập bất kỳ thông tin cá nhân nào từ trẻ em. Nếu phát hiện vi phạm vô ý, chúng tôi sẽ ngay lập tức xử lý và xóa bỏ các thông tin liên quan.">
+          Our application is not directed to children under the age of 13, and we do not knowingly collect any personal information from children. If any unintentional collection is discovered, we will immediately take action to remove such data.
+        </p>
+      </section>
+
+      <!-- Section 7 -->
+      <section class="hw-panel rounded-2xl p-6">
+        <h2 class="font-display text-xl font-bold text-white mb-3 flex items-center gap-2.5">
+          <span class="w-2 h-2 rounded-full bg-[#00E5FF]"></span>
+          <span data-en="7. Contact Information" data-vi="7. Thông Tin Liên Hệ">7. Contact Information</span>
+        </h2>
+        <p class="mb-4"
+           data-en="If you have any questions, feedback, or requests regarding this Privacy Policy, please contact us at:"
+           data-vi="Nếu bạn có bất kỳ thắc mắc, phản hồi hoặc yêu cầu nào về Chính sách quyền riêng tư này, vui lòng liên hệ với chúng tôi qua:">
+          If you have any questions, feedback, or requests regarding this Privacy Policy, please contact us at:
+        </p>
+        <div class="p-4 rounded-xl bg-[#05080E] border border-slate-800 text-xs sm:text-sm space-y-2 font-mono-tech">
           <div><strong class="text-white">Studio:</strong> ASTVN Studios</div>
-          <div><strong class="text-white">Đại diện:</strong> Trần Minh Sang</div>
-          <div><strong class="text-white">Email hỗ trợ:</strong> <a href="mailto:astvncryo.support@gmail.com" class="text-cyan-400">astvncryo.support@gmail.com</a> / <a href="mailto:hoten2817@gmail.com" class="text-cyan-400">hoten2817@gmail.com</a></div>
-          <div><strong class="text-white">Địa chỉ:</strong> Đà Giang, Tà Hine, Lâm Đồng, Việt Nam</div>
+          <div><strong class="text-white" data-en="Representative:" data-vi="Đại diện:">Representative:</strong> Trần Minh Sang</div>
+          <div><strong class="text-white" data-en="Support Emails:" data-vi="Email hỗ trợ:">Support Emails:</strong> <a href="mailto:hoten2817@gmail.com" class="text-[#00E5FF] hover:underline">hoten2817@gmail.com</a> / <a href="mailto:astvncryo.support@gmail.com" class="text-[#00E5FF] hover:underline">astvncryo.support@gmail.com</a></div>
+          <div><strong class="text-white" data-en="Address:" data-vi="Địa chỉ:">Address:</strong> Đà Giang, Tà Hine, Lâm Đồng, Việt Nam</div>
+          <div><strong class="text-white">Website:</strong> <a href="https://sangbodoi2007.github.io" class="text-[#00E5FF] hover:underline">https://sangbodoi2007.github.io</a></div>
         </div>
       </section>
+
     </div>
 
     <!-- Footer -->
-    <footer class="mt-16 pt-8 border-t border-slate-800 text-center text-xs text-slate-500">
-      <p>&copy; 2026 ASTVN Studios. Tất cả quyền được bảo lưu.</p>
+    <footer class="mt-12 pt-8 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono-tech text-slate-500">
+      <p>© 2026 ASTVN Studios. All rights reserved.</p>
+      <div class="flex items-center gap-4">
+        <a href="index.html" class="text-[#00E5FF] hover:underline" data-en="Home" data-vi="Trang chủ">Home</a>
+        <a href="app-ads.txt" class="hover:text-slate-300">app-ads.txt</a>
+        <a href="https://play.google.com/store/apps/details?id=com.astvn.cryo" target="_blank" rel="noopener" class="hover:text-slate-300">Google Play</a>
+      </div>
     </footer>
-  </div>
+
+  </main>
+
+  <script src="assets/cryo.js"></script>
 </body>
 </html>
