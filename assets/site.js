@@ -20,6 +20,9 @@
     fraction: { z: 0.55, k: 400 }, exit: { z: 1, k: 700 }, fade: { z: 1, k: 260 }, gentle: { z: 0.85, k: 90 }, smooth: { z: 1, k: 140 },
     /* Nhịp của cả một màn bay vào (cấp trang, không phải cấp thành phần): chậm và êm hơn spatial một chút. */
     stage: { z: 0.7, k: 210 },
+    /* Lò xo chuẩn của M3 Expressive (MotionScheme.expressive): dùng cho thành phần cấp trang và con trỏ. */
+    m3FastSpatial: { z: 0.6, k: 800 }, m3Spatial: { z: 0.8, k: 380 }, m3SlowSpatial: { z: 0.8, k: 200 },
+    m3FastEffects: { z: 1, k: 3800 }, m3Effects: { z: 1, k: 1600 }, m3SlowEffects: { z: 1, k: 800 },
   };
   const live = new Set(), dirty = new Set();
   let raf = 0, last = 0;
@@ -67,6 +70,59 @@
   function go(el, p, s, os) { const m = mo(el); for (const k in p) m[k].to(p[k], k === 'o' ? (os || SPEC.fade) : (s || SPEC.spatial)); }
   function put(el, p) { const m = mo(el); for (const k in p) m[k].set(p[k]); }
 
+  /* ---------- Hình khối M3 Expressive ----------
+     Xấp xỉ bằng hàm bán kính: siêu elip bậc p (2 = tròn, 4 = vuông bo) × gợn n cánh biên độ a, kéo dãn ngang sx.
+     Mọi hình lấy mẫu ở cùng các góc nên nội suy điểm-với-điểm là ra phép biến hình liền mạch. */
+  const SHAPES = {
+    circle: { n: 0, a: 0, p: 2, sx: 1 }, oval: { n: 0, a: 0, p: 2, sx: 1.34 },
+    squircle: { n: 0, a: 0, p: 4.2, sx: 1 }, pill: { n: 0, a: 0, p: 3.4, sx: 1.6 },
+    cookie4: { n: 4, a: 0.11, p: 2, sx: 1 }, cookie9: { n: 9, a: 0.075, p: 2, sx: 1 },
+    clover: { n: 4, a: 0.2, p: 2, sx: 1 }, flower: { n: 8, a: 0.13, p: 2, sx: 1 },
+    sunny: { n: 8, a: 0.055, p: 2, sx: 1 }, burst: { n: 10, a: 0.09, p: 2, sx: 1 }, pentagon: { n: 5, a: 0.075, p: 2, sx: 1 },
+  };
+  /* Trả [x0, y0, x1, y1, …] trong khung đơn vị (điểm xa tâm nhất có bán kính 1). */
+  function shapePts(def, P) {
+    const out = new Float32Array(P * 2);
+    let max = 0;
+    for (let i = 0; i < P; i++) {
+      const t = (i / P) * Math.PI * 2, c = Math.cos(t), s = Math.sin(t), p = def.p || 2;
+      const r = Math.pow(Math.pow(Math.abs(c), p) + Math.pow(Math.abs(s), p), -1 / p) * (1 + def.a * Math.cos(def.n * t));
+      const x = r * c * (def.sx || 1), y = r * s;
+      out[i * 2] = x; out[i * 2 + 1] = y;
+      max = Math.max(max, Math.hypot(x, y));
+    }
+    for (let i = 0; i < out.length; i++) out[i] /= max;
+    return out;
+  }
+  /* Nội suy hai hình (t có thể vượt 1 khi lò xo nảy) thành chuỗi d của SVG, tâm (cx, cy), bán kính R. */
+  function morphPath(A, B, t, cx, cy, R) {
+    let p = '';
+    for (let i = 0; i < A.length; i += 2) p += (i ? 'L' : 'M') + (cx + lerp(A[i], B[i], t) * R).toFixed(2) + ' ' + (cy + lerp(A[i + 1], B[i + 1], t) * R).toFixed(2);
+    return p + 'Z';
+  }
+
+  /* Chỉ báo đang tải M3 Expressive: một khối đổi dáng liên tục qua bảy hình, vừa đổi vừa xoay. */
+  const LOAD_SEQ = ['burst', 'cookie9', 'pentagon', 'pill', 'sunny', 'cookie4', 'oval'].map((k) => shapePts(SHAPES[k], 96));
+  function loader(host) {
+    const path = host && $('path', host);
+    if (!path) return { show() {}, hide() {} };
+    let i = 0, timer = 0, on = false;
+    const o = owner(() => {
+      const A = LOAD_SEQ[i % LOAD_SEQ.length], B = LOAD_SEQ[(i + 1) % LOAD_SEQ.length];
+      path.setAttribute('d', morphPath(A, B, u.x, 0, 0, 1));
+      host.style.transform = 'rotate(' + rot.x.toFixed(1) + 'deg) scale(' + Math.max(0, vis.x).toFixed(3) + ')';
+    });
+    const u = new Spring(0, 0.001, o), rot = new Spring(0, 0.05, o), vis = new Spring(0, 0.001, o);
+    function step() {
+      i++; u.set(0); u.to(1, SPEC.m3FastSpatial); rot.to(rot.t + 140, SPEC.m3Spatial);
+      timer = setTimeout(step, 650);
+    }
+    return {
+      show() { if (on) return; on = true; host.classList.add('on'); vis.to(1, SPEC.m3FastSpatial); if (!reduced) step(); else u.set(0); },
+      hide() { on = false; clearTimeout(timer); vis.to(0, SPEC.m3FastEffects); setTimeout(() => { if (!on) host.classList.remove('on'); }, 260); },
+    };
+  }
+
   /* ---------- Ngôn ngữ ---------- */
   const TITLES = { vi: 'Cryo: Chế độ game & đo FPS — ASTVN Studios', en: 'Cryo: Game Mode & FPS Meter — ASTVN Studios' };
   function setLang(l) {
@@ -101,21 +157,29 @@
 
   /* ---------- Đầu trang & cuộn ---------- */
   const top = $('.top');
-  const onScroll = () => top.classList.toggle('scrolled', scrollY > 24);
+  /* Vị trí cuộn đọc MỘT lần mỗi sự kiện ở đây (bộ nghe đăng ký đầu tiên); fx.js dùng lại view.y. Mỗi lần đọc scrollY
+     sau khi vừa ghi kiểu đều ép trình duyệt tính lại kiểu + bố cục — nhiều bộ nghe đọc xen kẽ là ép nhiều lần mỗi khung. */
+  const view = { y: scrollY };
+  const onScroll = () => { view.y = scrollY; top.classList.toggle('scrolled', view.y > 24); };
   addEventListener('scroll', onScroll, { passive: true }); onScroll();
 
-  let lenis = null;
+  let lenis = null, wakeLenis = () => {};
   if (!reduced && window.Lenis && matchMedia('(pointer: fine)').matches) {
     lenis = new window.Lenis({ lerp: 0.12, wheelMultiplier: 0.95 });
-    const tick = (t) => { lenis.raf(t); requestAnimationFrame(tick); };
-    requestAnimationFrame(tick);
+    /* Nhịp rAF của Lenis chỉ chạy khi đang cuộn: chạy mãi thì trang đứng yên vẫn đòi 60 khung/giây (đo: ~8% một nhân).
+       Đánh thức thì xoá mốc thời gian cũ (lenis.time) để khung đầu không coi cả quãng nghỉ là một bước. */
+    let lr = 0, still = 0;
+    const tick = (t) => { lenis.raf(t); still = lenis.isScrolling ? 0 : still + 1; lr = still > 30 ? 0 : requestAnimationFrame(tick); };
+    wakeLenis = () => { still = 0; if (!lr) { lenis.time = 0; lr = requestAnimationFrame(tick); } };
+    ['wheel', 'touchstart', 'keydown', 'pointerdown', 'scroll'].forEach((ev) => addEventListener(ev, wakeLenis, { passive: true }));
+    wakeLenis();
   }
   $$('a[href^="#"]').forEach((a) => a.addEventListener('click', (e) => {
     const id = a.getAttribute('href');
     if (id === '#main' || id.length < 2) return;
     const t = $(id); if (!t) return;
     e.preventDefault();
-    if (lenis) lenis.scrollTo(t, { offset: -84 }); else t.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
+    if (lenis) { lenis.scrollTo(t, { offset: -84 }); wakeLenis(); } else t.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
     history.replaceState(null, '', id);
   }));
 
@@ -150,12 +214,16 @@
     const scr = $('.scr', sc), cv = $('.game-cv', sc), ctx = cv.getContext('2d');
     const lc = $('.loupe canvas', sc), lctx = lc.getContext('2d'), pillT = $('.g-pill-t', sc), pill = $('.g-pill', sc);
     const input = $('input[type="range"]', sc), slider = $('.a-slider', sc), card = $('.res-card', sc);
-    const numEl = $('.res-num', sc), dimEl = $('.res-dim', sc), presets = $('.res-presets', sc);
+    const numEl = $('.res-num', sc), dimEl = $('.res-dim', sc), presets = $('.res-presets', sc), bubble = $('.sl-val b', sc);
     const pBtns = $$('button', presets), sw = $('[data-sw="res-on"]', sc);
     const off = d.createElement('canvas'), octx = off.getContext('2d');
     let val = 70, on = true, mode = 'buffer', shown = false, touched = false;
 
-    const thumb = new Spring(0.571, 0.0005, owner(() => slider.style.setProperty('--p', thumb.x.toFixed(4))));
+    /* Thanh trượt M3 Expressive: rãnh trước/sau tay cầm tính từ --p trong CSS, chấm dừng ẩn khi tay cầm chạm cuối. */
+    const thumb = new Spring(0.571, 0.0005, owner(() => {
+      slider.style.setProperty('--p', thumb.x.toFixed(4));
+      slider.classList.toggle('at-end', thumb.x > 0.985);
+    }));
     const eff = new Spring(0.7, 0.0008, owner(draw));
     const dims = (v) => Math.round(1260 * v / 100) + ' × ' + Math.round(2800 * v / 100);
     const pillText = () => (mode === 'buffer'
@@ -204,6 +272,7 @@
       val = clamp(Math.round(v / 5) * 5, 30, 100);
       if (!fromInput) input.value = val;
       numEl.textContent = val;
+      if (bubble) bubble.textContent = val;
       dimEl.textContent = dims(val);
       pill.dataset.t = pillText(); pillT.textContent = pill.dataset.t;
       pill.style.display = on ? '' : 'none';
@@ -216,7 +285,8 @@
     }
     input.addEventListener('input', () => { touched = true; setVal(+input.value, true); });
     input.addEventListener('pointerdown', () => slider.classList.add('drag'));
-    addEventListener('pointerup', () => slider.classList.remove('drag'));
+    const lift = () => slider.classList.remove('drag');
+    addEventListener('pointerup', lift); addEventListener('pointercancel', lift);
     pBtns.forEach((b) => b.addEventListener('click', () => { touched = true; setVal(+b.dataset.v); }));
     sw.addEventListener('sw', (e) => { on = e.detail; card.classList.toggle('off', !on); setVal(val); });
     segInit($('.seg-demo', sc), 'mode', (m) => { mode = m; scr.classList.toggle('full', m === 'full'); setVal(val); draw(); });
@@ -251,11 +321,15 @@
       a.appendChild(b);
     });
     const texts = {
-      vi: { frozen: (n, l) => 'Đã đóng băng ' + n + ' app ở mức L' + l + '. 3 app có ghim được chừa ra.', thawed: (n) => 'Đã rã đông ' + n + ' app.' },
-      en: { frozen: (n, l) => n + ' apps frozen at L' + l + '. The 3 pinned apps are skipped.', thawed: (n) => n + ' apps unfrozen.' },
+      vi: { frozen: (n, l) => 'Đã đóng băng ' + n + ' app ở mức L' + l + '. 3 app có ghim được chừa ra.', thawed: (n) => 'Đã rã đông ' + n + ' app.', bf: 'Đang đóng băng app nền…', bt: 'Đang rã đông…' },
+      en: { frozen: (n, l) => n + ' apps frozen at L' + l + '. The 3 pinned apps are skipped.', thawed: (n) => n + ' apps unfrozen.', bf: 'Freezing background apps…', bt: 'Unfreezing…' },
     };
+    const load = loader($('.m3-load', sc));
     let noteState = null;
-    const renderNote = () => { note.textContent = noteState ? (noteState === 'f' ? texts[lang()].frozen(apps.length, lv) : texts[lang()].thawed(apps.length)) : ''; };
+    const renderNote = () => {
+      const t = texts[lang()];
+      note.textContent = !noteState ? '' : noteState === 'f' ? t.frozen(apps.length, lv) : noteState === 't' ? t.thawed(apps.length) : t[noteState];
+    };
     refreshers.push(renderNote);
 
     function rects(list) { return new Map(list.map((a) => [a, a.getBoundingClientRect()])); }
@@ -291,7 +365,7 @@
         apps.forEach((a, i) => timers.push(setTimeout(() => go(a, { s: 1, o: 1 }, SPEC.spatial), 80 + i * 35)));
       }
     }
-    function apply() {
+    function apply(busy) {
       timers.forEach(clearTimeout); timers = [];
       btn.setAttribute('aria-pressed', String(frozen));
       game.classList.toggle('live', frozen);
@@ -305,18 +379,22 @@
         }, delay));
       });
       setGone(frozen && lv === 4);
-      noteState = frozen ? 'f' : (noteState ? 't' : null);
-      renderNote();
+      const fin = frozen ? 'f' : (noteState ? 't' : null);
+      if (busy && fin) {
+        /* Trong lúc các biểu tượng lần lượt đổi trạng thái: chỉ báo đang tải M3, xong mới báo kết quả. */
+        noteState = frozen ? 'bf' : 'bt'; renderNote(); load.show();
+        timers.push(setTimeout(() => { load.hide(); noteState = fin; renderNote(); }, reduced ? 0 : apps.length * 45 + 420));
+      } else { load.hide(); noteState = fin; renderNote(); }
     }
     lvs.forEach((b) => b.addEventListener('click', () => {
       lv = +b.dataset.lv;
       lvs.forEach((x) => x.setAttribute('aria-checked', String(x === b)));
-      if (frozen) apply(); else renderNote();
+      if (frozen) apply(false); else renderNote();
     }));
-    btn.addEventListener('click', () => { auto = false; frozen = !frozen; apply(); });
+    btn.addEventListener('click', () => { auto = false; frozen = !frozen; apply(true); });
     let autoT = 0;
     return {
-      start() { if (auto && !frozen) autoT = setTimeout(() => { if (auto && !frozen) { frozen = true; apply(); } }, reduced ? 0 : 1100); },
+      start() { if (auto && !frozen) autoT = setTimeout(() => { if (auto && !frozen) { frozen = true; apply(true); } }, reduced ? 0 : 1100); },
       stop() { clearTimeout(autoT); },
     };
   }
@@ -326,8 +404,28 @@
     const scr = $('.scr', sc), ov = $('.ov', sc), card = $('.mon-card', sc);
     const cells = { cpu: $('[data-m="cpu"] b', ov), gpu: $('[data-m="gpu"] b', ov), ram: $('[data-m="ram"] b', ov), bat: $('[data-m="bat"] b', ov) };
     const mRam = $('.m-ram', card), mUsed = $('.m-used', card), mCpu = $('.m-cpu', card), mBat = $('.m-bat', card);
-    const ring = $('.ring-fg', card), C = 2 * Math.PI * 48;
+    const ringFg = $('.ring-fg', card), ringBg = $('.ring-bg', card);
     const N = 40;
+    /* Vòng tiến độ dạng sóng M3 Expressive: phần đã dùng là sóng chạy, phần còn lại là rãnh phẳng, cách nhau một khe. */
+    let wave = 0;
+    /* Khi vòng lặp khung đang chạy thì nó tự vẽ vòng mỗi khung; lò xo chỉ vẽ lúc vòng lặp đứng (tránh vẽ hai lần). */
+    const ringP = new Spring(0.51, 0.0005, owner(() => { if (!running || reduced) drawRing(); }));
+    function drawRing() {
+      const p = clamp(ringP.x, 0, 1), R = 46, A = 2.2, K = 14, gap = 15 / R, a0 = -Math.PI / 2, a1 = a0 + p * Math.PI * 2;
+      const n = Math.max(2, Math.ceil(p * 180));
+      let fg = '';
+      for (let i = 0; i <= n; i++) {
+        const t = a0 + (a1 - a0) * (i / n);
+        /* Biên độ thu về 0 sát hai đầu để đầu tròn của nét không lệch khỏi rãnh. */
+        const taper = Math.min(1, (t - a0) / 0.35, (a1 - t) / 0.35);
+        const r = R + A * Math.max(0, taper) * Math.sin(K * (t - a0) - wave);
+        fg += (i ? 'L' : 'M') + (60 + r * Math.cos(t)).toFixed(2) + ' ' + (60 + r * Math.sin(t)).toFixed(2);
+      }
+      ringFg.setAttribute('d', fg);
+      const b0 = a1 + gap, b1 = a0 + Math.PI * 2 - gap;
+      ringBg.setAttribute('d', b1 - b0 < 0.02 ? '' : 'M' + (60 + R * Math.cos(b0)).toFixed(2) + ' ' + (60 + R * Math.sin(b0)).toFixed(2) +
+        'A' + R + ' ' + R + ' 0 ' + (b1 - b0 > Math.PI ? 1 : 0) + ' 1 ' + (60 + R * Math.cos(b1)).toFixed(2) + ' ' + (60 + R * Math.sin(b1)).toFixed(2));
+    }
     const st = { cpu: 18, gpu: 41, ram: 5.6, bat: 35.9 };
     const mk = (tile, v0, lo, hi, jit) => {
       const el = $('[data-tile="' + tile + '"]', card);
@@ -349,7 +447,7 @@
       mUsed.textContent = num(11 - st.ram, 1) + ' / ' + num(11, 1) + ' GB';
       mCpu.textContent = Math.round(st.cpu);
       mBat.textContent = num(st.bat, 1);
-      ring.style.strokeDashoffset = (C * (1 - st.ram / 11)).toFixed(1);
+      ringP.to(st.ram / 11, SPEC.m3Spatial);
     }
     function drawChart(c) {
       const y = (v) => 40 - ((v - c.min) / (c.max - c.min)) * 40;
@@ -367,6 +465,8 @@
       phase = Math.min(1, phase + dt);
       /* Đầu biểu đồ trượt dần về giá trị mới: đường chạy liền, không trượt-rồi-đứng. */
       for (const k in charts) { const c = charts[k]; c.head.x += (c.head.t - c.head.x) * Math.min(1, dt * 6); drawChart(c); }
+      wave = (wave + dt * 2.6) % (Math.PI * 2);
+      drawRing();
       loopId = requestAnimationFrame(frame);
     }
     function tick() {
@@ -495,6 +595,9 @@
     if (active === key || !deskMQ.matches) return;
     const prev = active && screens[active];
     active = key;
+    /* Chương đang xem sáng lên, các chương khác lùi lại; ánh nền sau sân khấu đổi tông theo chương. */
+    Object.values(screens).forEach((sc) => sc.chap.classList.toggle('chap-on', sc.key === key));
+    stage.dataset.tone = key;
     if (prev) exit(prev);
     enter(screens[key], prev ? 230 : 0);
   }
@@ -505,7 +608,7 @@
     [bandIO, stageIO, slotIO].forEach((o) => o && o.disconnect());
     Object.values(screens).forEach((sc) => {
       sc.timers.forEach(clearTimeout); sc.timers = []; sc.demo.stop();
-      sc.el.classList.remove('on');
+      sc.el.classList.remove('on'); sc.chap.classList.remove('chap-on');
       const target = desk ? stage : sc.slot;
       if (sc.el.parentNode !== target) target.appendChild(sc.el);
       sc.fit.style.transform = '';
@@ -586,32 +689,23 @@
       const host = el.closest('.step, .plan') || el;
       host.addEventListener('pointerenter', () => u.to(1, SPEC.spatial));
       host.addEventListener('pointerleave', () => u.to(0, SPEC.spatial));
+      /* fx.js gọi khi đường tiến độ chạm tới bước này: đổi dáng một nhịp rồi về. */
+      el.cryoPulse = () => { u.to(1, SPEC.m3FastSpatial); setTimeout(() => { if (!host.matches(':hover')) u.to(0, SPEC.spatial); }, 520); };
     });
   })();
 
+  /* Lớp hiệu ứng fx.js dùng chung lò xo, hình khối và trạng thái ngôn ngữ với trang. */
+  window.CryoMotion = { Spring, SPEC, owner, mo, go, put, reduced, lang, refreshers, clamp, lerp, SHAPES, shapePts, morphPath, view, $, $$ };
+
   /* ---------- Mở đầu: một nhịp duy nhất khi tải trang ---------- */
-  function splitWords(el) {
-    const words = el.textContent.trim().split(/\s+/);
-    el.textContent = '';
-    words.forEach((w, i) => {
-      const s = d.createElement('span'); s.className = 'w'; s.textContent = w; s.style.display = 'inline-block';
-      el.appendChild(s);
-      if (i < words.length - 1) el.appendChild(d.createTextNode(' '));
-    });
-  }
   function intro() {
     const lines = $$('.hero-h .hl');
-    lines.forEach(splitWords);
     const ins = $$('.hero-in'), blocks = $$('.hero-phone [data-b]');
-    if (reduced) { lines.forEach((l) => { l.style.opacity = 1; }); return; }
+    /* fx.js (nếu có) tách tiêu đề thành từng chữ cái và cho chúng "nở" theo trục biến thiên ngay trong sự kiện này,
+       trước khi dòng chữ hiện ra; không có fx.js thì cả dòng hiện luôn. */
+    d.dispatchEvent(new CustomEvent('cryo:intro'));
     lines.forEach((l) => { l.style.opacity = 1; });
-    let i = 0;
-    $$('.hero-h [lang="' + lang() + '"] .w').forEach((w) => {
-      put(w, { y: 34, r: 3, o: 0 });
-      setTimeout(() => go(w, { y: 0, r: 0, o: 1 }, SPEC.spatial), 60 + i++ * 55);
-    });
-    /* Từ của thứ tiếng còn lại hiện sẵn, để đổi ngôn ngữ không bị trống. */
-    $$('.hero-h [lang="' + (lang() === 'vi' ? 'en' : 'vi') + '"] .w').forEach((w) => put(w, { o: 1 }));
+    if (reduced) return;
     ins.forEach((el, j) => { put(el, { y: 16, o: 0 }); setTimeout(() => go(el, { y: 0, o: 1 }, SPEC.spatial, SPEC.fade), 380 + j * 70); });
     blocks.forEach((b, j) => {
       const f = FROM[b.dataset.b] || FROM.up;

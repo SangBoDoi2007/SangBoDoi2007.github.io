@@ -47,6 +47,7 @@
 <link rel="stylesheet" href="assets/site.css">
 </head>
 <body>
+<div class="amb" aria-hidden="true"><i></i><i></i><i></i></div>
 <a class="skip" href="#main"><span lang="vi">Bỏ qua tới nội dung</span><span lang="en">Skip to content</span></a>
 
 <header class="top" id="top">
@@ -63,7 +64,6 @@
     </nav>
     <div class="top-actions">
       <div class="seg seg-lang" role="group" aria-label="Ngôn ngữ / Language">
-        <span class="seg-ind" aria-hidden="true"></span>
         <button type="button" data-lang="vi" aria-pressed="false">VI</button>
         <button type="button" data-lang="en" aria-pressed="false">EN</button>
       </div>
@@ -79,7 +79,13 @@
 <main id="main">
 
 <!-- ============ Mở đầu ============ -->
-<section class="hero wrap" aria-labelledby="hero-title">
+<section class="hero wrap" aria-labelledby="hero-title" data-amb="p">
+  <div class="orbs" aria-hidden="true">
+    <div class="orb o1" data-shape="cookie9 flower" data-c="primary tertiary" data-depth=".55" data-rot="14"></div>
+    <div class="orb o2 far" data-shape="squircle pill" data-c="tertiary primary" data-depth=".25" data-rot="-22"></div>
+    <div class="orb o3" data-shape="clover sunny" data-c="tertiary primary" data-depth=".9" data-rot="18"></div>
+    <div class="orb o4 far" data-shape="oval cookie4" data-c="primary secondary" data-depth=".35" data-rot="-30"></div>
+  </div>
   <div class="hero-copy">
     <h1 id="hero-title" class="hero-h">
       <span lang="vi"><span class="hl">Vào game là bật.</span> <span class="hl">Thoát game là trả lại.</span></span>
@@ -156,8 +162,24 @@
   </div>
 </section>
 
+<!-- ============ Dải chữ chạy theo cuộn (trang trí, đã có đủ chữ ở các mục dưới) ============ -->
+<div class="kin" aria-hidden="true" data-amb="t">
+  <div class="kin-row" data-dir="1"><div class="kin-track">
+    <span class="ki"><span lang="vi">Độ phân giải kết xuất</span><span lang="en">Render resolution</span></span><span class="ks"><svg viewBox="0 0 100 100"><path/></svg></span>
+    <span class="ki"><span lang="vi">Đóng băng app nền</span><span lang="en">Freeze background apps</span></span><span class="ks"><svg viewBox="0 0 100 100"><path/></svg></span>
+    <span class="ki"><span lang="vi">Khoá 60 Hz</span><span lang="en">60 Hz lock</span></span><span class="ks"><svg viewBox="0 0 100 100"><path/></svg></span>
+    <span class="ki"><span lang="vi">Cửa sổ theo dõi</span><span lang="en">Floating monitor</span></span><span class="ks"><svg viewBox="0 0 100 100"><path/></svg></span>
+  </div></div>
+  <div class="kin-row" data-dir="-1"><div class="kin-track">
+    <span class="ki"><span lang="vi">Không làm phiền</span><span lang="en">Do Not Disturb</span></span><span class="ks"><svg viewBox="0 0 100 100"><path/></svg></span>
+    <span class="ki"><span lang="vi">Wi‑Fi độ trễ thấp</span><span lang="en">Low-latency Wi‑Fi</span></span><span class="ks"><svg viewBox="0 0 100 100"><path/></svg></span>
+    <span class="ki"><span lang="vi">Màn hình AFK</span><span lang="en">AFK screen</span></span><span class="ks"><svg viewBox="0 0 100 100"><path/></svg></span>
+    <span class="ki"><span lang="vi">Thoát game là trả lại</span><span lang="en">Undone when you leave</span></span><span class="ks"><svg viewBox="0 0 100 100"><path/></svg></span>
+  </div></div>
+</div>
+
 <!-- ============ Câu chuyện: giao diện dựng lại, có thể chạm ============ -->
-<section class="story" id="features" aria-labelledby="story-title">
+<section class="story" id="features" aria-labelledby="story-title" data-amb="p">
   <div class="wrap story-intro">
     <h2 id="story-title" class="h2"><span lang="vi">Thử ngay trên trang này.</span><span lang="en">Try it right here.</span></h2>
     <p class="lead" lang="vi">Các khối bên dưới là giao diện thật của Cryo, dựng lại bằng mã. Kéo, bấm, bật tắt thử. Đây chỉ là mô phỏng, không đổi gì trên máy bạn.</p>
@@ -215,13 +237,13 @@
                     <span class="res-px"><span lang="vi">Ước tính</span><span lang="en">Estimated</span> · <span class="res-dim">882 × 1960</span> px</span>
                   </div>
                   <div class="a-slider">
-                    <div class="a-track"><i class="a-fill"></i></div>
-                    <span class="a-thumb"><i></i><i></i></span>
+                    <i class="sl-act"></i><i class="sl-ina"></i><i class="sl-stop"></i>
+                    <span class="sl-hdl"></span>
+                    <span class="sl-val" aria-hidden="true"><b>70</b>%</span>
                     <input type="range" min="30" max="100" step="5" value="70" aria-label="Tỉ lệ dựng hình / Render scale">
                   </div>
                   <div class="res-ends"><span lang="vi">Ít điểm ảnh hơn</span><span lang="en">Fewer pixels</span><span lang="vi">Hình ảnh nét hơn</span><span lang="en">Sharper image</span></div>
                   <div class="a-seg res-presets" role="group" aria-label="Mức có sẵn / Presets">
-                    <span class="a-seg-ind" aria-hidden="true"></span>
                     <button type="button" data-v="30">30%</button><button type="button" data-v="50">50%</button><button type="button" data-v="70">70%</button><button type="button" data-v="85">85%</button><button type="button" data-v="100">100%</button>
                   </div>
                   <p class="a-hint"><span lang="vi">Nên bắt đầu ở 70%. Thả tay khỏi thanh trượt là áp dụng. Dùng Bộ đệm game thì đổi xong hãy tắt game rồi mở lại.</span><span lang="en">Start at 70%. It applies when you let go of the slider. With Game buffer, close the game and open it again after a change.</span></p>
@@ -231,7 +253,6 @@
             <div class="demo-ctl" data-b="fade">
               <span class="demo-lbl"><span lang="vi">Cách hạ</span><span lang="en">Method</span></span>
               <div class="seg seg-demo" role="group" aria-label="Bộ đệm game / Toàn màn hình">
-                <span class="seg-ind" aria-hidden="true"></span>
                 <button type="button" data-mode="buffer" aria-pressed="true"><span lang="vi">Bộ đệm game</span><span lang="en">Game buffer</span></button>
                 <button type="button" data-mode="full" aria-pressed="false"><span lang="vi">Toàn màn hình</span><span lang="en">Fullscreen</span></button>
               </div>
@@ -311,7 +332,7 @@
                 <span class="st-off"><span lang="vi">Mở game</span><span lang="en">Open game</span></span>
                 <span class="st-on"><span lang="vi">Thoát game</span><span lang="en">Leave game</span></span>
               </button>
-              <span class="demo-note fz-note" aria-live="polite"></span>
+              <span class="fz-status"><span class="m3-load" aria-hidden="true"><svg viewBox="-1.15 -1.15 2.3 2.3"><path/></svg></span><span class="demo-note fz-note" aria-live="polite"></span></span>
             </div>
           </div>
         </div>
@@ -359,7 +380,7 @@
                 <div class="a-card mon-card">
                   <div class="mon-ram">
                     <div class="ring-box">
-                      <svg viewBox="0 0 120 120" class="ring" aria-hidden="true"><circle cx="60" cy="60" r="48" class="ring-bg"/><circle cx="60" cy="60" r="48" class="ring-fg"/></svg>
+                      <svg viewBox="0 0 120 120" class="ring" aria-hidden="true"><path class="ring-bg"/><path class="ring-fg"/></svg>
                       <span class="ring-t"><span class="rv"><b class="m-ram">5,6</b><small>GB</small></span><em><span lang="vi">RAM trống</span><span lang="en">Free RAM</span></em></span>
                     </div>
                     <span class="mon-used"><span lang="vi">RAM đã dùng</span><span lang="en">RAM used</span><br><span class="m-used">5,4 / 11,0 GB</span></span>
@@ -383,7 +404,6 @@
             <div class="demo-ctl" data-b="fade">
               <span class="demo-lbl"><span lang="vi">Mô phỏng</span><span lang="en">Simulate</span></span>
               <div class="seg seg-demo" role="group" aria-label="Shizuku">
-                <span class="seg-ind" aria-hidden="true"></span>
                 <button type="button" data-shz="1" aria-pressed="true"><span lang="vi">Có Shizuku</span><span lang="en">With Shizuku</span></button>
                 <button type="button" data-shz="0" aria-pressed="false"><span lang="vi">Không có Shizuku</span><span lang="en">Without Shizuku</span></button>
               </div>
@@ -530,7 +550,11 @@
 </section>
 
 <!-- ============ Hoàn tác ============ -->
-<section class="undo wrap" aria-labelledby="undo-title">
+<section class="undo-zone zone-light" aria-labelledby="undo-title" data-amb="t">
+<div class="orbs" aria-hidden="true">
+  <div class="orb o5" data-shape="cookie4 squircle" data-c="primary-c tertiary-c" data-deep="primary" data-depth=".3" data-rot="12"></div>
+</div>
+<div class="undo wrap">
   <div class="undo-copy">
     <h2 id="undo-title" class="h2"><span lang="vi">Thoát game là mọi thứ về như cũ.</span><span lang="en">Leave the game and everything goes back.</span></h2>
     <p class="lead" lang="vi">Trước khi đổi độ phân giải màn hình, tần số quét hay Không làm phiền, Cryo ghi lại giá trị gốc rồi trả lại khi bạn tắt tính năng hoặc thoát game.</p>
@@ -561,10 +585,11 @@
     <div class="lg-row" data-k="fz"><span><span lang="vi">App nền đang đóng băng</span><span lang="en">Background apps frozen</span></span><span class="lg-o">0</span><span class="lg-n"><span class="lg-v">10</span><span class="lg-ok ms" aria-hidden="true">check</span></span></div>
     <p class="lg-foot"><span lang="vi">Ví dụ minh hoạ: Polar Run, chế độ Toàn màn hình 70%.</span><span lang="en">Example: Polar Run in Fullscreen mode at 70%.</span></p>
   </div>
+</div>
 </section>
 
 <!-- ============ Shizuku ============ -->
-<section class="shz" id="shizuku" aria-labelledby="shz-title">
+<section class="shz" id="shizuku" aria-labelledby="shz-title" data-amb="p">
   <div class="wrap">
     <div class="shz-copy">
       <h2 id="shz-title" class="h2"><span lang="vi">Vì sao cần Shizuku</span><span lang="en">Why Shizuku</span></h2>
@@ -602,7 +627,7 @@
 </section>
 
 <!-- ============ Miễn phí & PRO, quyền riêng tư ============ -->
-<section class="price wrap" id="pricing" aria-labelledby="price-title">
+<section class="price wrap" id="pricing" aria-labelledby="price-title" data-amb="s">
   <h2 id="price-title" class="h2"><span lang="vi">Miễn phí, có quảng cáo. Hoặc PRO.</span><span lang="en">Free with ads. Or PRO.</span></h2>
   <div class="plans">
     <div class="plan">
@@ -629,7 +654,7 @@
 </section>
 
 <!-- ============ Câu hỏi ============ -->
-<section class="faq wrap" id="faq" aria-labelledby="faq-title">
+<section class="faq wrap" id="faq" aria-labelledby="faq-title" data-amb="p">
   <h2 id="faq-title" class="h2"><span lang="vi">Câu hỏi hay gặp</span><span lang="en">Common questions</span></h2>
   <div class="qa">
     <details>
@@ -670,13 +695,21 @@
   </div>
 </section>
 
-<section class="end wrap" aria-labelledby="end-title">
+<section class="end wrap" aria-labelledby="end-title" data-amb="t">
   <h2 id="end-title" class="h2"><span lang="vi">Cryo có trên Google Play.</span><span lang="en">Cryo is on Google Play.</span></h2>
   <a class="play-badge" href="https://play.google.com/store/apps/details?id=com.astvn.cryo" target="_blank" rel="noopener">
     <img lang="vi" src="https://play.google.com/intl/en_us/badges/static/images/badges/vi_badge_web_generic.png" alt="Tải nội dung trên Google Play" width="646" height="250" loading="lazy">
     <img lang="en" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" width="646" height="250" loading="lazy">
   </a>
 </section>
+
+<div class="fin" aria-hidden="true">
+  <div class="orbs">
+    <div class="orb o6" data-shape="sunny cookie9" data-c="tertiary primary" data-depth=".5" data-rot="-8"></div>
+    <div class="orb o7 far" data-shape="pill oval" data-c="primary tertiary" data-depth=".3" data-rot="35"></div>
+  </div>
+  <span class="fin-word">Cryo</span>
+</div>
 
 </main>
 
@@ -699,5 +732,6 @@
 
 <script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js" defer></script>
 <script src="assets/site.js" defer></script>
+<script src="assets/fx.js" defer></script>
 </body>
 </html>

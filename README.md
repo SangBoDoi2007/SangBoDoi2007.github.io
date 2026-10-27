@@ -13,6 +13,7 @@ Landing page, privacy policy and `app-ads.txt` for **Cryo: Game Mode & FPS Meter
 | --- | --- |
 | `index.html` | The landing page, Vietnamese and English side by side (`lang` on `<html>` picks which one shows). |
 | `assets/site.css`, `assets/site.js` | Styles and behaviour of the landing page. No build step, no framework; Lenis is the only script loaded from a CDN. |
+| `assets/fx.js` | The expressive layer: inverted cursor, variable-font type, 3D shapes, scroll ticker, wavy progress. Pure decoration — the page reads fine without it. |
 | `privacy.html`, `assets/cryo.css`, `assets/cryo.js` | Privacy policy page and its own styles. Linked from the Play Console, so its URL must keep working. |
 | `app-ads.txt`, `.nojekyll` | Ad-seller declaration and the flag that makes GitHub Pages serve files as they are. Do not edit by hand. |
 
@@ -27,6 +28,18 @@ Landing page, privacy policy and `app-ads.txt` for **Cryo: Game Mode & FPS Meter
 - **App panels** on the page are the real Cryo screens rebuilt in HTML/CSS, not screenshots, so they can be dragged, toggled and
   re-themed. The game shown is Polar Run, a demo game made by ASTVN Studios for this purpose.
 - **Type** is Google Sans Flex (with its roundness axis) and Material Symbols Rounded, both from Google Fonts.
+- **M3 Expressive details**: page-level components use the official expressive springs (fast spatial 0.6/800, default 0.8/380,
+  slow 0.8/200; effects 1.0/3800 · 1600 · 800). The resolution slider, the wavy RAM ring and Shizuku progress line, the connected
+  button groups, the switch with its check icon and the shape-morphing loading indicator follow the M3 Expressive component specs.
+- **Expressive layer (`fx.js`)**: on a mouse, the cursor is an inverted (`mix-blend-mode: difference`) dot that turns into the
+  exact pill of the button under it (a ring around light filled buttons) and becomes a lens over big headings; headings bloom from
+  thin/condensed to their weight and swell with the `wght`/`wdth` axes near the cursor; the hero, the light "paper" section and
+  the finale carry clay-like 3D M3 shapes drawn on canvas in the current color scheme. With reduced motion or on touch, the
+  cursor and swelling are off and every word is visible.
+- **Cost rules** (measured with Chrome traces against the previous version): nothing runs while the page is idle (Lenis only ticks
+  while scrolling, the ticker drifts on a compositor animation, shapes morph at most ~30 times a second and only on screen);
+  never read `scrollY` or layout inside a write pass (use `view.y` from `site.js`); variable-font axes are rounded to steps so
+  font instances are reused; locked heading lines are layout roots (`contain: size layout`) with their measured width and height.
 
 ## Rules for the copy
 
