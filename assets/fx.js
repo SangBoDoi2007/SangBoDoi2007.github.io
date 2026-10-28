@@ -76,10 +76,45 @@
     k.words.forEach((w, i) => { k.vis.appendChild(w); if (i < k.words.length - 1) k.vis.appendChild(d.createTextNode(' ')); });
     k.locked = false;
   }
+  /* Kerning cố định cho chữ "nở" (#303). Chữ cái là các span riêng: đứng yên cùng phông thì trình duyệt dựng chung một
+     lượt và áp kerning (cặp "ay", "y." ăn khít vào nhau); lúc nở mỗi chữ mang trục riêng = phông riêng → dựng riêng, mất
+     kerning, mà hai chữ kề nhau tình cờ cùng bậc trục thì lại có. Kerning bật/tắt theo từng cặp → chữ phía sau giật qua
+     lại; lúc nở xong từng chữ trả kiểu về CSS là kerning bật lại từng cặp — đo: đuôi "play." lùi 7,6 px trong ~90 ms
+     (user #303, máy tính: "gần kết animation phần đuôi mấy chữ bị rung"). Đo kerning lúc đứng yên, tắt kerning của trình
+     duyệt (.nk) và cộng phần đó vào khoảng chữ (letter-spacing, theo em → đổi cỡ vẫn đúng) của chữ đứng trước: đứng yên
+     trông như cũ, lúc nở không còn gì bật tắt. Chỉ cho khối chữ có nở (k.kern); đo lại mỗi lần khoá (đổi cỡ, phông tải xong). */
+  function kern(k) {
+    if (!k.kern || !shown(k.vis)) return;
+    /* Đo một lần cho mỗi (ngôn ngữ, phông đã tải): kerning theo em nên đổi cỡ chữ không cần đo lại — khỏi thêm hai lượt
+       bố cục vào lúc tiêu đề nở giữa cú cuộn hay mỗi lần đổi bề rộng cửa sổ. */
+    const ks = root.lang + '|' + fontOk(k);
+    if (k.kernSig === ks) return;
+    k.kernSig = ks;
+    const cs = k.letters, fv = cs.map((c) => c.style.fontVariationSettings);
+    cs.forEach((c) => { c.style.fontVariationSettings = ''; c.style.letterSpacing = ''; });
+    k.vis.classList.remove('nk');
+    const a = cs.map((c) => c.getBoundingClientRect());
+    const st = cs.map((c) => { const s = getComputedStyle(c); return [parseFloat(s.letterSpacing) || 0, parseFloat(s.fontSize) || 16]; });
+    k.vis.classList.add('nk');
+    const b = cs.map((c) => c.getBoundingClientRect());
+    const wOf = k.wOf || (k.wOf = cs.map((c) => c.closest('.kw')));
+    cs.forEach((c, i) => {
+      const n = i + 1;
+      if (n >= cs.length || wOf[n] !== wOf[i] || Math.abs(a[n].top - a[i].top) > 1) return;
+      const kk = (a[n].left - a[i].left) - (b[n].left - b[i].left);
+      if (Math.abs(kk) > 0.01) c.style.letterSpacing = ((st[i][0] + kk) / st[i][1]).toFixed(4) + 'em';
+    });
+    cs.forEach((c, i) => { c.style.fontVariationSettings = fv[i]; });
+  }
   function lock(k) {
     if (!shown(k.vis)) return false;
     unpin(k);
     unlock(k);
+    kern(k);
+    /* Đo dòng ở dáng ĐỨNG YÊN: khoá lại có thể tới giữa lúc một từ đang thở/phình (phông tải xong, đổi cỡ) — đo luôn dáng
+       phình thì dòng khoá rộng thừa (#303: đổi sang tiếng Việt, dòng 576 → 606 px). Trả lại trục đang chạy sau khi đo. */
+    const fv0 = k.letters.map((c) => c.style.fontVariationSettings);
+    k.letters.forEach((c) => { c.style.fontVariationSettings = ''; });
     const rows = []; let top = null;
     k.words.forEach((w) => {
       const t = w.offsetTop;
@@ -103,9 +138,21 @@
       return [Math.ceil(b.right - a.left) + 1, l.getBoundingClientRect().height];
     });
     lines.forEach((l, i) => { l.style.width = box[i][0] + 'px'; l.style.height = box[i][1] + 'px'; l.classList.add('kl-c'); });
+    k.letters.forEach((c, i) => { c.style.fontVariationSettings = fv0[i]; });
     k.locked = true;
+    k.sig = lockSig(k);
     return true;
   }
+  /* Khoá lại chỉ khi thứ quyết định bố cục chữ đã đổi: bề rộng cửa sổ, ngôn ngữ, hoặc phông cho chữ của khối vừa tải xong
+     (fontOk). Bản trước khoá lại MỌI tiêu đề khi fonts.ready tới — mà màn mở đầu vốn đã chờ phông — nên tiêu đề đầu trang
+     bị gỡ + dựng dòng + đo lại hai lần ngay sau khi nở, gỡ luôn ô chữ vừa ghim sẵn (vết #303: 3,0 s và 3,4 s). */
+  /* Phông đã đủ cho đúng các chữ của khối này chưa (bộ chữ tiếng Việt của Google Sans Flex tải riêng, có khi tới sau). */
+  function fontOk(k) {
+    if (!d.fonts || !d.fonts.check) return 1;
+    if (k.text === undefined) k.text = k.letters.map((c) => c.textContent).join('');
+    try { return d.fonts.check('16px "Google Sans Flex"', k.text) ? 1 : 0; } catch (e) { return 1; }
+  }
+  function lockSig(k) { return innerWidth + '|' + root.lang + '|' + fontOk(k); }
 
   /* Mỗi chữ cái có hai lò xo: a = đã "nở" (0 hẹp-mảnh → 1 dáng gốc), u = độ phình khi con trỏ tới gần. Cả khối chữ chung
      một chủ: mỗi khung tính trục cho từng chữ rồi xếp vị trí cả khối một lượt (place).
@@ -282,7 +329,12 @@
       setTimeout(() => go(w, { y: 0, o: 1 }, SPEC.stage, SPEC.fade), t0);
       w.querySelectorAll('.kc').forEach(() => { const L = kit[i]; setTimeout(() => L.a.to(1, SPEC.m3SlowSpatial), delay + i * gap); i++; });
     });
-    setTimeout(() => { k.busy--; if (!k.busy && relockPending) { relockPending = false; relock(); } if (done) done(); }, delay + i * gap + 900);
+    setTimeout(() => {
+      k.busy--; k.bloomed = true;
+      if (!k.busy && relockPending) { relockPending = false; relock(); }
+      if (done) done();
+      prePinSoon(k);
+    }, delay + i * gap + 900);
     /* Xong thì bỏ transform của từng từ: transform 3D giữ lại biến mỗi từ thành một lớp compositor, làm mọi khung sau
        đó tốn thêm công xếp lớp. */
     setTimeout(function clear() {
@@ -299,8 +351,21 @@
   /* Phình không nảy (tắt dần tới hạn): nảy qua lại là chữ co giãn qua lại = rung. */
   const SWELL = { z: 1, k: 240 };
   const seen = 'IntersectionObserver' in window
-    ? new IntersectionObserver((es) => es.forEach((e) => { const s = swells.find((x) => x.k.vis === e.target); if (s) s.inView = e.isIntersecting; }), { rootMargin: '25% 0px' })
+    ? new IntersectionObserver((es) => es.forEach((e) => { const s = swells.find((x) => x.k.vis === e.target); if (s) { s.inView = e.isIntersecting; if (s.inView) prePinSoon(s.k); } }), { rootMargin: '25% 0px' })
     : null;
+  /* Ghim sẵn (đo ô chữ, ~12 lượt bố cục của riêng dòng chữ) lúc rảnh khi tiêu đề vào khung nhìn hoặc vừa nở xong, thay vì
+     đúng lần đầu con trỏ lại gần — lúc đó đo là trễ khung ngay dưới tay người xem (#303 máy tính: "di chuột bị khựng").
+     Chỉ máy có chuột; khối còn chờ nở thì để sau khi nở (nở là gỡ ghim). idleEach không chen vào lúc cuộn / đang rê chuột. */
+  function prePinSoon(k) {
+    if (!fine || reduced || !M.idleEach || k.slot || k.prePinQ) return;
+    const s = swells.find((x) => x.k === k);
+    if (!s) return;
+    k.prePinQ = true;
+    M.idleEach([s], (x) => {
+      k.prePinQ = false;
+      if (x.inView && x.k.locked && !x.k.busy && !x.k.slot && (!x.k.kern || x.k.bloomed)) pin(x.k, x.opt);
+    }, 1);
+  }
   function swell(k, kit, opt) {
     const s = { k, kit, opt, inView: !seen };
     swells.push(s);
@@ -335,7 +400,6 @@
     }, { passive: true });
     d.addEventListener('mouseout', (e) => { if (!e.relatedTarget) swells.forEach((s) => { s.hot = false; s.kit.forEach((L) => L.u.to(0, SWELL)); }); });
   }
-  const restale = () => swells.forEach((s) => { unpin(s.k); s.fs = 0; });
 
   /* Tiêu đề mở đầu: nở khi tải trang, phình theo con trỏ. */
   /* Chữ thường của tiêu đề mảnh-hẹp vừa (wght 380, wdth 90) để chữ nhấn (STY) nổi hẳn lên — khớp .hero-h trong site.css. */
@@ -368,6 +432,7 @@
   d.addEventListener('cryo:intro', () => {
     $$('.hero-h .hl').forEach((el) => {
       const k = split(el), kit = letterKit(k, HERO);
+      k.kern = true;
       heroKs.push({ k, kit, s: swell(k, kit, HERO) });
     });
     let delay = 80;
@@ -398,6 +463,8 @@
     const parts = $$('[lang]', h);
     (parts.length ? parts : [h]).forEach((p) => {
       const k = split(p), kit = letterKit(k, H2);
+      k.kern = true;
+      kern(k);
       headKs.push({ h, k, kit, done: false });
       swell(k, kit, H2);
       if (shown(k.vis)) k.words.forEach((w) => put(w, { o: 0 }));
@@ -498,6 +565,7 @@
     if (finEl.cryoSplit) return;
     finEl.cryoSplit = true;
     const k = split(finEl, false), kit = letterKit(k, FIN);
+    k.kern = true;
     swell(k, kit, FIN);
     /* Dải màu tô TỪNG chữ cái (CSS .fin-word.split .kc), kéo dài bằng cả từ và dời theo chỗ của chữ đó, nên nhìn vẫn là
        một dải liền. Trước đây cả khối chữ lẫn từ cùng tô background-clip:text: lúc từ đang bay lên (có transform), Chrome
@@ -516,6 +584,7 @@
     const fitFin = () => {
       if (k.busy) return;
       unpin(k);
+      kern(k);
       finEl.classList.remove('kl-c'); finEl.style.height = ''; finEl.style.height = finEl.offsetHeight + 'px'; finEl.classList.add('kl-c');
       grad();
     };
@@ -542,13 +611,19 @@
   const relock = () => {
     heroKs.concat(headKs, swellKs).forEach((x) => {
       if (!(x.k.locked || x.h === undefined || x.done)) return;
-      if (x.k.busy) relockPending = true; else lock(x.k);
+      if (x.k.locked && x.k.sig === lockSig(x.k)) return;
+      if (x.k.busy) { relockPending = true; return; }
+      lock(x.k);
+      /* Ô chữ đo theo bố cục cũ là sai → gỡ (lock đã gỡ), quên cỡ chữ đã nhớ, rồi ghim sẵn lại lúc rảnh. Khối không khoá
+         lại thì giữ nguyên ghim — bản trước gỡ ghim của MỌI tiêu đề mỗi lần gọi. */
+      swells.forEach((s) => { if (s.k === x.k) s.fs = 0; });
+      prePinSoon(x.k);
     });
-    restale();
   };
   M.refreshers.push(() => requestAnimationFrame(relock));
   /* Phông web tải xong sau lần ghim đầu: bề rộng ô chữ đo bằng phông dự phòng là sai → gỡ ghim, đo lại. */
   if (d.fonts && d.fonts.ready) d.fonts.ready.then(() => requestAnimationFrame(relock));
+  if (d.fonts && d.fonts.addEventListener) d.fonts.addEventListener('loadingdone', later(() => requestAnimationFrame(relock), 60));
   /* Chỉ khi BỀ RỘNG đổi: điện thoại ẩn/hiện thanh địa chỉ lúc cuộn là đổi chiều cao liên tục — khoá + đo lại cả tiêu đề mỗi lần là phí. */
   let lastW = innerWidth;
   addEventListener('resize', later(() => { if (innerWidth !== lastW) { lastW = innerWidth; relock(); } }, 220));

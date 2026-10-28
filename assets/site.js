@@ -316,7 +316,7 @@
   const top = $('.top');
   /* Vị trí cuộn đọc MỘT lần mỗi sự kiện ở đây (bộ nghe đăng ký đầu tiên); fx.js dùng lại view.y. Mỗi lần đọc scrollY
      sau khi vừa ghi kiểu đều ép trình duyệt tính lại kiểu + bố cục — nhiều bộ nghe đọc xen kẽ là ép nhiều lần mỗi khung. */
-  const view = { y: scrollY, t: 0 };
+  const view = { y: scrollY, t: 0, p: 0 };
   const onScroll = () => { view.y = scrollY; view.t = performance.now(); top.classList.toggle('scrolled', view.y > 24); };
 
   /* Việc không gấp (#303): chờ màn mở đầu chạy xong (afterIntro), rồi làm từng phần trong lúc rảnh, không chen vào lúc
@@ -325,29 +325,53 @@
   const introQ = [];
   function afterIntro(fn) { if (introDone) fn(); else introQ.push(fn); }
   /* Việc đã hoãn chạy từng phần lúc rảnh, không dồn một mạch đúng lúc màn mở đầu vừa xong (đo #303: ~300 ms ở CPU ×4). */
-  function finishIntro() { if (introDone) return; introDone = true; idleEach(introQ.splice(0), (f) => f()); }
-  /* Không có requestIdleCallback (Safari): hẹn giờ + hạn 12 ms tự đo, để vẫn làm từng phần chứ không dồn một mạch. */
+  function finishIntro() { if (introDone) return; introDone = true; idleEach(introQ.splice(0), (f) => f(), 0, true); }
+  /* Không có requestIdleCallback (Safari): hẹn giờ, rồi chờ một khung vẽ xong và chạy ngay sau nó (setTimeout 0 trong rAF)
+     — chỗ xa khung kế nhất; hạn = 8 ms tính từ đầu khung đó (đủ cho màn 120 Hz), để vẫn làm từng phần, không chen giữa khung.
+     Chờ quá 4 s (tính từ lần hẹn đầu của cùng một hàng việc) thì báo didTimeout như requestIdleCallback, để việc bắt buộc
+     vẫn có ngày chạy. */
+  const idleSince = new WeakMap();
   const idleCb = window.requestIdleCallback
     ? (f) => requestIdleCallback(f, { timeout: 4000 })
-    : (f) => setTimeout(() => { const end = performance.now() + 12; f({ timeRemaining: () => Math.max(0, end - performance.now()), didTimeout: false }); }, 120);
-  function idleEach(list, fn, max) {
+    : (f) => {
+      if (!idleSince.has(f)) idleSince.set(f, performance.now());
+      setTimeout(() => requestAnimationFrame((t0) => setTimeout(() => {
+        const end = t0 + 8, late = performance.now() - idleSince.get(f) > 4000;
+        if (late) idleSince.delete(f);
+        f({ timeRemaining: () => Math.max(0, end - performance.now()), didTimeout: late });
+      }, 0)), 120);
+    };
+  const IDLE_MIN = 3;
+  function idleEach(list, fn, max, must) {
     const q = list.slice();
     const step = (dl) => {
       /* Đang cuộn (hoặc vừa cuộn < 0,4 s) thì LUÔN hoãn, kể cả khi requestIdleCallback hết hạn chờ: việc ở đây chỉ là dựng
          sẵn — phần nào thật sự cần thì đã được dựng lúc tới gần. Máy tính cuộn qua Lenis trên luồng chính nên một việc
          chen vào lúc cuộn là cú cuộn khựng ngay (#303: bản trước cho chạy sau 6 s cuộn liên tục). */
       if (performance.now() - view.t < 400) { idleCb(step); return; }
+      /* Việc dựng sẵn (không bắt buộc) cũng không chen vào lúc đang rê chuột: con trỏ, chữ phình đang chạy theo tay. */
+      if (!must && performance.now() - view.p < 250) { idleCb(step); return; }
+      /* Chỉ làm khi CÒN rảnh thật (≥ IDLE_MIN ms tới khung sau), cả với việc đầu tiên của lượt và cả khi requestIdleCallback
+         gọi vì hết hạn chờ (lúc đó timeRemaining() = 0). Trang có hoạt ảnh liên tục (ánh nền, chữ thở, con trỏ) thì gần như
+         không bao giờ "rảnh hẳn": bản trước cứ 4 s hết hạn là chen một việc vào giữa hai khung — ở 165 Hz (6 ms/khung) một
+         lần dựng phông + bố cục là trễ khung (user #303 máy tính: "lần đầu tải lên khựng, di chuột khựng"; vết: 62 lần dựng
+         sẵn phông tên chương ép bố cục trong mấy giây đầu, cả lúc đang rê chuột). Không bao giờ rảnh thì thôi không dựng sẵn.
+         Việc nặng hơn phần rảnh còn lại (ghim ô chữ ~12 lượt bố cục) vẫn có thể lố một khung — nhưng chỉ lúc người xem không
+         cuộn, không rê chuột (hai điều kiện trên), thay vì đúng dưới tay họ như khi làm lúc cần.
+         Riêng hàng việc BẮT BUỘC (must: việc hoãn tới sau màn mở đầu, như tách chữ tiêu đề ở gần) vẫn làm một việc mỗi
+         lần hết hạn chờ, để chắc chắn có ngày xong. */
       let n = 0;
-      while (q.length && n < (max || Infinity)) {
+      while (q.length && n < (max || Infinity) && (dl.timeRemaining() >= (n ? 8 : IDLE_MIN) || (must && !n && dl.didTimeout))) {
         /* Một việc hỏng không được kéo theo cả hàng đợi: báo lỗi ra ngoài rồi làm tiếp. */
         try { fn(q.shift()); } catch (err) { setTimeout(() => { throw err; }); }
-        n++; if (!(dl.timeRemaining() > 8)) break;
+        n++;
       }
       if (q.length) idleCb(step);
     };
     if (q.length) idleCb(step);
   }
   addEventListener('scroll', onScroll, { passive: true }); onScroll();
+  addEventListener('pointermove', () => { view.p = performance.now(); }, { passive: true });
 
   /* Lenis (cuộn mượt cho con lăn chuột) nằm ngay trong trang (assets/lenis.min.js, MIT) và chỉ tải khi có chuột: trên màn
      chạm nó không làm gì (Lenis không làm mượt cú vuốt). Trước #303 nó tải từ unpkg bằng thẻ defer ĐỨNG ĐẦU chuỗi script:
@@ -402,7 +426,9 @@
   }
 
   /* ---------- Game chạy thật trên các màn game (Polar Run, assets/polar.js) ----------
-     Một nhịp rAF chung cho mọi canvas game đang chạy, tối đa ~60 khung/giây, chỉ chạy khi có màn đang hiện (start/stop của
+     Một nhịp rAF chung cho mọi canvas game đang chạy — máy có chuột: đủ tần số màn tới ~220 Hz (#303: màn 165 Hz mà game
+     khoá ~60 là vẽ mỗi 3 khung một lần, kém mượt hẳn so với cả trang; màn 240/360 Hz vẽ cách khung, ~120); màn chạm: tối đa
+     ~60 khung/giây (Chrome Android vốn chạy JS ở 60 trên màn 120 Hz) — chỉ chạy khi có màn đang hiện (start/stop của
      từng mô phỏng) — hết màn chạy thì nhịp dừng hẳn. Không có polar.js hoặc bật giảm chuyển động: giữ ảnh tĩnh như cũ. */
   const PR = window.PolarRun;
   const games = new Set();
@@ -410,7 +436,7 @@
   function gameTick(now) {
     gRaf = games.size ? requestAnimationFrame(gameTick) : 0;
     if (window.CryoPerf && window.CryoPerf.noGame) { gLast = 0; return; } // bảng đo (assets/perf.js) tắt thử: game đứng hình
-    if (gLast && now - gLast < 15) return;
+    if (gLast && now - gLast < (FINE ? 4.5 : 15)) return;
     const dt = gLast ? Math.min(0.1, (now - gLast) / 1000) : 0;
     gLast = now;
     games.forEach((g) => g.step(dt));

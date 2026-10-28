@@ -66,6 +66,17 @@ Landing page, privacy policy and `app-ads.txt` for **Cryo: Game Mode & FPS Meter
   it ran a frame apart and shook, user report on a 165 Hz monitor). Letter shapes, chapter numerals, the wave and the games
   are drawn by script and stay at the main-thread rate. `…/?mo=main` forces the rAF path everywhere, to compare the two on a
   real phone; the `?perf` panel header names the path in use.
+- **Split headings** (#303). Each letter is its own span, so the browser kerns a pair only while both letters share one
+  font — true at rest, false while a heading "blooms" (each letter on its own axis step). Kerning switching on and off
+  pair by pair made the line tail jump back up to 7.6 px as a heading finished. Headings that bloom (`k.kern` in `fx.js`)
+  measure their kerning once at rest, turn the browser's off (`.kt.nk`) and add it to each letter's `letter-spacing`
+  (in em): the rest look is unchanged to the pixel and nothing toggles mid-animation. Lines are re-locked only when the
+  window width, the language or the loaded fonts for that heading's letters change, and always measured at rest.
+- **Idle work** (`idleEach` in `site.js`) runs only with at least 3 ms of real idle time, never while scrolling or moving
+  the mouse; the page always animates something, so the old 4 s timeout used to force jobs between frames. Only the
+  queue deferred past the opening (`must`) still runs one job per timeout. Heading letter cells are pinned in idle time
+  when a heading comes into view or finishes blooming, not on the first mouse approach. The canvas game runs at the
+  screen's rate on mouse devices (up to ~220 Hz) and at most ~60 per second on touch screens.
 - **Cache stamps.** GitHub Pages serves every file with `max-age=600`, and Chrome's ordinary reload re-checks only the HTML,
   so for ten minutes after a push a reload can still run the previous `site.js`. Every reference to a file in `assets/` —
   `href`/`src` in `index.html` and `privacy.html`, and `'assets/…'` strings in the scripts (`perf.js`, Lenis, the Polar Run

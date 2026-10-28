@@ -1066,6 +1066,9 @@ html:not(.js) .sheet-body::after { opacity: 1; }
 .kl-c { contain: size layout style; }
 /* Chữ cái ở "ô" cố định khi phình theo con trỏ (fx.js pin): rộng đúng như lúc đứng yên, vị trí đổi bằng transform. */
 .kc-pin { display: inline-block; }
+/* Khối chữ có nở: kerning đo sẵn và cộng vào khoảng chữ của từng chữ cái (fx.js kern) — tắt kerning/ghép chữ của trình
+   duyệt để lúc nở (mỗi chữ một phông) và lúc đứng yên dựng giống hệt nhau, không giật. */
+.kt.nk { font-kerning: none; font-variant-ligatures: none; }
 /* Chữ đang đổi dáng có lớp riêng (fx.js liveLayer, site.js chapMorph): không kéo theo vẽ lại quầng mờ / lưới / số chương
    nằm chung mảng ảnh. Tiêu đề đầu trang "thở" gần như liên tục nên giữ lớp luôn (chỉ khi có hiệu ứng). Số chương KHÔNG
    tách lớp: nó nằm dưới chữ (z-index -1) nên tách ra là kéo cả phần chữ phía trên thành lớp chồng — đo #303 (điện thoại,
