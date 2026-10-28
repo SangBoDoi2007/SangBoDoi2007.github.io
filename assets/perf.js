@@ -245,12 +245,14 @@
     }, 250);
   });
   const head = () => {
-    const ua = navigator.userAgent, m = /(Chrome|Firefox|Version)\/([\d.]+)/.exec(ua), and = /Android/.test(ua);
+    const ua = navigator.userAgent, m = /(Chrome|Firefox|Version)\/([\d.]+)/.exec(ua), and = /Android/.test(ua), M = window.CryoMotion;
     /* Nhịp rAF = nhịp phần chạy bằng JS. Chrome Android cố ý chạy phần này ở NỬA tần số khi màn ≥ 120 Hz (cờ
        ThrottleMainFrameTo60Hz, bật mặc định) — cuộn và hoạt ảnh CSS vẫn đủ tần số màn. */
     return 'Cryo đo khung · ' + (m ? m[1] + ' ' + m[2].split('.')[0] : '?') + (and ? ' · Android' : /iPhone|iPad/.test(ua) ? ' · iOS' : '') +
       ' · DPR ' + (devicePixelRatio || 1).toFixed(2) + ' · ' + innerWidth + '×' + innerHeight + ' · nhịp JS ~' + Math.round(1000 / vsync()) + ' Hz' +
-      (navigator.hardwareConcurrency ? ' · ' + navigator.hardwareConcurrency + ' nhân' : '') + (navigator.deviceMemory ? ' · ' + navigator.deviceMemory + ' GB' : '');
+      (navigator.hardwareConcurrency ? ' · ' + navigator.hardwareConcurrency + ' nhân' : '') + (navigator.deviceMemory ? ' · ' + navigator.deviceMemory + ' GB' : '') +
+      /* Bản nào đang chạy (dấu ?v= của site.js) + đường chuyển động của khối — để biết chắc kết quả thuộc bản nào. */
+      (M ? ' · bản ' + (M.build || '?') + ' · khối chạy ' + (M.comp ? 'compositor' : 'luồng chính') : '');
   };
   const offNames = () => (on.size ? OFF.filter((o) => on.has(o[0])).map((o) => o[1]).join(', ') : 'không');
   const say = (s) => { out.textContent = s; };

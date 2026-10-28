@@ -10,8 +10,11 @@
   const lerp = (a, b, t) => a + (b - a) * t;
   const lang = () => (root.lang === 'en' ? 'en' : 'vi');
   const num = (n, dp) => { const s = n.toFixed(dp); return lang() === 'vi' ? s.replace('.', ',') : s; };
+  /* Dấu phiên bản của chính tệp này (index.html nạp site.js?v=<băm nội dung>; mọi địa chỉ 'assets/…' trong mã cũng mang dấu
+     — tools/bust.py, để tải lại trang sau một lần đẩy bản mới là lấy bản mới). Bảng ?perf in ra để biết kết quả thuộc bản nào. */
+  const BUILD = (() => { try { return new URL(d.currentScript.src).searchParams.get('v') || ''; } catch (e) { return ''; } })();
   /* Bảng đo khung hình ẩn (assets/perf.js): chỉ tải khi địa chỉ có "perf" (…/?perf hoặc …/#perf). */
-  if (/[?&#]perf\b/.test(location.search + location.hash)) { const ps = d.createElement('script'); ps.src = 'assets/perf.js'; ps.async = true; d.head.appendChild(ps); }
+  if (/[?&#]perf\b/.test(location.search + location.hash)) { const ps = d.createElement('script'); ps.src = 'assets/perf.js?v=3703f842'; ps.async = true; d.head.appendChild(ps); }
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches || root.classList.contains('no-motion');
   if (reduced) root.classList.add('no-motion');
   const refreshers = [];
@@ -73,7 +76,8 @@
   /* Máy có chuột — MỘT luật cho cả trang: fx.js đọc lại FINE qua window.CryoMotion. Đọc một lần lúc tải (như mọi hiệu
      ứng theo loại con trỏ của trang). */
   const FINE = matchMedia('(hover: hover) and (pointer: fine)').matches;
-  const COMP = WAAPI && !FINE;
+  /* …/?mo=main: ép mọi thứ về đường luồng chính (như bản trước 40c8f7e) — để so hai đường ngay trên điện thoại thật. */
+  const COMP = WAAPI && !FINE && !/[?&]mo=main\b/.test(location.search);
   /* Lò xo khối lượng 1, độ cứng k, tỉ số tắt dần z; c = { x0, v0, to, z, k } → [vị trí, vận tốc] sau t giây. */
   function springAt(c, t) {
     const w = Math.sqrt(c.k), z = c.z, u0 = c.x0 - c.to, v0 = c.v0;
@@ -364,7 +368,7 @@
   }
   if (!reduced && matchMedia('(pointer: fine)').matches) {
     if (window.Lenis) startLenis();
-    else { const ls = d.createElement('script'); ls.src = 'assets/lenis.min.js'; ls.async = true; ls.onload = startLenis; d.head.appendChild(ls); }
+    else { const ls = d.createElement('script'); ls.src = 'assets/lenis.min.js?v=412fc1b9'; ls.async = true; ls.onload = startLenis; d.head.appendChild(ls); }
   }
   $$('a[href^="#"]').forEach((a) => a.addEventListener('click', (e) => {
     const id = a.getAttribute('href');
@@ -473,7 +477,7 @@
      bằng decode() — cùng địa chỉ với <img class="game-img"> nên không tải thêm. */
   let polar = null;
   const stillImage = (onReady) => {
-    if (!polar) { polar = new Image(); polar.decoding = 'async'; polar.src = 'assets/polar.webp'; }
+    if (!polar) { polar = new Image(); polar.decoding = 'async'; polar.src = 'assets/polar.webp?v=8a157078'; }
     const go = () => (polar.decode ? polar.decode() : Promise.resolve()).catch(() => {}).then(onReady);
     if (polar.complete && polar.naturalWidth) go(); else polar.addEventListener('load', go, { once: true });
   };
@@ -1688,7 +1692,7 @@
   })();
 
   /* Lớp hiệu ứng fx.js dùng chung lò xo, hình khối và trạng thái ngôn ngữ với trang. */
-  window.CryoMotion = { Spring, SPEC, owner, mo, go, put, reduced, fine: FINE, lang, refreshers, clamp, lerp, SHAPES, shapePts, morphPath, view, $, $$, afterIntro, idleEach };
+  window.CryoMotion = { Spring, SPEC, owner, mo, go, put, reduced, fine: FINE, comp: COMP, build: BUILD, lang, refreshers, clamp, lerp, SHAPES, shapePts, morphPath, view, $, $$, afterIntro, idleEach };
 
   /* ---------- Mở đầu: một nhịp duy nhất khi tải trang ---------- */
   function intro() {
