@@ -179,10 +179,12 @@
     ? (f) => requestIdleCallback(f, { timeout: 4000 })
     : (f) => setTimeout(() => { const end = performance.now() + 12; f({ timeRemaining: () => Math.max(0, end - performance.now()), didTimeout: false }); }, 120);
   function idleEach(list, fn, max) {
-    const q = list.slice(), born = performance.now();
+    const q = list.slice();
     const step = (dl) => {
-      /* Đang cuộn thì hoãn — nhưng không quá 6 s (cuộn mãi thì vẫn phải xong). */
-      if (performance.now() - view.t < 300 && !dl.didTimeout && performance.now() - born < 6000) { idleCb(step); return; }
+      /* Đang cuộn (hoặc vừa cuộn < 0,4 s) thì LUÔN hoãn, kể cả khi requestIdleCallback hết hạn chờ: việc ở đây chỉ là dựng
+         sẵn — phần nào thật sự cần thì đã được dựng lúc tới gần. Máy tính cuộn qua Lenis trên luồng chính nên một việc
+         chen vào lúc cuộn là cú cuộn khựng ngay (#303: bản trước cho chạy sau 6 s cuộn liên tục). */
+      if (performance.now() - view.t < 400) { idleCb(step); return; }
       let n = 0;
       while (q.length && n < (max || Infinity)) {
         /* Một việc hỏng không được kéo theo cả hàng đợi: báo lỗi ra ngoài rồi làm tiếp. */
@@ -1476,7 +1478,11 @@
             last = k;
             xs.forEach((el) => { const v = TB[el.dataset.x][k]; el.style.fontVariationSettings = v.fv; el.style.letterSpacing = v.ls; });
           }
-          if (p.moving && h.x === h.t) { p.moving = false; chap.dispatchEvent(new CustomEvent('cryo:morphed', { detail: h.t === 1 })); }
+          if (p.moving && h.x === h.t) {
+            p.moving = false; chap.dispatchEvent(new CustomEvent('cryo:morphed', { detail: h.t === 1 }));
+            /* Biến hình xong, chờ thêm 0,9 s rồi trả lớp. */
+            clearTimeout(p.layerT); p.layerT = setTimeout(() => { if (!p.moving) chap.classList.remove('morphing'); }, 900);
+          }
         });
         h.set(h.x);
         p.head = h;
@@ -1485,7 +1491,9 @@
       p.go = (on) => {
         if (p.num) p.num.to(on ? 1 : 0, on ? SPEC.m3SlowSpatial : SPEC.m3Spatial);
         if (p.head) {
-          if (!p.moving) { p.moving = true; chap.dispatchEvent(new CustomEvent('cryo:morph')); }
+          /* Trong lúc biến hình: tên chương có lớp riêng (.chap.morphing, site.css) — đổi nét mỗi khung mà nằm chung mảng
+             ảnh thì vẽ lại cả vùng quanh nó (xem liveLayer trong fx.js). */
+          if (!p.moving) { p.moving = true; clearTimeout(p.layerT); if (!reduced) chap.classList.add('morphing'); chap.dispatchEvent(new CustomEvent('cryo:morph')); }
           p.head.to(on ? 1 : 0, on ? SPEC.m3SlowSpatial : SPEC.m3Spatial);
         }
       };

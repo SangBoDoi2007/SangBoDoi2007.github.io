@@ -1066,6 +1066,11 @@ html:not(.js) .sheet-body::after { opacity: 1; }
 .kl-c { contain: size layout style; }
 /* Chữ cái ở "ô" cố định khi phình theo con trỏ (fx.js pin): rộng đúng như lúc đứng yên, vị trí đổi bằng transform. */
 .kc-pin { display: inline-block; }
+/* Chữ đang đổi dáng có lớp riêng (fx.js liveLayer, site.js chapMorph): không kéo theo vẽ lại quầng mờ / lưới / số chương
+   nằm chung mảng ảnh. Tiêu đề đầu trang "thở" gần như liên tục nên giữ lớp luôn (chỉ khi có hiệu ứng). Số chương KHÔNG
+   tách lớp: nó nằm dưới chữ (z-index -1) nên tách ra là kéo cả phần chữ phía trên thành lớp chồng — đo #303 (điện thoại,
+   3 chương sáng): chỉ tách tên chương 113–137 khung, tách cả số 78–102, không tách gì 62–75. */
+.kx-live, .js:not(.no-motion) .hero-h, .chap.morphing .h3 { will-change: transform; }
 /* Màn chạm: tiêu đề giữ cử chỉ NGANG cho hiệu ứng chữ phình bám ngón (fx.js tapFx gắn html.tfx khi chạy — không có ở
    giảm chuyển động / không JS), vuốt dọc vẫn cuộn trang, chụm vẫn phóng to. Trang không cuộn ngang nên không mất gì.
    Danh sách tiêu đề vừa phải khớp SWELL_H trong fx.js (tách ở lần chạm đầu, nên luật phải có sẵn từ trước). */

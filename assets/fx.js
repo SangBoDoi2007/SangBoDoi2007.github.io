@@ -159,10 +159,33 @@
         if (col !== L.col) { L.col = col; L.c.style.color = col; }
       });
       if (k.slot) slotPlace(k, kit, opt);
+      liveLayer(k, kit.some((L) => L.fv));
     });
     kit.forEach((L) => { L.ws = L.st.b[2]; L.a = new Spring(1, 0.002, o); L.u = new Spring(0, 0.002, o); });
     kit.o = o; k.kit = kit;
     return kit;
+  }
+
+  /* Chữ đang đổi dáng (nở / phình theo con trỏ hay ngón) có lớp riêng trong lúc đổi (#303). Không có lớp riêng thì mỗi
+     khung đổi nét chữ là trình duyệt vẽ lại cả mảng ảnh chứa nó — kể cả quầng làm mờ / lưới có mặt nạ / số chương nằm bên
+     dưới. Đo (máy tính 1440×900 @1,5, GPU giả lập) ở đầu trang lúc chữ thở: 39 → 60 khung/giây, GPU 10,7 → 2,8 ms/khung,
+     vẽ lại 702 → 116 ms/giây. Đứng yên 0,9 s thì trả lớp (lớp thừa cũng tốn: xem mo() bên site.js). */
+  /* Một khối chữ (tiêu đề) có thể có vài bộ chữ cái (hai thứ tiếng, hai dòng) → trạng thái "đang đổi" giữ ở chính phần tử
+     mang lớp, đếm theo bộ. Có chuột (máy tính) thì giữ lớp luôn sau lần đầu: tháo lớp là chữ đổi từ khử răng cưa xám về
+     ClearType (Windows) — nhìn như chữ nhích một cái sau mỗi lần rê. Màn chạm không có ClearType → nghỉ 0,9 s thì trả lớp.
+     Tiêu đề đầu trang giữ lớp sẵn bằng CSS (thở theo chu kỳ, bật/tắt mỗi chu kỳ là vẽ lại cả lớp). */
+  const layerHost = (k) => (k.layerEl !== undefined ? k.layerEl : (k.layerEl = k.el.closest('.hero-h') ? null : (k.el.closest('.h2, .fx-h, .fin-word') || null)));
+  function liveLayer(k, live) {
+    const h = layerHost(k);
+    if (!h) return;
+    const S = h.cryoLive || (h.cryoLive = new Set());
+    if (live) {
+      if (!S.has(k)) S.add(k);
+      if (h.cryoLiveT) { clearTimeout(h.cryoLiveT); h.cryoLiveT = 0; }
+      if (!h.cryoLayer) { h.cryoLayer = true; h.classList.add('kx-live'); }
+    } else if (S.delete(k) && !S.size && !fine && !h.cryoLiveT) {
+      h.cryoLiveT = setTimeout(() => { h.cryoLiveT = 0; if (!S.size) { h.cryoLayer = false; h.classList.remove('kx-live'); } }, 900);
+    }
   }
 
   /* Ô chữ cố định (#302). Chữ phình mà vẫn để trình duyệt xếp theo dòng thì mỗi bậc trục của MỘT chữ đẩy cả phần dòng phía
