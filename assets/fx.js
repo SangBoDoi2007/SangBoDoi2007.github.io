@@ -287,7 +287,7 @@
        đó tốn thêm công xếp lớp. */
     setTimeout(function clear() {
       const m = k.words.map((w) => M.mo(w));
-      if (m.some((x) => Math.abs(x.y.x) > 0.3 || x.o.x < 0.995)) { setTimeout(clear, 400); return; }
+      if (m.some((x) => x.moving || Math.abs(x.y.x) > 0.3 || x.o.x < 0.995)) { setTimeout(clear, 400); return; }
       k.words.forEach((w) => { w.style.transform = ''; w.style.opacity = ''; });
     }, delay + i * gap + 1600);
   }

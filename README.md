@@ -54,6 +54,12 @@ Landing page, privacy policy and `app-ads.txt` for **Cryo: Game Mode & FPS Meter
   the three background glows step on the same 100 ms beat. Blurs sit on a static child of the animated element so they are
   rasterized once. The background glows are 128 px canvases scaled up by the compositor, so changing their tone does not repaint
   three screen-sized layers. Settled spring transforms are removed so finished elements leave the compositor.
+- **Motion runs on the compositor** (#303): Chrome on Android runs the main thread at half the screen rate on 120 Hz-and-up
+  screens (`ThrottleMainFrameTo60Hz`, on by default), while scrolling and compositor animations keep the full rate. So
+  `go()`/`put()` in `site.js` solve each spring in closed form and hand it to Web Animations as sampled keyframes (dense at the
+  start, sparse in the tail): blocks, cards and words fly in at the screen's rate and keep moving when the main thread is busy.
+  Interrupting reads position and velocity off the running curve, so it stays continuous like a spring. Letter-shape effects
+  (variable-font axes), the chapter numerals, the wave and the games are drawn by script and stay at the main-thread rate.
 
 ## Rules for the copy
 

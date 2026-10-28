@@ -54,28 +54,139 @@
   }
   function owner(fn) { return { apply: fn }; }
 
-  /* Biến đổi của một phần tử: x, y (px), s (tỉ lệ), r (độ), o (độ mờ). */
-  const MO = new WeakMap();
+  /* Biến đổi của một phần tử: x, y (px), s (tỉ lệ), r (độ), o (độ mờ) — chạy theo lò xo nhưng do COMPOSITOR vẽ.
+     User #303 ("trên điện thoại kiểu chạy ở fps thấp"; tắt cờ chrome://flags/#throttle-main-thread-to-60hz thì "mượt hẳn"):
+     Chrome Android cho luồng chính (rAF, mọi thứ JS đổi mỗi khung) NỬA tần số màn khi màn ≥ ~108 Hz (ThrottleMainFrameTo60Hz,
+     bật mặc định; cc/scheduler/scheduler_state_machine.cc), còn cuộn + hoạt ảnh transform/opacity ở compositor vẫn đủ tần
+     số. Nên mỗi lần go(): giải lò xo bằng công thức đóng (từ vị trí + vận tốc hiện tại), lấy mẫu (90 điểm/giây 0,45 s đầu,
+     30 điểm/giây phần đuôi) thành keyframes Web Animations → compositor nội suy ở đúng tần số màn, luồng chính bận cũng không
+     giật. Mỗi go() dựng một animation mới: dùng cho chuyển động theo sự kiện rời rạc, KHÔNG cho thứ đổi đích mỗi
+     pointermove (con trỏ, nút hút, nghiêng thẻ — những thứ đó giữ Spring + rAF). Ngắt giữa chừng: đọc
+     vị trí + vận tốc từ quỹ đạo đang chạy (theo currentTime của chính animation) rồi lập quỹ đạo mới — liền mạch như lò xo.
+     Xong thì ghi trạng thái cuối vào style và huỷ animation; đứng yên đúng gốc thì bỏ transform (translate giữ lại biến mỗi
+     khối thành một lớp compositor mãi mãi — đo #303: 80–120 lớp). Opacity vẫn ghi inline: CSS ẩn sẵn khối
+     (.js .slot [data-b] { opacity: 0 }). Không có Web Animations (trình duyệt rất cũ) thì nhảy thẳng tới đích. */
+  const MO = new WeakMap(), CH = ['x', 'y', 's', 'r', 'o'], EPS = { x: 0.2, y: 0.2, s: 0.0005, r: 0.02, o: 0.002 };
+  const WAAPI = typeof Element !== 'undefined' && typeof Element.prototype.animate === 'function';
+  /* Lò xo khối lượng 1, độ cứng k, tỉ số tắt dần z; c = { x0, v0, to, z, k } → [vị trí, vận tốc] sau t giây. */
+  function springAt(c, t) {
+    const w = Math.sqrt(c.k), z = c.z, u0 = c.x0 - c.to, v0 = c.v0;
+    let u, v;
+    if (z < 0.999) {
+      const wd = w * Math.sqrt(1 - z * z), e = Math.exp(-z * w * t), B = (v0 + z * w * u0) / wd, co = Math.cos(wd * t), si = Math.sin(wd * t);
+      u = e * (u0 * co + B * si); v = e * (-z * w * (u0 * co + B * si) + wd * (B * co - u0 * si));
+    } else if (z <= 1.001) {
+      const e = Math.exp(-w * t), B = v0 + w * u0;
+      u = e * (u0 + B * t); v = e * (B - w * (u0 + B * t));
+    } else {
+      const q = Math.sqrt(z * z - 1), r1 = -w * (z - q), r2 = -w * (z + q), c2 = (v0 - r1 * u0) / (r2 - r1), c1 = u0 - c2;
+      u = c1 * Math.exp(r1 * t) + c2 * Math.exp(r2 * t); v = r1 * c1 * Math.exp(r1 * t) + r2 * c2 * Math.exp(r2 * t);
+    }
+    return [c.to + u, v];
+  }
+  /* Thời điểm lò xo coi như dừng (cùng ngưỡng với Spring: lệch < eps và vận tốc < 20·eps), tối đa 4 s. Nảy (z < 1): lấy
+     theo đường bao |lệch| ≤ A·e^(−zωt), |vận tốc| ≤ A·ω·e^(−zωt) — một phép log thay vì dò từng bước. */
+  function settleOf(c, eps) {
+    const w = Math.sqrt(c.k), z = c.z, u0 = c.x0 - c.to;
+    if (z < 0.999) {
+      const A = Math.hypot(u0, (c.v0 + z * w * u0) / (w * Math.sqrt(1 - z * z))), need = Math.max(A / eps, (A * w) / (eps * 20));
+      return need <= 1 ? 0 : Math.min(4, Math.log(need) / (z * w));
+    }
+    for (let t = 0; t < 4; t += 1 / 60) { const [x, v] = springAt(c, t); if (Math.abs(x - c.to) < eps && Math.abs(v) < eps * 20) return t; }
+    return 4;
+  }
+  const tf = (x, y, s, r) => 'translate(' + x.toFixed(2) + 'px,' + y.toFixed(2) + 'px) scale(' + s.toFixed(4) + ') rotate(' + r.toFixed(2) + 'deg)';
   function mo(el) {
     let m = MO.get(el);
-    if (!m) {
-      m = { apply() {
-        const o = clamp(m.o.x, 0, 1);
-        /* Đứng yên đúng gốc (lò xo đã dừng, hiện hẳn hoặc ẩn hẳn): bỏ transform. translate3d giữ lại sau khi bay vào xong
-           biến mỗi khối thành một lớp compositor mãi mãi — đo #303: 80–120 lớp, mỗi khung có gì đổi là xếp lớp + đẩy khung
-           tốn theo số lớp. Opacity vẫn ghi inline: CSS ẩn sẵn khối (.js .slot [data-b] { opacity: 0 }). */
-        const rest = m.x.x === 0 && m.y.x === 0 && m.s.x === 1 && m.r.x === 0 && (o === 0 || o === 1);
-        el.style.transform = rest ? '' : 'translate3d(' + m.x.x.toFixed(2) + 'px,' + m.y.x.toFixed(2) + 'px,0) scale(' + m.s.x.toFixed(4) + ') rotate(' + m.r.x.toFixed(2) + 'deg)';
-        el.style.opacity = o.toFixed(3);
-      } };
-      m.x = new Spring(0, 0.2, m); m.y = new Spring(0, 0.2, m); m.s = new Spring(1, 0.0005, m);
-      m.r = new Spring(0, 0.02, m); m.o = new Spring(1, 0.002, m);
-      MO.set(el, m);
-    }
+    if (m) return m;
+    /* c[k]: { val } đứng yên, hoặc { x0, v0, to, z, k, end } đang chạy — thời gian tính từ lúc animation hiện tại bắt đầu. */
+    const c = { x: { val: 0 }, y: { val: 0 }, s: { val: 1 }, r: { val: 0 }, o: { val: 1 } };
+    let anim = null, t0 = 0;
+    const elapsed = () => {
+      const ct = anim && anim.currentTime;
+      return Math.max(0, typeof ct === 'number' ? ct / 1000 : (performance.now() - t0) / 1000);
+    };
+    /* [vị trí, vận tốc] của một kênh lúc này. */
+    const now = (k) => {
+      const q = c[k];
+      if (!('to' in q)) return [q.val, 0];
+      const t = elapsed();
+      return t >= q.end ? [q.to, 0] : springAt(q, t);
+    };
+    const write = () => {
+      const x = c.x.val, y = c.y.val, sc = c.s.val, r = c.r.val, o = Math.min(1, Math.max(0, c.o.val));
+      const rest = x === 0 && y === 0 && sc === 1 && r === 0 && (o === 0 || o === 1);
+      el.style.transform = rest ? '' : tf(x, y, sc, r);
+      el.style.opacity = o.toFixed(3);
+    };
+    const stop = () => { if (anim) { const a = anim; anim = null; a.onfinish = null; a.cancel(); } };
+    /* Kênh đang chạy mà đã tới đích → đứng yên ở đích. */
+    const settle = () => CH.forEach((k) => { if ('to' in c[k]) c[k] = { val: c[k].to }; });
+    m = {
+      get moving() { return !!anim; },
+      /* next[k] = { to, z, k } (lò xo mới) | { val } (đặt thẳng); kênh không có trong next chạy tiếp quỹ đạo cũ. */
+      plan(next) {
+        const cur = {};
+        CH.forEach((k) => { cur[k] = now(k); });
+        stop();
+        CH.forEach((k) => {
+          const [x, v] = cur[k], n = next[k], old = c[k];
+          if (n && 'val' in n) c[k] = { val: n.val };
+          else if (n || 'to' in old) {
+            const sp = n || old, q = { x0: x, v0: v, to: sp.to, z: sp.z, k: sp.k };
+            q.end = Math.abs(x - q.to) < EPS[k] && Math.abs(v) < EPS[k] * 20 ? 0 : settleOf(q, EPS[k]);
+            c[k] = q.end ? q : { val: q.to };
+          } else c[k] = { val: x };
+        });
+        const moving = CH.filter((k) => 'to' in c[k]);
+        if (!moving.length || !WAAPI) { settle(); write(); return; }
+        /* Thuộc tính không chạy thì ghi thẳng vào style (keyframes chỉ mang thuộc tính đang chạy). */
+        const T = Math.max(...moving.map((k) => c[k].end));
+        const mT = moving.some((k) => k !== 'o'), mO = moving.includes('o');
+        const at = (k, t) => ('to' in c[k] ? (t >= c[k].end ? c[k].to : springAt(c[k], t)[0]) : c[k].val);
+        if (!mT) { const x = c.x.val, y = c.y.val, sc = c.s.val, r = c.r.val; el.style.transform = x === 0 && y === 0 && sc === 1 && r === 0 ? '' : tf(x, y, sc, r); }
+        if (!mO) el.style.opacity = Math.min(1, Math.max(0, c.o.val)).toFixed(3);
+        /* Mẫu dày (90/giây) đoạn đầu nơi lò xo đổi nhanh, thưa (30/giây) phần đuôi gần đích; compositor nội suy thẳng giữa
+           các mẫu ở đúng tần số màn. */
+        const ts = [];
+        for (let t = 0; t < T; t += t < 0.45 ? 1 / 90 : 1 / 30) ts.push(t);
+        ts.push(T);
+        const frames = [];
+        for (const t of ts) {
+          const f = { offset: t / T };
+          if (mT) f.transform = tf(at('x', t), at('y', t), at('s', t), at('r', t));
+          if (mO) f.opacity = Math.min(1, Math.max(0, at('o', t))).toFixed(3);
+          frames.push(f);
+        }
+        t0 = performance.now();
+        let a;
+        try { a = el.animate(frames, { duration: T * 1000, easing: 'linear', fill: 'forwards' }); } catch (e) { settle(); write(); return; }
+        anim = a;
+        a.onfinish = () => { if (anim !== a) return; anim = null; settle(); write(); a.cancel(); };
+      },
+    };
+    /* Giao diện cũ của từng kênh (m.x.x vị trí lúc này, m.x.t đích, to/set) cho chỗ đọc trạng thái: flip, setGone, fx.js. */
+    CH.forEach((k) => {
+      m[k] = {
+        get x() { return now(k)[0]; },
+        get t() { return 'to' in c[k] ? c[k].to : c[k].val; },
+        to(t, sp) { go(el, { [k]: t }, sp || SPEC.effects, sp || SPEC.effects); return this; }, // mặc định như Spring.to
+        set(v) { put(el, { [k]: v }); return this; },
+      };
+    });
+    MO.set(el, m);
     return m;
   }
-  function go(el, p, s, os) { const m = mo(el); for (const k in p) m[k].to(p[k], k === 'o' ? (os || SPEC.fade) : (s || SPEC.spatial)); }
-  function put(el, p) { const m = mo(el); for (const k in p) m[k].set(p[k]); }
+  function go(el, p, s, os) {
+    const next = {};
+    for (const k in p) {
+      if (reduced) { next[k] = { val: p[k] }; continue; }
+      const sp = k === 'o' ? (os || SPEC.fade) : (s || SPEC.spatial);
+      next[k] = { to: p[k], z: sp.z, k: sp.k };
+    }
+    mo(el).plan(next);
+  }
+  function put(el, p) { const next = {}; for (const k in p) next[k] = { val: p[k] }; mo(el).plan(next); }
 
   /* ---------- Hình khối M3 Expressive ----------
      Xấp xỉ bằng hàm bán kính: siêu elip bậc p (2 = tròn, 4 = vuông bo) × gợn n cánh biên độ a, kéo dãn ngang sx.
