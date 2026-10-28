@@ -284,24 +284,30 @@
     if (seen && fine && !reduced) seen.observe(k.vis);
     return s;
   }
+  /* Phình từng chữ theo khoảng cách tới điểm (x, y) — một công thức cho cả con trỏ chuột lẫn ngón tay (tapFx). r = khung
+     của khối chữ đọc ngay trước đó; on = false → mọi chữ về 0. */
+  const fsOf = (s) => s.fs || (s.fs = parseFloat(getComputedStyle(s.k.el).fontSize) || 60);
+  function swellTo(s, x, y, r, on, spec) {
+    const R = fsOf(s) * s.opt.reach;
+    s.kit.forEach((L) => {
+      const dx = x - (r.left + L.x), dy = (y - (r.top + L.y)) * 1.25;
+      const t = on ? Math.exp(-(dx * dx + dy * dy) / (R * R)) : 0;
+      if (Math.abs(t - L.u.t) > 0.015) L.u.to(t < 0.02 ? 0 : t, spec);
+    });
+  }
   if (fine && !reduced) {
     addEventListener('pointermove', (e) => {
       if (e.pointerType !== 'mouse') return;
       swells.forEach((s) => {
         if (!s.inView && !s.hot) return;
         if (s.k.busy || !shown(s.k.vis)) return;
-        if (!s.fs) s.fs = parseFloat(getComputedStyle(s.k.el).fontSize) || 60;
-        const r = s.k.el.getBoundingClientRect(), R = s.fs * s.opt.reach, pad = R * 1.6;
+        const r = s.k.el.getBoundingClientRect(), R = fsOf(s) * s.opt.reach, pad = R * 1.6;
         const near = e.clientX > r.left - pad && e.clientX < r.right + pad && e.clientY > r.top - pad && e.clientY < r.bottom + pad;
         if (!near && !s.hot) return;
         /* Ô chữ + toạ độ tâm từng chữ đo một lần lúc đứng yên (pin); đổi cỡ/ngôn ngữ thì gỡ ra và đo lại lần sau. */
         if (!pin(s.k, s.opt)) return;
         s.hot = near;
-        s.kit.forEach((L) => {
-          const dx = e.clientX - (r.left + L.x), dy = (e.clientY - (r.top + L.y)) * 1.25;
-          const t = near ? Math.exp(-(dx * dx + dy * dy) / (R * R)) : 0;
-          if (Math.abs(t - L.u.t) > 0.015) L.u.to(t < 0.02 ? 0 : t, SWELL);
-        });
+        swellTo(s, e.clientX, e.clientY, r, near, SWELL);
       });
     }, { passive: true });
     d.addEventListener('mouseout', (e) => { if (!e.relatedTarget) swells.forEach((s) => { s.hot = false; s.kit.forEach((L) => L.u.to(0, SWELL)); }); });
@@ -397,8 +403,7 @@
 
   /* ================= Tên chương + tiêu đề vừa: phình theo con trỏ =================
      User #303: "tiêu đề các chương cũng có hiệu ứng như thế, cũng như mấy tiêu đề lớn khác" — chữ phình theo chuột + con
-     trỏ thành thấu kính khi nằm trên chữ (lớp .fx-h). Chỉ khi có chuột: màn chạm không rê được nên không tách, không tốn
-     gì. Không "nở" khi cuộn tới: tên chương đã có màn biến hình riêng lúc chương sáng (site.js chapMorph), các tiêu đề vừa
+     trỏ thành thấu kính khi nằm trên chữ (lớp .fx-h). Màn chạm: chạm / kéo ngang trên chữ thì phình (tapFx). Không "nở" khi cuộn tới: tên chương đã có màn biến hình riêng lúc chương sáng (site.js chapMorph), các tiêu đề vừa
      vốn đứng yên. Trục gốc đọc từ CSS của chính tiêu đề (mỗi loại một cỡ, một độ tròn) để lúc bắt đầu phình không nhảy.
      Thẻ PRO bỏ qua: chữ tô dải màu bằng background-clip:text, tách thành chữ cái có transform là mất màu. */
   const swellKs = [];
@@ -444,8 +449,11 @@
       if (!k.busy) lock(k);
     });
   }
+  /* Có chuột: tách sẵn khi tới gần. Màn chạm: tách ở lần CHẠM đầu vào tiêu đề (tapFx) — không tách sẵn, để lúc cuộn không
+     có thêm việc (tên chương đổi dáng khi sáng là phải gỡ/khoá lại dòng). */
+  const SWELL_H = '.chap .h3, .step h3, .plan:not(.plan-pro) h3, .privacy h3, .cm-h';
   if (fine && !reduced) {
-    io($$('.chap .h3, .step h3, .plan:not(.plan-pro) h3, .privacy h3, .cm-h'), { rootMargin: '100% 0px' }, (h, on, o) => {
+    io($$(SWELL_H), { rootMargin: '100% 0px' }, (h, on, o) => {
       if (!on) return;
       if (o) o.unobserve(h);
       afterIntro(() => prepSwell(h));
@@ -811,7 +819,49 @@
       d.body.appendChild(e);
       setTimeout(() => e.remove(), 600);
     };
-    const cancel = () => { if (!st) return; clearTimeout(st.timer); st = null; fade(); };
+    /* Chữ tiêu đề dưới ngón (#303, bản cho màn chạm của "rê chuột thì chữ phình"; user: "bám ngón cũng được"):
+       - chạm nhanh vào chữ: chữ quanh chỗ ngón phình lên theo khoảng cách rồi trở lại — một nhịp;
+       - kéo NGANG trên dòng chữ: vùng phình bám theo ngón, nhấc ngón là trở lại.
+       KHÔNG kích hoạt khi vuốt dọc, cũng không khi chỉ đặt ngón giữ yên (user #303 hỏi "vuốt trang thì kích hoạt có ổn
+       không" — không: vuốt là để cuộn; người đọc hay đặt ngón nghỉ trên chữ rồi mới vuốt, chữ phình rồi xẹp mỗi lần như
+       thế là rối mắt, lại đổi trục phông + bố cục trên luồng chính đúng lúc cần mượt nhất, và trái luật #302 "không ảnh
+       hưởng lúc lướt"; giữ lâu là việc của Android: chọn chữ). Tiêu đề giữ cử chỉ ngang (touch-action: pan-y khi html.tfx,
+       site.css); kéo dọc là huỷ, trình duyệt nhận cú cuộn thì gửi pointercancel → chữ về như cũ. Chạm khoảng trống của dải
+       tiêu đề, hay chữ đang ẩn chờ nở: vòng sáng như cũ. */
+    root.classList.add('tfx');
+    const TAP_UP = { z: 1, k: 520 };
+    const headAt = (node) => {
+      if (!node || !node.closest || !node.closest('.hero-h, .h2, .fx-h')) return null;
+      const w = node.closest('.kw');
+      if (!w || +getComputedStyle(w).opacity < 0.5) return null;
+      const sw = swells.find((x) => x.k.vis.contains(node));
+      return sw && !sw.k.busy ? sw : null;
+    };
+    const swellAt = (sw, x, y) => {
+      if (sw.k.busy || !pin(sw.k, sw.opt)) return false;
+      swellTo(sw, x, y, sw.k.el.getBoundingClientRect(), true, TAP_UP);
+      return true;
+    };
+    const relax = (sw, delay) => {
+      clearTimeout(sw.tapT);
+      sw.tapT = setTimeout(() => { sw.hot = false; sw.kit.forEach((L) => L.u.to(0, SWELL)); }, delay || 0);
+    };
+    /* Kéo: gom các sự kiện di chuyển về một lần mỗi khung (màn 120 Hz gửi tới 240 sự kiện/giây). */
+    const track = (s) => {
+      if (s.raf) return;
+      s.raf = requestAnimationFrame(() => { s.raf = 0; if (st === s && s.follow) swellAt(s.sw, s.x, s.y); });
+    };
+    const follow = (s) => {
+      if (!s.sw || s.follow) return;
+      s.follow = true; s.sw.hot = true; clearTimeout(s.sw.tapT);
+      if (!swellAt(s.sw, s.x, s.y)) { s.follow = false; s.sw.hot = false; }
+    };
+    const cancel = () => {
+      if (!st) return;
+      clearTimeout(st.timer); cancelAnimationFrame(st.raf);
+      if (st.follow) relax(st.sw);
+      st = null; fade();
+    };
     addEventListener('pointerdown', (e) => {
       if (e.pointerType !== 'touch' || !e.isPrimary) return;
       cancel();
@@ -819,20 +869,39 @@
       /* Thanh trượt và cửa sổ nổi kéo được có phản hồi riêng (tay cầm, sóng, kéo theo ngón): bỏ qua. */
       if (t && t.matches('input[type="range"]')) return;
       if (e.target.closest && e.target.closest('.ov, .a-slider')) return;
-      st = { x: e.clientX, y: e.clientY, t, pressed: false, timer: 0 };
-      st.timer = setTimeout(press, TAP_MS);
+      /* Tên chương / tiêu đề vừa chưa tách (màn chạm không tách sẵn): tách ngay bây giờ rồi dò lại chữ dưới ngón. */
+      let node = e.target;
+      const cand = !t && node.closest && node.closest(SWELL_H);
+      if (cand && !cand.cryoSplit) {
+        prepSwell(cand);
+        node = d.elementFromPoint(e.clientX, e.clientY) || node;
+        /* Tách chữ có thể vừa gỡ đúng phần tử dưới ngón khỏi trang: các sự kiện tiếp theo của cú chạm sẽ bắn vào phần tử
+           đã gỡ và không về tới window → giữ cú chạm trên chính tiêu đề. */
+        if (!e.target.isConnected) { try { cand.setPointerCapture(e.pointerId); } catch (err) { /* không giữ được: bỏ qua */ } }
+      }
+      st = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t, sw: t ? null : headAt(node), follow: false, pressed: false, timer: 0, raf: 0 };
+      if (!st.sw) st.timer = setTimeout(press, TAP_MS);
     }, { passive: true });
     addEventListener('pointermove', (e) => {
       if (!st || e.pointerType !== 'touch' || !e.isPrimary) return;
-      if (Math.hypot(e.clientX - st.x, e.clientY - st.y) > SLOP) cancel();
+      st.x = e.clientX; st.y = e.clientY;
+      if (st.follow) { track(st); return; }
+      const dx = Math.abs(st.x - st.x0), dy = Math.abs(st.y - st.y0);
+      if (Math.hypot(dx, dy) <= SLOP) return;
+      /* Kéo ngang trên chữ tiêu đề: bám ngón. Còn lại (kéo dọc = cuộn, hay không phải tiêu đề): huỷ như cũ. */
+      if (st.sw && dx > dy) follow(st); else cancel();
     }, { passive: true });
     addEventListener('pointercancel', (e) => { if (e.pointerType === 'touch') cancel(); }, { passive: true });
     addEventListener('pointerup', (e) => {
       if (!st || e.pointerType !== 'touch' || !e.isPrimary) return;
       const s = st;
-      clearTimeout(s.timer);
-      if (s.t) { press(); const h = host; setTimeout(() => { if (host === h) fade(); }, 140); } else ring(s.x, s.y);
+      clearTimeout(s.timer); cancelAnimationFrame(s.raf);
+      if (s.follow) { st = null; relax(s.sw, 120); return; }
+      if (s.t) { press(); st = null; const h = host; setTimeout(() => { if (host === h) fade(); }, 140); return; }
       st = null;
+      /* Chạm nhanh vào chữ: phình một nhịp rồi trở lại. */
+      if (s.sw) { s.sw.hot = true; if (swellAt(s.sw, s.x, s.y)) { relax(s.sw, 520); return; } s.sw.hot = false; }
+      ring(s.x, s.y);
     }, { passive: true });
     /* Trang cuộn trong lúc đang nhấn giữ (một số trình duyệt không gửi pointercancel): tan ngay. Chỉ cuộn của TRANG (không
        bắt pha capture): bảng báo cáo tự cuộn bên trong không được huỷ cú chạm. */

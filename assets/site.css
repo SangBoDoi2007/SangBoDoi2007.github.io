@@ -1066,6 +1066,10 @@ html:not(.js) .sheet-body::after { opacity: 1; }
 .kl-c { contain: size layout style; }
 /* Chữ cái ở "ô" cố định khi phình theo con trỏ (fx.js pin): rộng đúng như lúc đứng yên, vị trí đổi bằng transform. */
 .kc-pin { display: inline-block; }
+/* Màn chạm: tiêu đề giữ cử chỉ NGANG cho hiệu ứng chữ phình bám ngón (fx.js tapFx gắn html.tfx khi chạy — không có ở
+   giảm chuyển động / không JS), vuốt dọc vẫn cuộn trang, chụm vẫn phóng to. Trang không cuộn ngang nên không mất gì.
+   Danh sách tiêu đề vừa phải khớp SWELL_H trong fx.js (tách ở lần chạm đầu, nên luật phải có sẵn từ trước). */
+.tfx .hero-h, .tfx .h2, .tfx .fx-h, .tfx .chap .h3, .tfx .step h3, .tfx .plan:not(.plan-pro) h3, .tfx .privacy h3, .tfx .cm-h { touch-action: pan-y pinch-zoom; }
 
 /* ---------- Câu chuyện: chương đang xem sáng lên, ánh sau sân khấu đổi tông ---------- */
 /* Biến tông nằm trên chính ::before (không kế thừa): sân khấu chứa cả năm màn, đổi biến ở .stage sẽ tính lại cả cây. */
