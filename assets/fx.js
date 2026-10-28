@@ -352,6 +352,7 @@
   const breathe = () => {
     breathT = 0;
     if (!breathOn || reduced) return;
+    if (window.CryoPerf && window.CryoPerf.noBreath) { breathT = setTimeout(breathe, 3600); return; } // bảng đo tắt thử
     if (!d.hidden && performance.now() - scrolledAt > 900) {
       /* Mỗi nhịp MỘT từ nhấn (lần lượt mọi từ nhấn của cả hai dòng): số chữ cái đổi trục mỗi khung ít đi ~3 lần. */
       const all = [];

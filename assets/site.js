@@ -10,6 +10,8 @@
   const lerp = (a, b, t) => a + (b - a) * t;
   const lang = () => (root.lang === 'en' ? 'en' : 'vi');
   const num = (n, dp) => { const s = n.toFixed(dp); return lang() === 'vi' ? s.replace('.', ',') : s; };
+  /* Bảng đo khung hình ẩn (assets/perf.js): chỉ tải khi địa chỉ có "perf" (…/?perf hoặc …/#perf). */
+  if (/[?&#]perf\b/.test(location.search + location.hash)) { const ps = d.createElement('script'); ps.src = 'assets/perf.js'; ps.async = true; d.head.appendChild(ps); }
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches || root.classList.contains('no-motion');
   if (reduced) root.classList.add('no-motion');
   const refreshers = [];
@@ -205,6 +207,7 @@
   function startLenis() {
     if (!window.Lenis || lenis) return;
     lenis = new window.Lenis({ lerp: 0.12, wheelMultiplier: 0.95 });
+    window.CryoLenis = lenis;
     /* Nhịp rAF của Lenis chỉ chạy khi đang cuộn: chạy mãi thì trang đứng yên vẫn đòi 60 khung/giây (đo: ~8% một nhân).
        Đánh thức thì xoá mốc thời gian cũ (lenis.time) để khung đầu không coi cả quãng nghỉ là một bước. */
     let lr = 0, still = 0;
@@ -256,6 +259,7 @@
   let gRaf = 0, gLast = 0;
   function gameTick(now) {
     gRaf = games.size ? requestAnimationFrame(gameTick) : 0;
+    if (window.CryoPerf && window.CryoPerf.noGame) { gLast = 0; return; } // bảng đo (assets/perf.js) tắt thử: game đứng hình
     if (gLast && now - gLast < 15) return;
     const dt = gLast ? Math.min(0.1, (now - gLast) / 1000) : 0;
     gLast = now;
