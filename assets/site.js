@@ -58,8 +58,13 @@
     let m = MO.get(el);
     if (!m) {
       m = { apply() {
-        el.style.transform = 'translate3d(' + m.x.x.toFixed(2) + 'px,' + m.y.x.toFixed(2) + 'px,0) scale(' + m.s.x.toFixed(4) + ') rotate(' + m.r.x.toFixed(2) + 'deg)';
-        el.style.opacity = clamp(m.o.x, 0, 1).toFixed(3);
+        const o = clamp(m.o.x, 0, 1);
+        /* Đứng yên đúng gốc (lò xo đã dừng, hiện hẳn hoặc ẩn hẳn): bỏ transform. translate3d giữ lại sau khi bay vào xong
+           biến mỗi khối thành một lớp compositor mãi mãi — đo #303: 80–120 lớp, mỗi khung có gì đổi là xếp lớp + đẩy khung
+           tốn theo số lớp. Opacity vẫn ghi inline: CSS ẩn sẵn khối (.js .slot [data-b] { opacity: 0 }). */
+        const rest = m.x.x === 0 && m.y.x === 0 && m.s.x === 1 && m.r.x === 0 && (o === 0 || o === 1);
+        el.style.transform = rest ? '' : 'translate3d(' + m.x.x.toFixed(2) + 'px,' + m.y.x.toFixed(2) + 'px,0) scale(' + m.s.x.toFixed(4) + ') rotate(' + m.r.x.toFixed(2) + 'deg)';
+        el.style.opacity = o.toFixed(3);
       } };
       m.x = new Spring(0, 0.2, m); m.y = new Spring(0, 0.2, m); m.s = new Spring(1, 0.0005, m);
       m.r = new Spring(0, 0.02, m); m.o = new Spring(1, 0.002, m);
@@ -159,12 +164,44 @@
   const top = $('.top');
   /* Vị trí cuộn đọc MỘT lần mỗi sự kiện ở đây (bộ nghe đăng ký đầu tiên); fx.js dùng lại view.y. Mỗi lần đọc scrollY
      sau khi vừa ghi kiểu đều ép trình duyệt tính lại kiểu + bố cục — nhiều bộ nghe đọc xen kẽ là ép nhiều lần mỗi khung. */
-  const view = { y: scrollY };
-  const onScroll = () => { view.y = scrollY; top.classList.toggle('scrolled', view.y > 24); };
+  const view = { y: scrollY, t: 0 };
+  const onScroll = () => { view.y = scrollY; view.t = performance.now(); top.classList.toggle('scrolled', view.y > 24); };
+
+  /* Việc không gấp (#303): chờ màn mở đầu chạy xong (afterIntro), rồi làm từng phần trong lúc rảnh, không chen vào lúc
+     người xem đang cuộn (idleEach). Lúc tải trang luồng chính chỉ lo đúng những gì đang ở trên màn hình. */
+  let introDone = false;
+  const introQ = [];
+  function afterIntro(fn) { if (introDone) fn(); else introQ.push(fn); }
+  /* Việc đã hoãn chạy từng phần lúc rảnh, không dồn một mạch đúng lúc màn mở đầu vừa xong (đo #303: ~300 ms ở CPU ×4). */
+  function finishIntro() { if (introDone) return; introDone = true; idleEach(introQ.splice(0), (f) => f()); }
+  /* Không có requestIdleCallback (Safari): hẹn giờ + hạn 12 ms tự đo, để vẫn làm từng phần chứ không dồn một mạch. */
+  const idleCb = window.requestIdleCallback
+    ? (f) => requestIdleCallback(f, { timeout: 4000 })
+    : (f) => setTimeout(() => { const end = performance.now() + 12; f({ timeRemaining: () => Math.max(0, end - performance.now()), didTimeout: false }); }, 120);
+  function idleEach(list, fn, max) {
+    const q = list.slice(), born = performance.now();
+    const step = (dl) => {
+      /* Đang cuộn thì hoãn — nhưng không quá 6 s (cuộn mãi thì vẫn phải xong). */
+      if (performance.now() - view.t < 300 && !dl.didTimeout && performance.now() - born < 6000) { idleCb(step); return; }
+      let n = 0;
+      while (q.length && n < (max || Infinity)) {
+        /* Một việc hỏng không được kéo theo cả hàng đợi: báo lỗi ra ngoài rồi làm tiếp. */
+        try { fn(q.shift()); } catch (err) { setTimeout(() => { throw err; }); }
+        n++; if (!(dl.timeRemaining() > 8)) break;
+      }
+      if (q.length) idleCb(step);
+    };
+    if (q.length) idleCb(step);
+  }
   addEventListener('scroll', onScroll, { passive: true }); onScroll();
 
+  /* Lenis (cuộn mượt cho con lăn chuột) nằm ngay trong trang (assets/lenis.min.js, MIT) và chỉ tải khi có chuột: trên màn
+     chạm nó không làm gì (Lenis không làm mượt cú vuốt). Trước #303 nó tải từ unpkg bằng thẻ defer ĐỨNG ĐẦU chuỗi script:
+     cả trang (site.js, fx.js…) phải chờ một máy chủ bên ngoài trả lời rồi mới chạy — mạng điện thoại chậm là trang đứng
+     trơ, quá 3,5 s thì hiện thô không hiệu ứng. */
   let lenis = null, wakeLenis = () => {};
-  if (!reduced && window.Lenis && matchMedia('(pointer: fine)').matches) {
+  function startLenis() {
+    if (!window.Lenis || lenis) return;
     lenis = new window.Lenis({ lerp: 0.12, wheelMultiplier: 0.95 });
     /* Nhịp rAF của Lenis chỉ chạy khi đang cuộn: chạy mãi thì trang đứng yên vẫn đòi 60 khung/giây (đo: ~8% một nhân).
        Đánh thức thì xoá mốc thời gian cũ (lenis.time) để khung đầu không coi cả quãng nghỉ là một bước. */
@@ -173,6 +210,10 @@
     wakeLenis = () => { still = 0; if (!lr) { lenis.time = 0; lr = requestAnimationFrame(tick); } };
     ['wheel', 'touchstart', 'keydown', 'pointerdown', 'scroll'].forEach((ev) => addEventListener(ev, wakeLenis, { passive: true }));
     wakeLenis();
+  }
+  if (!reduced && matchMedia('(pointer: fine)').matches) {
+    if (window.Lenis) startLenis();
+    else { const ls = d.createElement('script'); ls.src = 'assets/lenis.min.js'; ls.async = true; ls.onload = startLenis; d.head.appendChild(ls); }
   }
   $$('a[href^="#"]').forEach((a) => a.addEventListener('click', (e) => {
     const id = a.getAttribute('href');
@@ -275,9 +316,15 @@
   }
 
   /* ---------- Mô phỏng 1: độ phân giải kết xuất ---------- */
-  const polar = new Image();
-  polar.decoding = 'async';
-  polar.src = 'assets/polar.webp';
+  /* Ảnh tĩnh của màn game: vẽ khi chưa (hoặc không) có game chạy thật. Trước #303 tạo ngay lúc tải và drawImage bắt luồng
+     chính giải mã ảnh 1600×720 giữa lúc trang đang dựng; nay chỉ tạo khi mô phỏng được dựng (tới gần) và giải mã trước
+     bằng decode() — cùng địa chỉ với <img class="game-img"> nên không tải thêm. */
+  let polar = null;
+  const stillImage = (onReady) => {
+    if (!polar) { polar = new Image(); polar.decoding = 'async'; polar.src = 'assets/polar.webp'; }
+    const go = () => (polar.decode ? polar.decode() : Promise.resolve()).catch(() => {}).then(onReady);
+    if (polar.complete && polar.naturalWidth) go(); else polar.addEventListener('load', go, { once: true });
+  };
 
   function resDemo(sc) {
     const scr = $('.scr', sc), cv = $('.game-cv', sc), ctx = cv.getContext('2d');
@@ -376,7 +423,7 @@
     if (PR) PR.onReady(() => draw());
     function draw() {
       const live = PR && PR.ready() && !reduced;
-      if ((!live && (!polar.complete || !polar.naturalWidth)) || !cv.clientWidth) return;
+      if ((!live && (!polar || !polar.complete || !polar.naturalWidth)) || !cv.clientWidth) return;
       sizeCanvas();
       const W = cv.width, H = cv.height, s = clamp(eff.x, 0.2, 1);
       const lw = Math.max(16, Math.round(W * s)), lh = Math.max(8, Math.round(H * s));
@@ -418,7 +465,8 @@
     sw.addEventListener('sw', (e) => { on = e.detail; card.classList.toggle('off', !on); setVal(val); });
     segInit($('.seg-demo', sc), 'mode', (m) => { mode = m; scr.classList.toggle('full', m === 'full'); setVal(val); draw(); });
     if ('ResizeObserver' in window) new ResizeObserver(draw).observe(cv);
-    polar.addEventListener('load', draw);
+    /* Ảnh tĩnh vẽ trước trong lúc atlas game chưa sẵn (hoặc tải hỏng); có game thì game thay ngay khung sau. */
+    stillImage(draw);
     refreshers.push(() => setVal(val));
     setVal(70);
     return {
@@ -1101,15 +1149,25 @@
   const DEMOS = { res: resDemo, freeze: fzDemo, mon: monDemo, play: playDemo, rep: repDemo };
   /* Mô phỏng nào đổi chiều cao (thẻ xổ ra) gọi refit(màn, phần cao thêm) để sân khấu máy tính co lại cho vừa. */
   let refit = () => {};
+  /* chapMorph (bên dưới) gán: dựng phần biến hình của chương NGAY TRƯỚC khi nó sáng lên, để chương nào sáng cũng được biến
+     hình từ dáng thường — kể cả khi sáng sớm hơn lúc dựng sẵn (cuộn vào câu chuyện khi màn mở đầu chưa xong, mở link giữa
+     trang). Review #303. */
+  let morphReady = () => {};
   const stage = $('.stage'), deskMQ = matchMedia('(min-width: 1024px)');
   const screens = {};
+  /* Mô phỏng của từng chương dựng LÚC CẦN (#303), không dựng cả năm lúc tải: dựng một mô phỏng là dựng DOM cửa sổ nổi, biểu
+     đồ, canvas game, đọc bố cục… — đo trên điện thoại giả lập (CPU ×4): cả năm cùng lúc chặn luồng chính hàng trăm ms đúng
+     lúc tiêu đề mở đầu đang nở. Nay: chương tới gần (cách 1,5 màn) thì dựng; còn lại dựng dần lúc rảnh sau màn mở đầu.
+     HTML tĩnh đã mang sẵn trạng thái đầu của từng màn nên dựng muộn không đổi thứ người xem thấy. */
   $$('.chap').forEach((c) => {
     const el = $('.screen', c), key = c.dataset.screen;
     const fit = d.createElement('div'); fit.className = 'fit';
     while (el.firstChild) fit.appendChild(el.firstChild);
     el.appendChild(fit);
-    screens[key] = { key, el, fit, chap: c, slot: $('.slot', c), blocks: $$('[data-b]', fit), timers: [], demo: DEMOS[key](el), seen: false };
+    screens[key] = { key, el, fit, chap: c, slot: $('.slot', c), blocks: $$('[data-b]', fit), timers: [], seen: false, made: null,
+      get demo() { return this.made || (this.made = DEMOS[key](el)); } };
   });
+  const prepDemos = (list) => list.forEach((sc) => { void sc.demo; });
   /* Hướng bay vào của từng khối; khi rời đi khối bay tiếp theo hướng ngược lại (OUT). */
   const FROM = { up: { y: 70, s: 0.94 }, left: { x: -150, r: -5, s: 0.96 }, right: { x: 160, r: 4, s: 0.94 }, zoom: { s: 0.84, y: 30 }, fade: { y: 16 } };
   const OUT = { up: { y: -50, s: 0.95 }, left: { x: -110, r: -3, s: 0.96 }, right: { x: 120, r: 3, s: 0.95 }, zoom: { s: 1.05, y: -20 }, fade: { y: -12 } };
@@ -1125,6 +1183,8 @@
   }
   refit = (el, extra) => { const sc = Object.values(screens).find((x) => x.el === el); if (sc && active === sc.key) fitScreen(sc, extra, true); };
   function enter(sc, delay) {
+    /* Dựng mô phỏng (nếu chưa) TRƯỚC khi đo khung để co sân khấu: mô phỏng thêm cửa sổ nổi, biểu đồ… vào màn. */
+    void sc.demo;
     sc.timers.forEach(clearTimeout); sc.timers = [];
     sc.el.classList.add('on');
     fitScreen(sc);
@@ -1138,7 +1198,7 @@
   }
   function exit(sc) {
     sc.timers.forEach(clearTimeout); sc.timers = [];
-    sc.demo.stop();
+    if (sc.made) sc.made.stop();
     if (reduced) { sc.el.classList.remove('on'); return; }
     sc.blocks.slice().reverse().forEach((b, i) => sc.timers.push(setTimeout(() => {
       go(b, Object.assign({ x: 0, y: 0, s: 1, r: 0 }, OUT[b.dataset.b] || OUT.up, { o: 0 }), SPEC.exit, SPEC.effects);
@@ -1151,6 +1211,7 @@
     const prev = active && screens[active];
     active = key;
     /* Chương đang xem sáng lên, các chương khác lùi lại; ánh nền sau sân khấu đổi tông theo chương. */
+    morphReady(screens[key].chap);
     Object.values(screens).forEach((sc) => sc.chap.classList.toggle('chap-on', sc.key === key));
     pulseMark(screens[key]);
     stage.dataset.tone = key;
@@ -1165,7 +1226,7 @@
     const desk = deskMQ.matches;
     [bandIO, stageIO, slotIO, chapIO].forEach((o) => o && o.disconnect());
     Object.values(screens).forEach((sc) => {
-      sc.timers.forEach(clearTimeout); sc.timers = []; sc.demo.stop();
+      sc.timers.forEach(clearTimeout); sc.timers = []; if (sc.made) sc.made.stop();
       sc.el.classList.remove('on'); sc.chap.classList.remove('chap-on');
       const target = desk ? stage : sc.slot;
       if (sc.el.parentNode !== target) target.appendChild(sc.el);
@@ -1197,7 +1258,7 @@
         const sc = screens[e.target.dataset.key];
         if (e.isIntersecting) {
           if (!sc.seen) { sc.seen = true; enter(sc, 0); } else sc.demo.start();
-        } else sc.demo.stop();
+        } else if (sc.made) sc.made.stop();
       }), { threshold: 0.22 });
       Object.values(screens).forEach((sc) => { sc.el.dataset.key = sc.key; slotIO.observe(sc.el); });
       /* Điện thoại không có sân khấu dính: chương sáng lên (số nền + huy hiệu) khi phần chữ của nó tới giữa màn hình. */
@@ -1206,13 +1267,23 @@
         /* Sáng rồi thì giữ: điện thoại không làm mờ chương cũ, và biến hình trục chữ (số nền, tên chương) chỉ chạy lần đầu —
            cuộn qua lại không dựng lại phông cỡ lớn mỗi lượt. */
         if (!e.isIntersecting || sc.chap.classList.contains('chap-on')) return;
-        pulseMark(sc); sc.chap.classList.add('chap-on');
+        morphReady(sc.chap); pulseMark(sc); sc.chap.classList.add('chap-on');
       }), { rootMargin: '-30% 0px -30% 0px' });
       Object.values(screens).forEach((sc) => chapIO.observe($('.chap-in', sc.chap)));
     }
   }
   place();
   deskMQ.addEventListener('change', place);
+  if ('IntersectionObserver' in window) {
+    const near = new IntersectionObserver((es) => es.forEach((e) => {
+      if (!e.isIntersecting) return;
+      near.unobserve(e.target);
+      /* Chưa xong màn mở đầu thì chờ (cuộn thẳng tới chương thì enter() tự dựng ngay khi cần). */
+      afterIntro(() => prepDemos(Object.values(screens).filter((sc) => sc.chap === e.target)));
+    }), { rootMargin: '150% 0px' });
+    Object.values(screens).forEach((sc) => near.observe(sc.chap));
+  }
+  afterIntro(() => idleEach(Object.values(screens), (sc) => { void sc.demo; }));
   /* Cả phần câu chuyện khuất khỏi màn → quầng màu sau chương thôi trôi (site.css .story.off-view). */
   if ('IntersectionObserver' in window) new IntersectionObserver((es) => es.forEach((e) => e.target.classList.toggle('off-view', !e.isIntersecting))).observe($('.story'));
   let rT = 0;
@@ -1299,8 +1370,10 @@
     /* Khung vẽ chung cho mọi số, cả căn trái (máy tính) lẫn căn phải (điện thoại): quét mọi mốc + đoạn vượt của lò xo.
        Số chương có dạng "0N" (01–05): mép trái lấy từ nét "0", phần nhô quá bước tiến lấy từ chữ số sau. Thêm số dạng
        khác (vd. "10") thì phải quét thêm cặp đó — chương nào thiếu dữ liệu nét vẫn tự về số chữ cũ. */
-    let box = null;
-    if (G) {
+    let box = null, boxDone = false;
+    const getBox = () => {
+      if (boxDone || !G) return box;
+      boxDone = true;
       let x0 = 0, x1 = 0, y0 = 0, y1 = 0, XR = 0;
       const frames = (g) => g.p.concat([g.p[K - 1].map((v, i) => v + (v - g.p[K - 2][i]) * 0.64)]);
       Object.keys(G).forEach((ch) => {
@@ -1314,37 +1387,48 @@
         }
       });
       const P = 60;
-      box = { x0: x0 - P, y0: y0 - P, x1: XR + x1 + P, y1: y1 + P, XR };
-    }
+      return (box = { x0: x0 - P, y0: y0 - P, x1: XR + x1 + P, y1: y1 + P, XR });
+    };
     const em = (v) => (v / UPM).toFixed(4) + 'em';
     const alignEnd = () => !deskMQ.matches;
 
     /* Chữ nhấn tên chương: dáng thường (chương chưa tới) → dáng nhấn .x-c/.x-t/.x-w. Đọc từ CSS để một nguồn sự thật. */
     const XN = 24, AX = ['wght', 'wdth', 'slnt', 'ROND'];
     const fvOf = (cs) => { const o = { wght: parseFloat(cs.fontWeight) || 400, wdth: 100, slnt: 0, ROND: 0 }; cs.fontVariationSettings.replace(/["'](\w{4})["']\s+(-?[\d.]+)/g, (_, k, v) => { o[k] = +v; }); return o; };
-    /* Mẫu đo đặt trong một chương CHƯA sáng: chữ data-x ở đó mang đúng dáng thường của CSS (.js .chap:not(.chap-on) …);
-       ba chữ .x-* thì mang dáng nhấn. Lúc này chưa chương nào sáng (place() vừa gỡ, IO báo ở khung sau). */
-    const probe = d.createElement('span'); probe.className = 'h3'; probe.style.cssText = 'position:absolute;visibility:hidden;left:0;top:0';
-    probe.innerHTML = '<span data-x="p">a</span><span class="x-c">a</span><span class="x-t">a</span><span class="x-w">a</span>';
-    (chaps.find((c) => !c.classList.contains('chap-on')) || d.body).appendChild(probe);
-    const pcs = getComputedStyle(probe), pfs = parseFloat(pcs.fontSize) || 1, ps = getComputedStyle($('[data-x="p"]', probe));
-    const plain = fvOf(ps), plainLs = (parseFloat(ps.letterSpacing) || 0) / pfs;
-    const TB = {};
-    ['c', 't', 'w'].forEach((s) => {
-      const cs = getComputedStyle($('.x-' + s, probe)), e = fvOf(cs), ls = (parseFloat(cs.letterSpacing) || 0) / pfs;
-      TB[s] = [];
-      for (let k = 0; k <= XN; k++) {
-        const u = k / XN;
-        TB[s].push({
-          fv: AX.map((a) => "'" + a + "' " + +lerp(plain[a], e[a], u).toFixed(a === 'wght' ? 0 : 1)).join(', '),
-          ls: lerp(plainLs, ls, u).toFixed(4) + 'em',
-        });
-      }
-    });
-    probe.remove();
+    /* Mẫu đo đặt trong một khung .chap GIẢ (ẩn, không sáng): chữ data-x ở đó mang đúng dáng thường của CSS
+       (.js .chap:not(.chap-on) …); ba chữ .x-* thì mang dáng nhấn. Khung giả nên không phụ thuộc chương nào đang sáng —
+       bảng được tính lúc cần (#303), khi đó có thể đã có chương sáng. */
+    let TB = null;
+    const table = () => {
+      if (TB) return TB;
+      const host = d.createElement('div'); host.className = 'chap'; host.setAttribute('aria-hidden', 'true');
+      host.style.cssText = 'position:absolute;visibility:hidden;left:0;top:0;width:0;height:0;min-height:0;padding:0;overflow:hidden';
+      const probe = d.createElement('span'); probe.className = 'h3';
+      probe.innerHTML = '<span data-x="p">a</span><span class="x-c">a</span><span class="x-t">a</span><span class="x-w">a</span>';
+      host.appendChild(probe); d.body.appendChild(host);
+      const pcs = getComputedStyle(probe), pfs = parseFloat(pcs.fontSize) || 1, ps = getComputedStyle($('[data-x="p"]', probe));
+      const plain = fvOf(ps), plainLs = (parseFloat(ps.letterSpacing) || 0) / pfs;
+      TB = {};
+      ['c', 't', 'w'].forEach((s) => {
+        const cs = getComputedStyle($('.x-' + s, probe)), e = fvOf(cs), ls = (parseFloat(cs.letterSpacing) || 0) / pfs;
+        TB[s] = [];
+        for (let k = 0; k <= XN; k++) {
+          const u = k / XN;
+          TB[s].push({
+            fv: AX.map((a) => "'" + a + "' " + +lerp(plain[a], e[a], u).toFixed(a === 'wght' ? 0 : 1)).join(', '),
+            ls: lerp(plainLs, ls, u).toFixed(4) + 'em',
+          });
+        }
+      });
+      host.remove();
+      return TB;
+    };
 
-    chaps.forEach((chap, i) => {
-      const p = { chap, on: chap.classList.contains('chap-on') };
+    /* Dựng phần biến hình của MỘT chương — lúc chương tới gần (cách 1,5 màn) hoặc lúc rảnh sau màn mở đầu (#303). */
+    const setup = (chap) => {
+      if (chap.cryoMorph) return;
+      const i = chaps.indexOf(chap), TB = table(), box = getBox();
+      const p = chap.cryoMorph = { chap, on: chap.classList.contains('chap-on') };
       /* Số nền SVG — thiếu dữ liệu nét cho chữ số nào thì giữ số chữ cũ (CSS steps). */
       const bg = $('.chap-bg', chap), str = bg && bg.textContent.trim();
       if (box && /^0[1-9]$/.test(str || '') && G[str[1]]) {
@@ -1377,25 +1461,47 @@
         p.num = n;
         deskMQ.addEventListener('change', () => n.touch());
       }
-      /* Chữ nhấn tên chương (cả hai thứ tiếng). Lò xo chạy liên tục, trục đổi theo nấc của bảng. */
-      const xs = $$('.h3 [data-x]', chap).filter((el) => TB[el.dataset.x]);
+      /* Chữ nhấn tên chương (cả hai thứ tiếng). Lò xo chạy liên tục, trục đổi theo nấc của bảng. fx.js có thể tách tên chương
+         thành chữ cái (phình theo con trỏ) và dựng lại các span chữ nhấn (#303) — khi đó nó gọi p.redo() để tìm lại span và
+         ghi lại nấc hiện tại. Biến hình bắt đầu / xong thì báo cho fx.js (cryo:morph / cryo:morphed). */
+      const xsNow = () => $$('.h3 [data-x]', chap).filter((el) => TB[el.dataset.x]);
+      let xs = xsNow();
       if (xs.length) {
-        xs.forEach((el) => el.classList.add('xm'));
         let last = -1;
+        xs.forEach((el) => el.classList.add('xm'));
         const h = new Spring(p.on ? 1 : 0, 0.001, null);
         h.owner = owner(() => {
-          const k = Math.round(clamp(h.x, 0, 1) * XN); if (k === last) return; last = k;
-          xs.forEach((el) => { const v = TB[el.dataset.x][k]; el.style.fontVariationSettings = v.fv; el.style.letterSpacing = v.ls; });
+          const k = Math.round(clamp(h.x, 0, 1) * XN);
+          if (k !== last) {
+            last = k;
+            xs.forEach((el) => { const v = TB[el.dataset.x][k]; el.style.fontVariationSettings = v.fv; el.style.letterSpacing = v.ls; });
+          }
+          if (p.moving && h.x === h.t) { p.moving = false; chap.dispatchEvent(new CustomEvent('cryo:morphed', { detail: h.t === 1 })); }
         });
         h.set(h.x);
-        p.head = h; p.xs = xs;
+        p.head = h;
+        p.redo = () => { xs = xsNow(); xs.forEach((el) => el.classList.add('xm')); last = -1; h.touch(); };
       }
       p.go = (on) => {
         if (p.num) p.num.to(on ? 1 : 0, on ? SPEC.m3SlowSpatial : SPEC.m3Spatial);
-        if (p.head) p.head.to(on ? 1 : 0, on ? SPEC.m3SlowSpatial : SPEC.m3Spatial);
+        if (p.head) {
+          if (!p.moving) { p.moving = true; chap.dispatchEvent(new CustomEvent('cryo:morph')); }
+          p.head.to(on ? 1 : 0, on ? SPEC.m3SlowSpatial : SPEC.m3Spatial);
+        }
       };
       parts.push(p);
-    });
+    };
+    morphReady = setup;
+    if ('IntersectionObserver' in window) {
+      const near = new IntersectionObserver((es) => es.forEach((e) => {
+        if (!e.isIntersecting) return;
+        near.unobserve(e.target);
+        /* Chờ màn mở đầu xong; chương nào sáng sớm hơn thì morphReady đã dựng nó ngay trước lúc sáng. */
+        afterIntro(() => setup(e.target));
+      }), { rootMargin: '150% 0px' });
+      chaps.forEach((c) => near.observe(c));
+    } else chaps.forEach(setup);
+    afterIntro(() => idleEach(chaps, setup));
     const watch = new MutationObserver(() => parts.forEach((p) => {
       const on = p.chap.classList.contains('chap-on');
       if (on !== p.on) { p.on = on; p.go(on); }
@@ -1405,26 +1511,26 @@
     /* Dựng sẵn các bản phông của bảng nấc lúc rảnh: mỗi nấc một chữ ẩn cùng cỡ (.h3) chứa đủ ký tự của các chữ nhấn (để
        đủ cả bộ phông latin lẫn tiếng Việt). Vài nấc mỗi lượt rảnh, đọc offsetWidth để bố cục (= dựng phông) ngay lúc đó. */
     if (reduced) return;
-    const styles = [...new Set(parts.flatMap((p) => (p.xs || []).map((el) => el.dataset.x)))];
-    const chars = [...new Set(parts.flatMap((p) => (p.xs || []).map((el) => el.textContent)).join('').replace(/\s/g, ''))].join('');
-    const jobs = styles.flatMap((s) => TB[s].map((v) => v.fv));
-    if (!jobs.length) return;
-    const idle = window.requestIdleCallback || ((f) => setTimeout(() => f({ timeRemaining: () => 0 }), 60));
-    const warm = d.createElement('div'); warm.className = 'xm-warm'; warm.setAttribute('aria-hidden', 'true');
-    const step = (dl) => {
-      if (!warm.isConnected) d.body.appendChild(warm);
-      do {
+    /* Mỗi lượt rảnh MỘT nấc (#303: bản cũ dựng nhiều nấc một lượt, mỗi nấc là một lần bố cục + dựng phông, lượt rảnh bị
+       kéo dài quá hạn), chỉ sau màn mở đầu và không chen vào lúc đang cuộn (idleEach). */
+    const xsAll = $$('.chap .h3 [data-x]').filter((el) => ['c', 't', 'w'].includes(el.dataset.x));
+    if (!xsAll.length) return;
+    const chars = [...new Set(xsAll.map((el) => el.textContent).join('').replace(/\s/g, ''))].join('');
+    afterIntro(() => {
+      const TB = table();
+      const jobs = [...new Set(xsAll.map((el) => el.dataset.x))].flatMap((s) => TB[s].map((v) => v.fv));
+      const warm = d.createElement('div'); warm.className = 'xm-warm'; warm.setAttribute('aria-hidden', 'true');
+      idleEach(jobs, (fv) => {
+        if (!warm.isConnected) d.body.appendChild(warm);
         /* span (không phải i): <i> nghiêng mặc định → bản phông khác (nghiêng giả), không trúng bộ đệm. */
-        const el = d.createElement('span'); el.className = 'h3'; el.dataset.w = chars; el.style.fontVariationSettings = jobs.shift();
+        const el = d.createElement('span'); el.className = 'h3'; el.dataset.w = chars; el.style.fontVariationSettings = fv;
         warm.appendChild(el); void warm.offsetWidth;
-      } while (jobs.length && dl.timeRemaining() > 4);
-      if (jobs.length) idle(step);
-    };
-    addEventListener('load', () => setTimeout(() => idle(step), 1200), { once: true });
+      }, 1);
+    });
   })();
 
   /* Lớp hiệu ứng fx.js dùng chung lò xo, hình khối và trạng thái ngôn ngữ với trang. */
-  window.CryoMotion = { Spring, SPEC, owner, mo, go, put, reduced, lang, refreshers, clamp, lerp, SHAPES, shapePts, morphPath, view, $, $$ };
+  window.CryoMotion = { Spring, SPEC, owner, mo, go, put, reduced, lang, refreshers, clamp, lerp, SHAPES, shapePts, morphPath, view, $, $$, afterIntro, idleEach };
 
   /* ---------- Mở đầu: một nhịp duy nhất khi tải trang ---------- */
   function intro() {
@@ -1457,8 +1563,14 @@
   })();
 
   const fontsReady = d.fonts && d.fonts.ready ? d.fonts.ready : Promise.resolve();
-  Promise.race([fontsReady, new Promise((r) => setTimeout(r, 900))]).then(() => {
+  /* Chờ cả DOMContentLoaded: sự kiện này chỉ tới SAU khi mọi script defer (cả fx.js) đã chạy. Phông đã có sẵn (vào lại
+     trang, bộ nhớ đệm) thì fonts.ready xong ngay sau site.js — mở đầu chạy trước khi fx.js kịp nghe 'cryo:intro', tiêu đề
+     mất màn nở chữ (#303). */
+  const dclDone = () => { const n = performance.getEntriesByType && performance.getEntriesByType('navigation')[0]; return !!(n && n.domContentLoadedEventStart); };
+  const domReady = new Promise((r) => { if (dclDone()) r(); else d.addEventListener('DOMContentLoaded', () => r(), { once: true }); });
+  Promise.race([fontsReady, new Promise((r) => setTimeout(r, 900))]).then(() => domReady).then(() => {
     intro();
     root.classList.add('booted');
+    setTimeout(finishIntro, reduced ? 0 : 1800);
   });
 })();

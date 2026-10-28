@@ -7,6 +7,11 @@
   const M = window.CryoMotion;
   if (!M) return;
   const { Spring, SPEC, owner, go, put, reduced, clamp, lerp, SHAPES, shapePts, morphPath, $, $$ } = M;
+  const afterIntro = M.afterIntro || ((f) => f());
+  /* Đang nằm trong màn hình ngay lúc này → làm luôn, không chờ màn mở đầu (mở trang giữa chừng, link tới cuối trang): chờ
+     thì chữ hiện trơ vài giây rồi mới ẩn đi để nở. */
+  const onScreen = (el) => { const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; };
+  const soon = (el, fn) => (onScreen(el) ? fn() : afterIntro(fn));
   const d = document, root = d.documentElement;
   const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
   const shown = (el) => !!el && el.getClientRects().length > 0;
@@ -26,7 +31,9 @@
      Trình đọc màn hình đọc bản .sr nguyên câu; bản tách bị ẩn khỏi cây truy cập. */
   /* Chữ nằm trong phần tử có data-x (kiểu chữ nhấn, bảng STY) giữ kiểu đó: từng CHỮ CÁI mang lớp x-<kiểu> và nhớ kiểu
      (k.xs). Từ cắt theo dấu cách, nên dấu câu ngay sau phần tử nhấn vẫn dính vào từ (không chèn thêm dấu cách). */
-  function split(el, withSr) {
+  /* keepX (tên chương): chữ nhấn nằm trong một span [data-x] dựng lại trong từ, chữ cái thừa kế dáng của span đó — site.js
+     (chapMorph) biến hình span theo lúc chương sáng/tắt, như với chữ gốc chưa tách. */
+  function split(el, withSr, keepX) {
     const toks = [];
     const walk = (node, x) => node.childNodes.forEach((n) => {
       if (n.nodeType === 3) toks.push([n.textContent, x]);
@@ -50,7 +57,11 @@
     const words = [], letters = [], xs = [];
     ws0.forEach((w) => {
       const ws = d.createElement('span'); ws.className = 'kw';
-      w.parts.forEach(([s, x]) => graphemes(s).forEach((ch) => { const c = d.createElement('span'); c.className = 'kc' + (x ? ' x-' + x : ''); c.textContent = ch; ws.appendChild(c); letters.push(c); xs.push(x); }));
+      w.parts.forEach(([s, x]) => {
+        let host = ws;
+        if (keepX && x) { host = d.createElement('span'); host.className = 'x-' + x; host.dataset.x = x; ws.appendChild(host); }
+        graphemes(s).forEach((ch) => { const c = d.createElement('span'); c.className = 'kc' + (x && !keepX ? ' x-' + x : ''); c.textContent = ch; host.appendChild(c); letters.push(c); xs.push(x); });
+      });
       words.push(ws);
     });
     el.appendChild(vis);
@@ -88,7 +99,8 @@
        bị huy hiệu đè lên. Đặt luôn bề rộng = từ đầu tới hết từ cuối của dòng. */
     const box = lines.map((l) => {
       const ws = l.querySelectorAll('.kw'), a = ws[0].getBoundingClientRect(), b = ws[ws.length - 1].getBoundingClientRect();
-      return [Math.ceil(b.right - a.left) + 1, l.offsetHeight];
+      /* Chiều cao thật (lẻ), không offsetHeight (làm tròn): khoá dòng không được xô phần bên dưới nửa điểm ảnh. */
+      return [Math.ceil(b.right - a.left) + 1, l.getBoundingClientRect().height];
     });
     lines.forEach((l, i) => { l.style.width = box[i][0] + 'px'; l.style.height = box[i][1] + 'px'; l.classList.add('kl-c'); });
     k.locked = true;
@@ -112,7 +124,7 @@
   /* Kiểu của từng chữ cái: chữ thường lấy theo khối (opt), chữ nhấn theo STY. z = điểm xuất phát lúc "nở". */
   const styleOf = (x, opt) => {
     const S = x && STY[x];
-    if (!S) return { x: '', b: [opt.w0, opt.d0, 0], e: [opt.w1, opt.d1, 0], z: [opt.w0a, opt.d0a], r: 100 };
+    if (!S) return { x: '', b: [opt.w0, opt.d0, 0], e: [opt.w1, opt.d1, 0], z: [opt.w0a, opt.d0a], r: opt.r0 == null ? 100 : opt.r0 };
     return { x, b: S.b, e: S.e, z: [Math.min(S.b[0], opt.w0a), Math.min(S.b[1], opt.d0a)], r: S.r };
   };
   const fvOf = (w, dd, s, r) => "'wght' " + w + ", 'wdth' " + dd + ", 'slnt' " + (s || 0) + ", 'ROND' " + (r === undefined ? 100 : r);
@@ -306,7 +318,7 @@
      trỏ không ở gần (con trỏ gần thì phình theo con trỏ).
      Đo #302 (đầu trang đứng yên): cả dòng thở từng chữ cái + bậc mịn 366 ms/giây luồng chính; tắt hẳn 42. */
   const BREATH = { z: 0.92, k: 46 };
-  let breathOn = false, breathT = 0, bi = 0, scrolledAt = 0;
+  let breathOn = false, breathT = 0, bi = 0, scrolledAt = 0, prePinT = 0;
   addEventListener('scroll', () => { scrolledAt = performance.now(); }, { passive: true });
   const breathe = () => {
     breathT = 0;
@@ -332,30 +344,111 @@
     heroKs.forEach(({ k, kit }) => { if (lock(k)) { bloom(k, kit, delay, 26); delay += k.letters.length * 26 * 0.6; } });
     if (!reduced) io([$('.hero')], { threshold: 0.2 }, (el, on) => {
       breathOn = on;
-      if (on && !breathT) breathT = setTimeout(breathe, 2600);
+      if (on && !breathT) {
+        breathT = setTimeout(breathe, 2600);
+        /* Đo sẵn ô chữ (pin: ~11 lần bố cục với trục khác nhau) lúc rảnh, không dồn vào đúng khung chữ bắt đầu thở. */
+        if (M.idleEach && !prePinT) prePinT = setTimeout(() => { prePinT = 0; M.idleEach(heroKs, (x) => { if (!x.k.busy && !x.k.slot && breathOn) pin(x.k, HERO); }, 1); }, 1500);
+      }
     });
   });
 
   /* Tiêu đề mục: nở khi cuộn tới. */
+  /* Tách chữ LÚC CẦN (#303): bản cũ tách mọi tiêu đề (cả hai thứ tiếng) thành từng chữ cái ngay lúc tải — hàng nghìn phần
+     tử + đọc bố cục, chặn luồng chính đúng lúc màn mở đầu đang chạy. Nay tiêu đề tới gần (cách một màn) thì tách và ẩn sẵn
+     (sau màn mở đầu), cuộn tới thì nở như cũ. Giảm chuyển động: không có hiệu ứng nào cần tách → giữ nguyên chữ. */
   const H2 = { w0a: 300, w0: 580, w1: 760, d0a: 75, d0: 100, d1: 110, reach: 1.2, tint: true };
   const headKs = [];
-  $$('.h2').forEach((h) => {
+  const reveal = (h) => headKs.filter((x) => x.h === h && !x.done).forEach((x) => {
+    x.done = true;
+    if (lock(x.k)) bloom(x.k, x.kit, 0, 18); else x.k.words.forEach((w) => put(w, { o: 1 }));
+  });
+  const prepHead = (h) => {
+    if (h.cryoSplit) return;
+    h.cryoSplit = true;
     const parts = $$('[lang]', h);
     (parts.length ? parts : [h]).forEach((p) => {
       const k = split(p), kit = letterKit(k, H2);
       headKs.push({ h, k, kit, done: false });
       swell(k, kit, H2);
+      if (shown(k.vis)) k.words.forEach((w) => put(w, { o: 0 }));
     });
-  });
+  };
   if (!reduced) {
-    headKs.forEach((x) => { if (shown(x.k.vis)) x.k.words.forEach((w) => put(w, { o: 0 })); });
-    io($$('.h2'), { threshold: 0.3, rootMargin: '0px 0px -6% 0px' }, (h, on, o) => {
+    const h2s = $$('.h2');
+    /* Hai bộ quan sát theo đúng thứ tự tạo: "tới gần" luôn báo trước "đã thấy" trong cùng một khung. */
+    io(h2s, { rootMargin: '100% 0px' }, (h, on, o) => {
       if (!on) return;
       if (o) o.unobserve(h);
-      headKs.filter((x) => x.h === h && !x.done).forEach((x) => {
-        x.done = true;
-        if (lock(x.k)) bloom(x.k, x.kit, 0, 18); else x.k.words.forEach((w) => put(w, { o: 1 }));
+      soon(h, () => {
+        if (h.cryoSplit) return;
+        /* Lúc tách mà tiêu đề đã nằm trong màn (cuộn nhanh khi mở đầu chưa xong): nở luôn thay vì ẩn rồi chờ. */
+        const r = h.getBoundingClientRect(), inView = r.bottom > 0 && r.top < innerHeight * 0.94;
+        prepHead(h);
+        if (inView) reveal(h);
       });
+    });
+    io(h2s, { threshold: 0.3, rootMargin: '0px 0px -6% 0px' }, (h, on, o) => {
+      if (!on) return;
+      if (o) o.unobserve(h);
+      prepHead(h);
+      reveal(h);
+    });
+  }
+
+  /* ================= Tên chương + tiêu đề vừa: phình theo con trỏ =================
+     User #303: "tiêu đề các chương cũng có hiệu ứng như thế, cũng như mấy tiêu đề lớn khác" — chữ phình theo chuột + con
+     trỏ thành thấu kính khi nằm trên chữ (lớp .fx-h). Chỉ khi có chuột: màn chạm không rê được nên không tách, không tốn
+     gì. Không "nở" khi cuộn tới: tên chương đã có màn biến hình riêng lúc chương sáng (site.js chapMorph), các tiêu đề vừa
+     vốn đứng yên. Trục gốc đọc từ CSS của chính tiêu đề (mỗi loại một cỡ, một độ tròn) để lúc bắt đầu phình không nhảy.
+     Thẻ PRO bỏ qua: chữ tô dải màu bằng background-clip:text, tách thành chữ cái có transform là mất màu. */
+  const swellKs = [];
+  const axesOf = (el) => {
+    const cs = getComputedStyle(el), o = { wght: parseFloat(cs.fontWeight) || 400, wdth: 100, ROND: 0 };
+    cs.fontVariationSettings.replace(/["'](\w{4})["']\s+(-?[\d.]+)/g, (_, a, v) => { o[a] = +v; });
+    return o;
+  };
+  /* Tên chương: chữ nhấn đổi dáng theo chương (thường ↔ nhấn). Lúc đang biến hình thì khoá phình + trả dòng về bố cục
+     thường (chữ rộng/hẹp ra thì xuống dòng lại được); biến hình xong thì lấy dáng mới làm gốc và khoá dòng lại. */
+  function chapKit(x, chap) {
+    const k = x.k;
+    let morphing = false;
+    const restyle = (on) => x.kit.forEach((L, i) => { L.st = styleOf(on ? k.xs[i] : '', x.opt); L.ws = L.st.b[2]; L.w = L.wd = 0; });
+    const m = chap.cryoMorph;
+    if (m && m.moving) { morphing = true; k.busy++; }
+    restyle(chap.classList.contains('chap-on'));
+    if (m && m.redo) m.redo();
+    chap.addEventListener('cryo:morph', () => {
+      if (!morphing) { morphing = true; k.busy++; }
+      x.s.hot = false; x.s.fs = 0;
+      unpin(k); x.kit.forEach((L) => L.u.set(0));
+      if (k.locked) unlock(k);
+    });
+    chap.addEventListener('cryo:morphed', (e) => {
+      if (morphing) { morphing = false; k.busy--; }
+      restyle(!!e.detail);
+      if (!k.busy) lock(k);
+    });
+  }
+  function prepSwell(h) {
+    if (h.cryoSplit) return;
+    h.cryoSplit = true;
+    h.classList.add('fx-h');
+    const chap = h.closest('.chap'), parts = $$(':scope > [lang]', h);
+    (parts.length ? parts : [h]).forEach((p) => {
+      const a = axesOf(p), fs = parseFloat(getComputedStyle(p).fontSize) || 24;
+      const opt = { w0: a.wght, w0a: a.wght, w1: Math.min(1000, a.wght + 180), d0: a.wdth, d0a: a.wdth, d1: Math.min(151, a.wdth + 10), r0: a.ROND, reach: Math.max(1.2, 64 / fs), tint: true };
+      const k = split(p, true, !!chap), kit = letterKit(k, opt), x = { h, k, kit, opt, done: true };
+      x.s = swell(k, kit, opt);
+      swellKs.push(x);
+      if (chap) chapKit(x, chap);
+      if (!k.busy) lock(k);
+    });
+  }
+  if (fine && !reduced) {
+    io($$('.chap .h3, .step h3, .plan:not(.plan-pro) h3, .privacy h3, .cm-h'), { rootMargin: '100% 0px' }, (h, on, o) => {
+      if (!on) return;
+      if (o) o.unobserve(h);
+      afterIntro(() => prepSwell(h));
     });
   }
 
@@ -363,7 +456,15 @@
   /* Chữ rất lớn: bậc trục mịn hơn (mỗi bậc wdth ở cỡ này là vài điểm ảnh) — chỉ 4 chữ cái nên dựng phông vẫn rẻ. */
   const FIN = { w0a: 300, w0: 330, w1: 800, d0a: 75, d0: 92, d1: 125, reach: 0.55, tint: false, sw: 4, sd: 0.5, pad: true, gap: 0.06 };
   const finEl = $('.fin-word');
+  /* Dựng lúc cần (#303): chữ cuối trang tới gần (cách một màn) mới tách + đo, không lúc tải. */
   if (finEl) {
+    io([finEl], { rootMargin: '100% 0px' }, (el, on, o) => { if (!on) return; if (o) o.unobserve(el); soon(el, makeFin); });
+    /* Lọt vào màn trước khi việc hoãn kịp chạy (cuộn nhanh xuống cuối khi màn mở đầu chưa xong) → dựng ngay. */
+    io([finEl], {}, (el, on, o) => { if (!on) return; if (o) o.unobserve(el); makeFin(); });
+  }
+  function makeFin() {
+    if (finEl.cryoSplit) return;
+    finEl.cryoSplit = true;
     const k = split(finEl, false), kit = letterKit(k, FIN);
     swell(k, kit, FIN);
     /* Dải màu tô TỪNG chữ cái (CSS .fin-word.split .kc), kéo dài bằng cả từ và dời theo chỗ của chữ đó, nên nhìn vẫn là
@@ -407,7 +508,7 @@
   /* Tiêu đề đang nở thì bỏ qua (đo lúc chữ đang hẹp là sai) và đánh dấu để khoá lại ngay khi nở xong. */
   let relockPending = false;
   const relock = () => {
-    heroKs.concat(headKs).forEach((x) => {
+    heroKs.concat(headKs, swellKs).forEach((x) => {
       if (!(x.k.locked || x.h === undefined || x.done)) return;
       if (x.k.busy) relockPending = true; else lock(x.k);
     });
@@ -422,12 +523,14 @@
 
   /* Liên kết đầu trang: rê vào thì chữ giãn rộng, đậm lên, đổi màu. Giữ sẵn chỗ bằng bề rộng lúc giãn để hàng không xô. */
   (function nav() {
-    const links = $$('.top-nav a');
-    const fit = () => links.forEach((a) => {
-      a.style.minWidth = ''; a.classList.add('wide');
-      const w = a.offsetWidth; a.classList.remove('wide');
-      if (w) a.style.minWidth = Math.ceil(w) + 'px';
-    });
+    const links = $$('.top-nav a'), nav = $('.top-nav');
+    /* Ghi hết → đọc hết → ghi hết: một lần bố cục thay vì mỗi liên kết một lần. Thanh ẩn (màn hẹp) thì khỏi đo. */
+    const fit = () => {
+      if (!nav || !shown(nav)) return;
+      links.forEach((a) => { a.style.minWidth = ''; a.classList.add('wide'); });
+      const ws = links.map((a) => a.offsetWidth);
+      links.forEach((a, i) => { a.classList.remove('wide'); if (ws[i]) a.style.minWidth = Math.ceil(ws[i]) + 'px'; });
+    };
     (d.fonts && d.fonts.ready ? d.fonts.ready : Promise.resolve()).then(fit);
     M.refreshers.push(fit);
     addEventListener('resize', later(fit, 200));
@@ -444,12 +547,26 @@
   (function cursor() {
     if (reduced) return;
     const mk = (cls) => { const e = d.createElement('div'); e.className = cls; e.setAttribute('aria-hidden', 'true'); const i = d.createElement('i'); e.appendChild(i); d.body.appendChild(e); return [e, i]; };
-    const [el, blob] = mk('m3-cursor'), [hel, ring] = mk('m3-cursor m3-halo');
+    /* Hai khối con trỏ chỉ được tạo ở lần vẽ đầu tiên — tức là khi có chuột thật. Màn chạm không bao giờ cần chúng (#303:
+       trước đây điện thoại vẫn mang hai lớp hoà trộn "difference" vô hình suốt trang). */
+    let el = null, blob = null, hel = null, ring = null;
+    const ensure = () => { if (!el) { [el, blob] = mk('m3-cursor'); [hel, ring] = mk('m3-cursor m3-halo'); } };
     if (fine) root.classList.add('cur-on');
     const HIT = 'a[href], button, summary, [role="switch"], [role="radio"], .ov, input[type="range"]';
     const MAG = '.btn, .top-nav a, .brand, .seg button, .swatches button, .play-badge, .foot-links a, .more summary, .rp-close';
     /* Chữ "Cryo" cuối trang không dùng thấu kính: để hiệu ứng phình chữ tự nói. */
-    const LENS = '.hero-h, .h2, .kin-row';
+    const LENS = '.hero-h, .h2, .kin-row, .fx-h';
+    /* Thấu kính CHỈ khi con trỏ nằm trên phần có chữ (user #303: rê ra khoảng trống bên phải tiêu đề mà con trỏ vẫn to —
+       khung tiêu đề rộng hết hàng). Tiêu đề đã tách: dòng chữ .kl rộng đúng bằng chữ, từ .kw; dải chữ chạy kín chữ cả hàng. */
+    const TEXT = '.kl, .kw, .kin-row';
+    /* Dòng chưa khoá (tên chương đang biến hình, tiêu đề đang nở): khoảng trắng giữa hai từ thuộc .kt — vẫn là chữ, không
+       để con trỏ co lại giữa các từ. Đã khoá thì không tính .kt: khoảng trống bên phải dòng cũng thuộc nó. */
+    const lensOf = (node) => {
+      const L = node.closest(LENS);
+      if (!L) return null;
+      const tx = node.closest(TEXT) || (node.classList && node.classList.contains('kt') && !node.querySelector('.kl') ? node : null);
+      return tx && L.contains(tx) ? L : null;
+    };
     const FOLLOW = { z: 0.82, k: 1100 }, SHRINK = { z: 0.92, k: 760 };
     /* Vùng có màu thật của ảnh huy hiệu Google Play (ảnh có lề trong suốt): [lề ngang, lề dọc, bán kính góc] theo tỉ lệ. */
     const BADGE = { vi: [0, 0.116, 0.13], en: [0.0635, 0.164, 0.137] };
@@ -510,6 +627,7 @@
       i.style.borderRadius = r.toFixed(1) + 'px';
     };
     function paint() {
+      ensure();
       const hw = Math.max(0, hW.x), hh = Math.max(0, hH.x), m = Math.min(hw, hh);
       /* Vòng và chấm là MỘT khối: vòng càng nhỏ viền càng dày, tới cỡ chấm thì đặc hẳn. Vòng bung ra từ chính cái chấm;
          rời nút thì thu lại (nảy) thành đúng cái chấm rồi mới trao chỗ cho khối âm bản — cùng cỡ, cùng chỗ nên không thấy
@@ -550,7 +668,7 @@
         if (tgt && mags.has(tgt)) magnet(tgt, 0, 0);
         tgt = t;
       }
-      lens = !t && !touch && node && node.closest ? node.closest(LENS) : null;
+      lens = !t && !touch && node && node.closest ? lensOf(node) : null;
     }
     /* Khung + bán kính THẬT của nút, đọc lại mỗi lần (nút bấm vuông góc lại, nút bật/tắt đổi dáng → con trỏ bám theo).
        Huy hiệu Google Play: lấy đúng vùng có màu của ảnh. Chữ/logo không viền: chừa lề và bo tối thiểu như một viên thuốc. */
@@ -880,7 +998,11 @@
        trên: JS theo sự kiện cuộn thì dải chữ giật trên điện thoại). Dịch = vị trí cuộn × 0.42, quấn vòng theo nửa dải
        (--kh) → số vòng trên cả dải cuộn --kn = 0.42 × quãng cuộn / nửa dải. JS chỉ còn nghiêng theo vận tốc. */
     const SDA = !!(window.CSS && CSS.supports && CSS.supports('animation-timeline: view()'));
+    /* Đo LÚC CẦN (#303): đọc scrollWidth ngay khi fx.js chạy bắt cả trang bố cục giữa lúc tải (đo: ~385 ms ở CPU ×4). Dải
+       chữ đứng yên (.kin chưa .live) tới khi gần màn hình, nên đo trong lần IO báo "gần" là đủ — lúc đó bố cục vừa tính. */
+    let measured = false;
     const measure = () => {
+      measured = true;
       const range = Math.max(1, d.documentElement.scrollHeight - innerHeight);
       rows.forEach((r) => {
         r.half = r.loop.scrollWidth / 2 || 1;
@@ -888,12 +1010,12 @@
         if (SDA) { r.tr.style.setProperty('--kh', r.half.toFixed(1) + 'px'); r.tr.style.setProperty('--kn', (0.42 * range / r.half).toFixed(3)); }
       });
     };
-    measure();
-    M.refreshers.push(measure);
-    addEventListener('resize', later(measure, 150));
-    (d.fonts && d.fonts.ready ? d.fonts.ready : Promise.resolve()).then(measure);
+    const remeasure = () => { if (measured) measure(); };
+    M.refreshers.push(remeasure);
+    addEventListener('resize', later(remeasure, 150));
+    (d.fonts && d.fonts.ready ? d.fonts.ready : Promise.resolve()).then(remeasure);
     /* Trang cao lên/thấp xuống (mở câu hỏi, bảng thiết bị) thì quãng cuộn đổi → số vòng đổi theo. */
-    if (SDA && 'ResizeObserver' in window) new ResizeObserver(later(measure, 200)).observe(d.body);
+    if (SDA && 'ResizeObserver' in window) new ResizeObserver(later(remeasure, 200)).observe(d.body);
     if (reduced) return;
     let on = false, raf = 0, t0 = 0, y = scrollY, lastY = y, vel = 0, quiet = 0;
     const mod = (a, n) => ((a % n) + n) % n;
@@ -915,7 +1037,10 @@
       y = M.view.y;
       if (on && !raf) { t0 = 0; quiet = 0; raf = requestAnimationFrame(frame); }
     }, { passive: true });
+    /* Đo khi còn cách một màn (lúc IO báo, bố cục vừa tính xong nên đọc không tốn), để lúc hiện ra dải đã dời đúng chỗ. */
+    io([sec], { rootMargin: '100% 0px' }, (el, vis, o) => { if (!vis) return; if (o) o.unobserve(el); if (!measured) measure(); });
     io([sec], { rootMargin: '80px 0px' }, (el, vis) => {
+      if (vis && !measured) measure();
       on = vis;
       sec.classList.toggle('live', vis);
       if (on && !raf) { t0 = 0; quiet = 0; y = lastY = scrollY; raf = requestAnimationFrame(frame); }
@@ -977,7 +1102,9 @@
       if (!geo) return;
       const ay = geo.top - M.view.y + geo.a[1];
       const p = geo.vert ? (innerHeight * 0.62 - ay) / geo.L : (innerHeight * 0.78 - ay) / (innerHeight * 0.42);
-      prog.to(clamp(p, 0, 1), SPEC.m3Spatial);
+      const v = clamp(p, 0, 1);
+      if (v === prog.t && prog.x === v && prog.v === 0) return;
+      prog.to(v, SPEC.m3Spatial);
     }
     function frame(t) {
       const dt = t0 ? Math.min(0.05, (t - t0) / 1000) : 0; t0 = t;
@@ -985,10 +1112,13 @@
       draw();
       raf = on ? requestAnimationFrame(frame) : 0;
     }
-    (d.fonts && d.fonts.ready ? d.fonts.ready : Promise.resolve()).then(() => { measure(); target(); });
-    addEventListener('resize', later(() => { measure(); target(); }, 150));
-    M.refreshers.push(() => requestAnimationFrame(() => { measure(); target(); }));
-    addEventListener('scroll', target, { passive: true });
+    /* Khuất khỏi màn thì không đo, không đuổi lò xo theo cuộn (#303: bản cũ mỗi sự kiện cuộn ở BẤT KỲ đâu trên trang đều
+       chạy một nhịp lò xo + dựng lại đường sóng). Hiện lại thì IO đo và bắt kịp. */
+    const fresh = () => { if (on) { measure(); target(); } };
+    (d.fonts && d.fonts.ready ? d.fonts.ready : Promise.resolve()).then(fresh);
+    addEventListener('resize', later(fresh, 150));
+    M.refreshers.push(() => requestAnimationFrame(fresh));
+    addEventListener('scroll', () => { if (on) target(); }, { passive: true });
     /* Mục phía trên mở/đóng (Cách hoạt động, Câu hỏi) làm trang cao lên: đo lại vị trí đã lưu. */
     if ('ResizeObserver' in window) new ResizeObserver(later(() => { if (on) { measure(); target(); } }, 100)).observe(d.body);
     io([ol], { rootMargin: '60px 0px' }, (el, vis) => {
@@ -1027,5 +1157,74 @@
     const amb = $('.amb'), secs = $$('[data-amb]');
     if (!amb || !secs.length) return;
     io(secs, { rootMargin: '-45% 0px -45% 0px' }, (el, on) => { if (on) amb.dataset.amb = el.dataset.amb; });
+    /* Ba quầng nền vẽ bằng canvas NHỎ (128 điểm ảnh) rồi để bộ dựng hình phóng lên (#303). Quầng là dải màu tròn mềm nên
+       phóng lên không khác gì vẽ thẳng, mà:
+       - đổi tông theo mục (1,4 s) chỉ còn vẽ lại ba ô 128×128 — bản CSS vẽ lại ba lớp 90vmax (~4,7 triệu điểm ảnh mỗi lớp
+         trên điện thoại) mỗi khung: đo trên điện thoại giả lập, GPU kín 1,4 s, khung vẽ được tụt còn ~1/3 mỗi lần cuộn qua
+         ranh giới mục;
+       - bộ nhớ đồ hoạ ~60 MB → ~0,2 MB.
+       Màu chuyển y như chuyển tiếp CSS cũ: đường ease 1,4 s, nội suy trong Oklab (chuẩn của <color>). Không JS thì CSS gốc. */
+    const blobs = $$('i', amb);
+    const probe = d.createElement('canvas').getContext('2d', { willReadFrequently: true });
+    if (blobs.length !== 3 || !probe) return;
+    probe.canvas.width = probe.canvas.height = 1;
+    const N = 128, ALPHA = [0.62, 0.48, 0.34], WHICH = ['--amb1', '--amb2', '--amb1'];
+    const ctxs = blobs.map((b) => { const c = d.createElement('canvas'); c.width = c.height = N; c.className = 'amb-cv'; b.appendChild(c); return c.getContext('2d'); });
+    amb.classList.add('cv');
+    /* Màu đích đọc từ CSS (một nguồn sự thật: bảng màu + luật .amb[data-amb]); .amb.cv tắt chuyển tiếp CSS nên đọc ra đích ngay. */
+    const rgbOf = (v) => {
+      probe.clearRect(0, 0, 1, 1); probe.fillStyle = '#000'; probe.fillStyle = v; probe.fillRect(0, 0, 1, 1);
+      const p = probe.getImageData(0, 0, 1, 1).data; return [p[0], p[1], p[2]];
+    };
+    const read = () => { const cs = getComputedStyle(amb); return { a1: rgbOf(cs.getPropertyValue('--amb1').trim()), a2: rgbOf(cs.getPropertyValue('--amb2').trim()) }; };
+    const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+    const gam = (c) => 255 * (c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055);
+    const toLab = (c) => {
+      const r = lin(c[0]), g = lin(c[1]), b = lin(c[2]);
+      const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b), m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b), s2 = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+      return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s2, 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s2, 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s2];
+    };
+    const toRgb = (L) => {
+      const l = Math.pow(L[0] + 0.3963377774 * L[1] + 0.2158037573 * L[2], 3), m = Math.pow(L[0] - 0.1055613458 * L[1] - 0.0638541728 * L[2], 3), s2 = Math.pow(L[0] - 0.0894841775 * L[1] - 1.291485548 * L[2], 3);
+      return [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s2, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s2, -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s2].map((v) => clamp(Math.round(gam(v)), 0, 255));
+    };
+    /* Hàm ease của CSS = cubic-bezier(.25, .1, .25, 1): tìm tham số theo trục thời gian bằng chia đôi. */
+    const ease = (x) => {
+      const bz = (t, a, b) => 3 * a * t * (1 - t) * (1 - t) + 3 * b * t * t * (1 - t) + t * t * t;
+      let lo = 0, hi = 1, t = x;
+      for (let i = 0; i < 20; i++) { t = (lo + hi) / 2; if (bz(t, 0.25, 0.25) < x) lo = t; else hi = t; }
+      return bz(t, 0.1, 1);
+    };
+    const paint = (c, i) => {
+      const ctx = ctxs[i], h = N / 2;
+      ctx.clearRect(0, 0, N, N);
+      const g = ctx.createRadialGradient(h, h, 0, h, h, h), rgb = c[0] + ',' + c[1] + ',' + c[2];
+      g.addColorStop(0, 'rgba(' + rgb + ',' + ALPHA[i] + ')'); g.addColorStop(1, 'rgba(' + rgb + ',0)');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, N, N);
+    };
+    let cur = read(), from = null, to = null, t0 = 0, raf = 0, last = 0;
+    const show = (v) => WHICH.forEach((k, i) => paint(k === '--amb1' ? v.a1 : v.a2, i));
+    show(cur);
+    /* Vẽ lại ~30 lần/giây: mỗi bước màu chỉ đổi ~1 mức trên nền tối, nhịp 60/120 chỉ thêm việc đẩy khung. */
+    const tick = (now) => {
+      raf = 0;
+      if (!t0) t0 = now;
+      const p = clamp((now - t0) / 1400, 0, 1), e = ease(p);
+      if (p < 1 && now - last < 30) { raf = requestAnimationFrame(tick); return; }
+      last = now;
+      const mix = (a, b) => { const A = toLab(a), B = toLab(b); return toRgb([lerp(A[0], B[0], e), lerp(A[1], B[1], e), lerp(A[2], B[2], e)]); };
+      cur = { a1: mix(from.a1, to.a1), a2: mix(from.a2, to.a2) };
+      show(cur);
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    const retone = () => {
+      const next = read();
+      if (to && next.a1 + '' === to.a1 + '' && next.a2 + '' === to.a2 + '') return;
+      if (reduced) { cur = to = next; cancelAnimationFrame(raf); raf = 0; show(cur); return; }
+      from = cur; to = next; t0 = 0;
+      if (!raf) raf = requestAnimationFrame(tick);
+    };
+    new MutationObserver(retone).observe(amb, { attributes: true, attributeFilter: ['data-amb'] });
+    new MutationObserver(retone).observe(root, { attributes: true, attributeFilter: ['data-scheme'] });
   })();
 })();

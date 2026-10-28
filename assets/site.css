@@ -221,7 +221,8 @@ html[lang="vi"] :not(html)[lang="en"], html[lang="en"] :not(html)[lang="vi"] { d
 .facts li { padding: 6px 14px; border-radius: 10px; background: var(--surface-c); color: var(--on-surface-v); font-size: 14px; box-shadow: inset 0 0 0 1px var(--outline-v); }
 
 .hero-visual { display: flex; flex-direction: column; align-items: center; gap: 28px; perspective: 1600px; }
-.hero-tilt { will-change: transform; }
+/* Nghiêng theo chuột chỉ có khi có chuột → chỉ khi đó mới giữ lớp riêng. */
+@media (hover: hover) and (pointer: fine) { .hero-tilt { will-change: transform; } }
 .hero-phone { width: min(330px, 78vw); }
 @media (min-width: 961px) { .hero-phone { width: clamp(270px, calc((100svh - 240px) * .46), 330px); } }
 .palette { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; max-width: 340px; }
@@ -271,8 +272,17 @@ html[lang="vi"] :not(html)[lang="en"], html[lang="en"] :not(html)[lang="vi"] { d
   background: linear-gradient(170deg, color-mix(in oklab, var(--primary-c) 92%, var(--primary) 8%), color-mix(in oklab, var(--primary-c) 70%, var(--surface)));
   box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 18%, transparent);
 }
-.hs-glow { position: absolute; inset: -20% -10% auto -30%; height: 75%; background: radial-gradient(closest-side, color-mix(in oklab, var(--primary) 55%, transparent), transparent); filter: blur(14px); opacity: .55; animation: hsGlow 9s ease-in-out infinite alternate; }
-@keyframes hsGlow { from { transform: translate(-6%, 0) scale(1); } to { transform: translate(10%, 8%) scale(1.15); } }
+.hs-glow { position: absolute; inset: -20% -10% auto -30%; height: 75%; opacity: .55; animation: hsGlow 9s steps(23) infinite alternate; }
+/* Làm mờ nằm ở lớp con ĐỨNG YÊN so với khối đang trôi (#303): mờ được vẽ một lần vào ảnh của lớp, bộ dựng hình chỉ dời ảnh
+   đó. Đặt filter ngay trên phần tử đang chạy hoạt ảnh thì GPU phải làm mờ lại mỗi khung. Kết quả như nhau (làm mờ không
+   đổi khi dời/phóng cả khối). */
+.hs-glow::before { content: ""; position: absolute; inset: 0; background: radial-gradient(closest-side, color-mix(in oklab, var(--primary) 55%, transparent), transparent); filter: blur(14px); }
+/* Trôi chậm theo NHỊP BẬC (#303): ~10 lần/giây (quầng nền, quầng chương) hoặc ~20 (quầng thẻ, khối 3D) thay vì mỗi khung.
+   Mỗi bậc dời dưới ~1 điểm ảnh của một vệt màu mềm — mắt không phân biệt được — nhưng bộ dựng hình chỉ phải vẽ lại khi giá
+   trị đổi: đo (điện thoại giả lập) quầng nền chạy liên tục bắt GPU vẽ lại CẢ màn 60–120 lần/giây kể cả lúc đứng yên; theo
+   bậc 10 lần/giây → số khung phải vẽ giảm ~6 lần. Đường cong ease-in-out giữ nguyên: khung hình lấy mẫu đường cong ở 9–11
+   mốc (nối thẳng giữa các mốc), mỗi đoạn chạy steps(). Sinh bằng tính toán, sửa thì sinh lại cả khối. */
+@keyframes hsGlow { 0% { transform: translate(-6%, 0%) scale(1); } 12.5% { transform: translate(-5.502%, 0.249%) scale(1.005); } 25% { transform: translate(-3.933%, 1.033%) scale(1.019); } 37.5% { transform: translate(-1.316%, 2.342%) scale(1.044); } 50% { transform: translate(2%, 4%) scale(1.075); } 62.5% { transform: translate(5.316%, 5.658%) scale(1.106); } 75% { transform: translate(7.933%, 6.967%) scale(1.131); } 87.5% { transform: translate(9.502%, 7.751%) scale(1.145); } 100% { transform: translate(10%, 8%) scale(1.15); } }
 .hs-head, .hs-game, .hs-play, .hs-add, .hs-shz { position: relative; }
 .hs-head { display: flex; justify-content: space-between; align-items: center; font-size: .78em; }
 .hs-eyebrow { display: inline-flex; align-items: center; gap: .6em; letter-spacing: .16em; font-weight: 650; color: color-mix(in oklab, var(--on-primary-c) 80%, transparent); }
@@ -353,9 +363,9 @@ html[lang="vi"] :not(html)[lang="en"], html[lang="en"] :not(html)[lang="vi"] { d
   opacity: 0; translate: 0 -50%; scale: .8; transition: opacity 900ms ease, scale 1200ms cubic-bezier(.2,0,0,1); }
 .chap[data-screen="freeze"], .chap[data-screen="rep"] { --tone: var(--tertiary-c); }
 .chap[data-screen="mon"] { --tone: var(--secondary-c); }
-.chap.chap-on::before { opacity: 1; scale: 1; animation: chapGlow 14s ease-in-out 1.2s infinite alternate; }
-/* `translate` (-50%) áp SAU transform nên tổng dịch vẫn là (6%, -46%) như cũ. */
-@keyframes chapGlow { to { transform: translate(6%, 4%) scale(1.08) rotate(8deg); } }
+.chap.chap-on::before { opacity: 1; scale: 1; animation: chapGlow 14s steps(18) 1.2s infinite alternate; }
+/* `translate` (-50%) áp SAU transform nên tổng dịch vẫn là (6%, -46%) như cũ. Nhịp bậc: xem hsGlow. */
+@keyframes chapGlow { 0% { transform: translate(0%, 0%) scale(1) rotate(0deg); } 12.5% { transform: translate(0.187%, 0.124%) scale(1.002) rotate(0.249deg); } 25% { transform: translate(0.775%, 0.517%) scale(1.01) rotate(1.033deg); } 37.5% { transform: translate(1.757%, 1.171%) scale(1.023) rotate(2.342deg); } 50% { transform: translate(3%, 2%) scale(1.04) rotate(4deg); } 62.5% { transform: translate(4.243%, 2.829%) scale(1.057) rotate(5.658deg); } 75% { transform: translate(5.225%, 3.483%) scale(1.07) rotate(6.967deg); } 87.5% { transform: translate(5.813%, 3.876%) scale(1.078) rotate(7.751deg); } 100% { transform: translate(6%, 4%) scale(1.08) rotate(8deg); } }
 /* Câu chuyện đã cuộn khuất (máy tính: chương cuối vẫn "đang sáng") → quầng thôi trôi. */
 .story.off-view .chap::before { animation-play-state: paused; }
 .cmk { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
@@ -969,12 +979,18 @@ html:not(.js) .sheet-body::after { opacity: 1; }
 .amb[data-amb="s"] { --amb1: var(--secondary-c); --amb2: var(--tertiary-c); }
 .amb { position: fixed; inset: 0; z-index: -2; pointer-events: none; overflow: hidden; }
 .amb i { position: absolute; width: 90vmax; height: 90vmax; border-radius: 50%; will-change: transform; }
-.amb i:nth-child(1) { left: -42vmax; top: -48vmax; background: radial-gradient(closest-side, color-mix(in oklab, var(--amb1) 62%, transparent), transparent); animation: ambA 34s ease-in-out infinite alternate; }
-.amb i:nth-child(2) { right: -48vmax; top: 4vh; background: radial-gradient(closest-side, color-mix(in oklab, var(--amb2) 48%, transparent), transparent); animation: ambB 42s ease-in-out infinite alternate; }
-.amb i:nth-child(3) { left: 4vw; bottom: -62vmax; background: radial-gradient(closest-side, color-mix(in oklab, var(--amb1) 34%, transparent), transparent); animation: ambC 50s ease-in-out infinite alternate; }
-@keyframes ambA { to { transform: translate(18vw, 14vh) scale(1.12); } }
-@keyframes ambB { to { transform: translate(-16vw, 20vh) scale(.9); } }
-@keyframes ambC { to { transform: translate(22vw, -12vh) scale(1.08); } }
+.amb i:nth-child(1) { left: -42vmax; top: -48vmax; background: radial-gradient(closest-side, color-mix(in oklab, var(--amb1) 62%, transparent), transparent); animation: ambA 34s steps(34) infinite alternate; }
+.amb i:nth-child(2) { right: -48vmax; top: 4vh; background: radial-gradient(closest-side, color-mix(in oklab, var(--amb2) 48%, transparent), transparent); animation: ambB 42s steps(42) infinite alternate; }
+.amb i:nth-child(3) { left: 4vw; bottom: -62vmax; background: radial-gradient(closest-side, color-mix(in oklab, var(--amb1) 34%, transparent), transparent); animation: ambC 50s steps(50) infinite alternate; }
+/* fx.js vẽ ba quầng vào canvas nhỏ (.amb.cv): tắt nền CSS + chuyển tiếp màu CSS (JS tự chuyển màu, đọc đích ngay). */
+.amb.cv { transition: none; }
+.amb.cv i { background: none; }
+.amb-cv { display: block; width: 100%; height: 100%; }
+/* Nhịp bậc: xem hsGlow. Ba quầng bước ĐÚNG 100 ms (10 đoạn × thời lượng/10 s bậc) và cùng bắt đầu → cùng đổi trong một
+   khung: GPU thức 10 lần/giây chứ không 30 (lệch pha nhau). Đổi thời lượng thì giữ số bậc = thời lượng ÷ 0,1 s ÷ 10. */
+@keyframes ambA { 0% { transform: translate(0vw, 0vh) scale(1); } 10% { transform: translate(0.355vw, 0.276vh) scale(1.002); } 20% { transform: translate(1.47vw, 1.143vh) scale(1.01); } 30% { transform: translate(3.373vw, 2.624vh) scale(1.022); } 40% { transform: translate(5.974vw, 4.646vh) scale(1.04); } 50% { transform: translate(9vw, 7vh) scale(1.06); } 60% { transform: translate(12.026vw, 9.354vh) scale(1.08); } 70% { transform: translate(14.627vw, 11.376vh) scale(1.098); } 80% { transform: translate(16.53vw, 12.857vh) scale(1.11); } 90% { transform: translate(17.645vw, 13.724vh) scale(1.118); } 100% { transform: translate(18vw, 14vh) scale(1.12); } }
+@keyframes ambB { 0% { transform: translate(0vw, 0vh) scale(1); } 10% { transform: translate(-0.316vw, 0.394vh) scale(0.998); } 20% { transform: translate(-1.307vw, 1.633vh) scale(0.992); } 30% { transform: translate(-2.998vw, 3.748vh) scale(0.981); } 40% { transform: translate(-5.31vw, 6.638vh) scale(0.967); } 50% { transform: translate(-8vw, 10vh) scale(0.95); } 60% { transform: translate(-10.69vw, 13.362vh) scale(0.933); } 70% { transform: translate(-13.002vw, 16.252vh) scale(0.919); } 80% { transform: translate(-14.693vw, 18.367vh) scale(0.908); } 90% { transform: translate(-15.684vw, 19.606vh) scale(0.902); } 100% { transform: translate(-16vw, 20vh) scale(0.9); } }
+@keyframes ambC { 0% { transform: translate(0vw, 0vh) scale(1); } 10% { transform: translate(0.434vw, -0.237vh) scale(1.002); } 20% { transform: translate(1.797vw, -0.98vh) scale(1.007); } 30% { transform: translate(4.123vw, -2.249vh) scale(1.015); } 40% { transform: translate(7.301vw, -3.983vh) scale(1.027); } 50% { transform: translate(11vw, -6vh) scale(1.04); } 60% { transform: translate(14.699vw, -8.017vh) scale(1.053); } 70% { transform: translate(17.877vw, -9.751vh) scale(1.065); } 80% { transform: translate(20.203vw, -11.02vh) scale(1.073); } 90% { transform: translate(21.566vw, -11.763vh) scale(1.078); } 100% { transform: translate(22vw, -12vh) scale(1.08); } }
 .amb::after {
   content: ""; position: absolute; inset: 0; opacity: .07;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .7 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
@@ -990,10 +1006,11 @@ html:not(.js) .sheet-body::after { opacity: 1; }
 /* ---------- Khối 3D (vẽ bằng canvas theo màu chủ đề) ---------- */
 .orbs { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
 .orb { position: absolute; width: var(--s, 240px); aspect-ratio: 1; will-change: transform; }
-.orb canvas { display: block; width: 100%; height: 100%; animation: orbFloat 10s ease-in-out infinite alternate; }
+.orb canvas { display: block; width: 100%; height: 100%; animation: orbFloat 10s steps(25) infinite alternate; }
 .orb.far canvas { filter: blur(5px); opacity: .7; }
 .orb:nth-child(2n) canvas { animation-duration: 13s; animation-direction: alternate-reverse; }
-@keyframes orbFloat { from { transform: translateY(-3%) rotate(-3deg); } to { transform: translateY(3%) rotate(3deg); } }
+/* Nhịp bậc ~20 lần/giây (13 s: ~15): xem hsGlow. */
+@keyframes orbFloat { 0% { transform: translateY(-3%) rotate(-3deg); } 12.5% { transform: translateY(-2.813%) rotate(-2.813deg); } 25% { transform: translateY(-2.225%) rotate(-2.225deg); } 37.5% { transform: translateY(-1.243%) rotate(-1.243deg); } 50% { transform: translateY(0%) rotate(0deg); } 62.5% { transform: translateY(1.243%) rotate(1.243deg); } 75% { transform: translateY(2.225%) rotate(2.225deg); } 87.5% { transform: translateY(2.813%) rotate(2.813deg); } 100% { transform: translateY(3%) rotate(3deg); } }
 .o1 { --s: min(460px, 36vw); right: -7%; top: 3%; }
 .o2 { --s: min(380px, 30vw); left: -12%; bottom: -16%; }
 .o3 { --s: 140px; left: 43%; top: 11%; }
@@ -1193,9 +1210,14 @@ html.cur-on, html.cur-on * { cursor: none !important; }
 .plan-pro .perks .ms { border-radius: 50%; background: color-mix(in oklab, var(--primary) 24%, transparent); color: var(--primary); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 35%, transparent); }
 /* Cực quang xoay chậm phía sau (chỉ transform → compositor; dừng khi thẻ khuất) + đốm sáng theo con trỏ + khối 3D. */
 .pro-aura {
-  position: absolute; z-index: -2; inset: -70%; pointer-events: none; opacity: .5; filter: blur(46px);
-  background: conic-gradient(from 0deg, var(--primary), transparent 22%, var(--tertiary) 40%, transparent 58%, var(--primary-c) 75%, var(--primary));
+  position: absolute; z-index: -2; inset: -70%; pointer-events: none; opacity: .5;
   animation: proSpin 20s linear infinite; animation-play-state: paused;
+}
+/* Làm mờ ở lớp con đứng yên (#303, như .hs-glow::before): xoay cả khối không đổi kết quả làm mờ, nên mờ 46px được vẽ một
+   lần thay vì GPU làm lại trên cả vùng cực quang mỗi khung trong lúc nó xoay. */
+.pro-aura::before {
+  content: ""; position: absolute; inset: 0; filter: blur(46px);
+  background: conic-gradient(from 0deg, var(--primary), transparent 22%, var(--tertiary) 40%, transparent 58%, var(--primary-c) 75%, var(--primary));
 }
 .plan-pro.live .pro-aura { animation-play-state: running; }
 @keyframes proSpin { to { transform: rotate(1turn); } }

@@ -6,9 +6,24 @@
 (() => {
   'use strict';
   const A = {"background_clouds":[2,2,512,512],"background_fade_hills":[2,518,512,512],"character_yellow_jump":[518,2,256,256],"character_yellow_walk_a":[518,262,256,256],"character_yellow_walk_b":[518,522,256,256],"bee_a":[2,1034,128,128],"bee_b":[134,1034,128,128],"block_coin":[266,1034,128,128],"block_exclamation":[398,1034,128,128],"coin_gold":[530,1034,128,128],"coin_gold_side":[662,1034,128,128],"flag_blue_a":[794,1034,128,128],"flag_blue_b":[926,1034,128,128],"fly_a":[2,1166,128,128],"fly_b":[134,1166,128,128],"hud_character_0":[266,1166,128,128],"hud_character_1":[398,1166,128,128],"hud_character_2":[530,1166,128,128],"hud_character_3":[662,1166,128,128],"hud_character_4":[794,1166,128,128],"hud_character_5":[926,1166,128,128],"hud_character_6":[2,1298,128,128],"hud_character_7":[134,1298,128,128],"hud_character_8":[266,1298,128,128],"hud_character_9":[398,1298,128,128],"hud_character_multiply":[530,1298,128,128],"hud_coin":[662,1298,128,128],"hud_heart":[794,1298,128,128],"hud_heart_half":[926,1298,128,128],"hud_player_helmet_yellow":[2,1430,128,128],"rock":[134,1430,128,128],"sign_right":[266,1430,128,128],"slime_spike_walk_a":[398,1430,128,128],"slime_spike_walk_b":[530,1430,128,128],"snow":[662,1430,128,128],"star":[794,1430,128,128],"terrain_snow_block_center":[926,1430,128,128],"terrain_snow_block_left":[2,1562,128,128],"terrain_snow_block_right":[134,1562,128,128],"terrain_snow_block_top":[266,1562,128,128],"terrain_snow_block_top_left":[398,1562,128,128],"terrain_snow_block_top_right":[530,1562,128,128],"terrain_snow_cloud_left":[662,1562,128,128],"terrain_snow_cloud_middle":[794,1562,128,128],"terrain_snow_cloud_right":[926,1562,128,128]};
+  const ATLAS = 'assets/polar-atlas.webp';
   const img = new Image();
   img.decoding = 'async';
-  img.src = 'assets/polar-atlas.webp';
+  /* Vẽ từ ImageBitmap giải mã sẵn NGOÀI luồng chính. drawImage thẳng từ <img> bắt luồng chính giải mã tấm atlas
+     1056×1692 (~7 MB điểm ảnh) ngay khung vẽ đầu — đo #303 (điện thoại giả lập, CPU ×4): ~430 ms đứng hình lúc tải; còn ba
+     canvas game cùng vẽ một <img> thì trình duyệt giải mã lại liên tục (~110 ms/giây ở chương Cửa sổ theo dõi). */
+  let src = null;
+  const waiters = [];
+  const ready = (b) => { if (src) return; src = b; waiters.splice(0).forEach((f) => f()); };
+  /* Từ blob thì trình duyệt giải mã trên luồng phụ; createImageBitmap(<img>) vẫn chép ~7 MB điểm ảnh trên luồng chính. */
+  const viaImg = () => {
+    const done = () => (img.decode ? img.decode() : Promise.resolve()).catch(() => {}).then(() => ready(img));
+    if (!img.src) img.src = ATLAS;
+    if (img.complete && img.naturalWidth) done(); else img.addEventListener('load', done, { once: true });
+  };
+  if (window.fetch && window.createImageBitmap) {
+    fetch(ATLAS).then((r) => (r.ok ? r.blob() : Promise.reject(r.status))).then((b) => createImageBitmap(b)).then(ready, viaImg);
+  } else viaImg();
 
   // ---- Màn chơi lặp, đơn vị ô. Độ cao tính từ mặt đất. (Giống hệt GameView.) ----
   const PERIOD = 56, SPEED = 4.2, JUMP_LEN = 3.4, JUMP_H = 2.3, COIN_BODY = 0.75;
@@ -40,7 +55,7 @@
   })();
 
   let c = null;
-  function spr(n, x, y, w, h) { const a = A[n]; c.drawImage(img, a[0], a[1], a[2], a[3], x, y, w, h === undefined ? w : h); }
+  function spr(n, x, y, w, h) { const a = A[n]; c.drawImage(src, a[0], a[1], a[2], a[3], x, y, w, h === undefined ? w : h); }
   function rrect(x, y, w, h, r) {
     c.beginPath();
     if (c.roundRect) c.roundRect(x, y, w, h, r); else c.rect(x, y, w, h);
@@ -49,7 +64,7 @@
   /* Vẽ một khung vào ctx (w × h điểm ảnh của canvas) tại thời điểm t giây. o.px = chỗ người chạy đứng theo bề ngang
      (0,27 như bản Android), o.snow = tuyết rơi. */
   function draw(ctx, w, h, t, o) {
-    if (!img.complete || !img.naturalWidth) return false;
+    if (!src) return false;
     o = o || {};
     c = ctx;
     c.imageSmoothingEnabled = true;
@@ -235,7 +250,7 @@
 
   window.PolarRun = {
     draw,
-    ready: () => img.complete && img.naturalWidth > 0,
-    onReady(fn) { if (img.complete && img.naturalWidth) fn(); else img.addEventListener('load', fn, { once: true }); },
+    ready: () => !!src,
+    onReady(fn) { if (src) fn(); else waiters.push(fn); },
   };
 })();
