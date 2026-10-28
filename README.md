@@ -54,12 +54,16 @@ Landing page, privacy policy and `app-ads.txt` for **Cryo: Game Mode & FPS Meter
   the three background glows step on the same 100 ms beat. Blurs sit on a static child of the animated element so they are
   rasterized once. The background glows are 128 px canvases scaled up by the compositor, so changing their tone does not repaint
   three screen-sized layers. Settled spring transforms are removed so finished elements leave the compositor.
-- **Motion runs on the compositor** (#303): Chrome on Android runs the main thread at half the screen rate on 120 Hz-and-up
-  screens (`ThrottleMainFrameTo60Hz`, on by default), while scrolling and compositor animations keep the full rate. So
-  `go()`/`put()` in `site.js` solve each spring in closed form and hand it to Web Animations as sampled keyframes (dense at the
-  start, sparse in the tail): blocks, cards and words fly in at the screen's rate and keep moving when the main thread is busy.
-  Interrupting reads position and velocity off the running curve, so it stays continuous like a spring. Letter-shape effects
-  (variable-font axes), the chapter numerals, the wave and the games are drawn by script and stay at the main-thread rate.
+- **Motion: two paths** (#303). Chrome on Android runs the main thread at half the screen rate on 120 Hz-and-up screens
+  (`ThrottleMainFrameTo60Hz`, on by default), while scrolling and compositor animations keep the full rate. So on touch
+  screens `go()`/`put()` in `site.js` solve each spring in closed form and hand it to Web Animations as keyframes (sampled at
+  120/s like drawing every frame at 120 Hz, at most ~0.3 px off the true curve right as a stiff spring starts; samples
+  that sit within 0.05 px of the line between their neighbours are dropped): blocks, cards and app icons fly in at the
+  screen's rate and keep moving when the main thread is busy. Interrupting reads position and velocity off the running
+  curve. Devices with a mouse, and heading words everywhere, keep the per-frame rAF spring: the main thread already runs
+  at the screen's rate there, and a heading word must move in step with the letters reshaping inside it (on the compositor
+  it ran a frame apart and shook, user report on a 165 Hz monitor). Letter shapes, chapter numerals, the wave and the games
+  are drawn by script and stay at the main-thread rate.
 
 ## Rules for the copy
 

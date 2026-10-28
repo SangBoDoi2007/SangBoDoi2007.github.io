@@ -54,20 +54,26 @@
   }
   function owner(fn) { return { apply: fn }; }
 
-  /* Biến đổi của một phần tử: x, y (px), s (tỉ lệ), r (độ), o (độ mờ) — chạy theo lò xo nhưng do COMPOSITOR vẽ.
-     User #303 ("trên điện thoại kiểu chạy ở fps thấp"; tắt cờ chrome://flags/#throttle-main-thread-to-60hz thì "mượt hẳn"):
-     Chrome Android cho luồng chính (rAF, mọi thứ JS đổi mỗi khung) NỬA tần số màn khi màn ≥ ~108 Hz (ThrottleMainFrameTo60Hz,
-     bật mặc định; cc/scheduler/scheduler_state_machine.cc), còn cuộn + hoạt ảnh transform/opacity ở compositor vẫn đủ tần
-     số. Nên mỗi lần go(): giải lò xo bằng công thức đóng (từ vị trí + vận tốc hiện tại), lấy mẫu (90 điểm/giây 0,45 s đầu,
-     30 điểm/giây phần đuôi) thành keyframes Web Animations → compositor nội suy ở đúng tần số màn, luồng chính bận cũng không
-     giật. Mỗi go() dựng một animation mới: dùng cho chuyển động theo sự kiện rời rạc, KHÔNG cho thứ đổi đích mỗi
-     pointermove (con trỏ, nút hút, nghiêng thẻ — những thứ đó giữ Spring + rAF). Ngắt giữa chừng: đọc
-     vị trí + vận tốc từ quỹ đạo đang chạy (theo currentTime của chính animation) rồi lập quỹ đạo mới — liền mạch như lò xo.
-     Xong thì ghi trạng thái cuối vào style và huỷ animation; đứng yên đúng gốc thì bỏ transform (translate giữ lại biến mỗi
-     khối thành một lớp compositor mãi mãi — đo #303: 80–120 lớp). Opacity vẫn ghi inline: CSS ẩn sẵn khối
-     (.js .slot [data-b] { opacity: 0 }). Không có Web Animations (trình duyệt rất cũ) thì nhảy thẳng tới đích. */
+  /* Biến đổi của một phần tử: x, y (px), s (tỉ lệ), r (độ), o (độ mờ), chạy theo lò xo — hai đường:
+     - LUỒNG CHÍNH (máy có chuột, và chữ tiêu đề ở mọi máy): lò xo tính lại mỗi khung (rAF) và ghi thẳng vào style. Luồng
+       chính máy tính chạy đủ tần số màn, mỗi khung đúng đường cong, và chữ nằm cùng nhịp với chữ cái đổi trục phông bên
+       trong nó. User #303 (máy tính 165 Hz, bản 40c8f7e đưa cả máy tính lên compositor): "chữ hiển thị lên bị rung", "không
+       mượt như trước" — từ bay trên compositor còn chữ cái đổi dáng/xô dòng theo nhịp luồng chính → lệch một khung = rung;
+       đường cong lấy mẫu thưa (30/giây ở đuôi) → đoạn hãm thành từng nấc trên màn 165 Hz.
+     - COMPOSITOR (màn cảm ứng, khối không phải chữ tiêu đề): Chrome Android cho luồng chính NỬA tần số màn khi màn ≥ ~108 Hz
+       (ThrottleMainFrameTo60Hz, bật mặc định; user tắt cờ thì "mượt hẳn"), còn cuộn + hoạt ảnh compositor đủ tần số. Mỗi
+       go(): giải lò xo dạng đóng từ vị trí + vận tốc hiện tại, lấy mẫu 120/giây (như vẽ mỗi khung ở 120 Hz: giữa hai mẫu
+       lệch đường cong thật tối đa ~0,3 px lúc lò xo cứng vừa bắt đầu) rồi bỏ mẫu nằm gần như thẳng hàng với hai mẫu giữ lại
+       kề nó (lệch < 0,05 px) → keyframes Web Animations, compositor nội suy ở đúng tần số màn. Ngắt giữa chừng: đọc trạng thái từ quỹ đạo đang
+       chạy (currentTime). Mỗi go() là một animation mới — không dùng cho thứ đổi đích mỗi pointermove.
+     Cả hai: đứng yên đúng gốc thì bỏ transform (transform giữ lại biến mỗi khối thành một lớp compositor mãi mãi — đo #303:
+     80–120 lớp); opacity vẫn ghi inline vì CSS ẩn sẵn khối (.js .slot [data-b] { opacity: 0 }). */
   const MO = new WeakMap(), CH = ['x', 'y', 's', 'r', 'o'], EPS = { x: 0.2, y: 0.2, s: 0.0005, r: 0.02, o: 0.002 };
   const WAAPI = typeof Element !== 'undefined' && typeof Element.prototype.animate === 'function';
+  /* Máy có chuột — MỘT luật cho cả trang: fx.js đọc lại FINE qua window.CryoMotion. Đọc một lần lúc tải (như mọi hiệu
+     ứng theo loại con trỏ của trang). */
+  const FINE = matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const COMP = WAAPI && !FINE;
   /* Lò xo khối lượng 1, độ cứng k, tỉ số tắt dần z; c = { x0, v0, to, z, k } → [vị trí, vận tốc] sau t giây. */
   function springAt(c, t) {
     const w = Math.sqrt(c.k), z = c.z, u0 = c.x0 - c.to, v0 = c.v0;
@@ -96,9 +102,20 @@
     return 4;
   }
   const tf = (x, y, s, r) => 'translate(' + x.toFixed(2) + 'px,' + y.toFixed(2) + 'px) scale(' + s.toFixed(4) + ') rotate(' + r.toFixed(2) + 'deg)';
-  function mo(el) {
-    let m = MO.get(el);
-    if (m) return m;
+  function moMain(el) {
+    const m = { apply() {
+      const o = clamp(m.o.x, 0, 1);
+      const rest = m.x.x === 0 && m.y.x === 0 && m.s.x === 1 && m.r.x === 0 && (o === 0 || o === 1);
+      el.style.transform = rest ? '' : 'translate3d(' + m.x.x.toFixed(2) + 'px,' + m.y.x.toFixed(2) + 'px,0) scale(' + m.s.x.toFixed(4) + ') rotate(' + m.r.x.toFixed(2) + 'deg)';
+      el.style.opacity = o.toFixed(3);
+    } };
+    m.x = new Spring(0, 0.2, m); m.y = new Spring(0, 0.2, m); m.s = new Spring(1, 0.0005, m);
+    m.r = new Spring(0, 0.02, m); m.o = new Spring(1, 0.002, m);
+    m.plan = (next) => { for (const k in next) { const n = next[k]; if ('val' in n) m[k].set(n.val); else m[k].to(n.to, n); } };
+    Object.defineProperty(m, 'moving', { get: () => CH.some((k) => live.has(m[k])) });
+    return m;
+  }
+  function moComp(el) {
     /* c[k]: { val } đứng yên, hoặc { x0, v0, to, z, k, end } đang chạy — thời gian tính từ lúc animation hiện tại bắt đầu. */
     const c = { x: { val: 0 }, y: { val: 0 }, s: { val: 1 }, r: { val: 0 }, o: { val: 1 } };
     let anim = null, t0 = 0;
@@ -120,9 +137,9 @@
       el.style.opacity = o.toFixed(3);
     };
     const stop = () => { if (anim) { const a = anim; anim = null; a.onfinish = null; a.cancel(); } };
-    /* Kênh đang chạy mà đã tới đích → đứng yên ở đích. */
     const settle = () => CH.forEach((k) => { if ('to' in c[k]) c[k] = { val: c[k].to }; });
-    m = {
+    const TOL = { x: 0.05, y: 0.05, s: 0.0002, r: 0.01, o: 0.002 };
+    const m = {
       get moving() { return !!anim; },
       /* next[k] = { to, z, k } (lò xo mới) | { val } (đặt thẳng); kênh không có trong next chạy tiếp quỹ đạo cũ. */
       plan(next) {
@@ -139,33 +156,44 @@
           } else c[k] = { val: x };
         });
         const moving = CH.filter((k) => 'to' in c[k]);
-        if (!moving.length || !WAAPI) { settle(); write(); return; }
+        if (!moving.length) { settle(); write(); return; }
         /* Thuộc tính không chạy thì ghi thẳng vào style (keyframes chỉ mang thuộc tính đang chạy). */
         const T = Math.max(...moving.map((k) => c[k].end));
         const mT = moving.some((k) => k !== 'o'), mO = moving.includes('o');
         const at = (k, t) => ('to' in c[k] ? (t >= c[k].end ? c[k].to : springAt(c[k], t)[0]) : c[k].val);
         if (!mT) { const x = c.x.val, y = c.y.val, sc = c.s.val, r = c.r.val; el.style.transform = x === 0 && y === 0 && sc === 1 && r === 0 ? '' : tf(x, y, sc, r); }
         if (!mO) el.style.opacity = Math.min(1, Math.max(0, c.o.val)).toFixed(3);
-        /* Mẫu dày (90/giây) đoạn đầu nơi lò xo đổi nhanh, thưa (30/giây) phần đuôi gần đích; compositor nội suy thẳng giữa
-           các mẫu ở đúng tần số màn. */
-        const ts = [];
-        for (let t = 0; t < T; t += t < 0.45 ? 1 / 90 : 1 / 30) ts.push(t);
-        ts.push(T);
-        const frames = [];
-        for (const t of ts) {
-          const f = { offset: t / T };
-          if (mT) f.transform = tf(at('x', t), at('y', t), at('s', t), at('r', t));
-          if (mO) f.opacity = Math.min(1, Math.max(0, at('o', t))).toFixed(3);
-          frames.push(f);
+        /* Lấy mẫu 120/giây; bỏ mẫu mà đoạn thẳng nối hai mẫu giữ lại hai bên đi sát nó (mọi kênh lệch < TOL) — chỗ lò xo
+           cong giữ đủ dày, đuôi gần như đứng yên thì thưa; cửa sổ tối đa 24 mẫu (200 ms) cho chi phí có trần. */
+        /* Chỉ kênh đang chạy mới được lấy mẫu và so; kênh đứng yên lấy giá trị cố định. */
+        const n = Math.max(1, Math.ceil(T * 120)), ts = [], V = [], tol = moving.map((k) => TOL[k]);
+        for (let i = 0; i <= n; i++) { const t = i === n ? T : (T * i) / n; ts.push(t); V.push(moving.map((k) => at(k, t))); }
+        const keep = [0];
+        let a = 0;
+        for (let j = 2; j <= n; j++) {
+          let ok = j - a <= 24;
+          for (let i = a + 1; i < j && ok; i++) {
+            const f = (ts[i] - ts[a]) / (ts[j] - ts[a]);
+            for (let q = 0; q < tol.length; q++) if (Math.abs(V[a][q] + (V[j][q] - V[a][q]) * f - V[i][q]) > tol[q]) { ok = false; break; }
+          }
+          if (!ok) { keep.push(j - 1); a = j - 1; }
         }
+        keep.push(n);
+        const val = (i, k) => { const q = moving.indexOf(k); return q < 0 ? c[k].val : V[i][q]; };
+        const frames = keep.map((i) => {
+          const f = { offset: ts[i] / T };
+          if (mT) f.transform = tf(val(i, 'x'), val(i, 'y'), val(i, 's'), val(i, 'r'));
+          if (mO) f.opacity = Math.min(1, Math.max(0, val(i, 'o'))).toFixed(3);
+          return f;
+        });
         t0 = performance.now();
-        let a;
-        try { a = el.animate(frames, { duration: T * 1000, easing: 'linear', fill: 'forwards' }); } catch (e) { settle(); write(); return; }
-        anim = a;
-        a.onfinish = () => { if (anim !== a) return; anim = null; settle(); write(); a.cancel(); };
+        let an;
+        try { an = el.animate(frames, { duration: T * 1000, easing: 'linear', fill: 'forwards' }); } catch (e) { settle(); write(); return; }
+        anim = an;
+        an.onfinish = () => { if (anim !== an) return; anim = null; settle(); write(); an.cancel(); };
       },
     };
-    /* Giao diện cũ của từng kênh (m.x.x vị trí lúc này, m.x.t đích, to/set) cho chỗ đọc trạng thái: flip, setGone, fx.js. */
+    /* Giao diện cũ của từng kênh (m.x.x vị trí lúc này, m.x.t đích, to/set) cho chỗ đọc trạng thái: flip, setGone. */
     CH.forEach((k) => {
       m[k] = {
         get x() { return now(k)[0]; },
@@ -174,7 +202,14 @@
         set(v) { put(el, { [k]: v }); return this; },
       };
     });
-    MO.set(el, m);
+    return m;
+  }
+  /* Phần tử mà NỘI DUNG bên trong đổi mỗi khung ở luồng chính thì phải chuyển động cùng nhịp luồng chính: chữ tiêu đề
+     (.kw do fx.js tách — chữ cái bên trong đổi trục phông) và mọi phần tử gắn data-mo="main". Đường được chọn MỘT lần ở
+     lần gọi đầu cho phần tử đó (fx.js gắn lớp .kw lúc tách, trước mọi go/put). */
+  function mo(el) {
+    let m = MO.get(el);
+    if (!m) { m = COMP && !el.matches('.kw, [data-mo="main"]') ? moComp(el) : moMain(el); MO.set(el, m); }
     return m;
   }
   function go(el, p, s, os) {
@@ -1653,7 +1688,7 @@
   })();
 
   /* Lớp hiệu ứng fx.js dùng chung lò xo, hình khối và trạng thái ngôn ngữ với trang. */
-  window.CryoMotion = { Spring, SPEC, owner, mo, go, put, reduced, lang, refreshers, clamp, lerp, SHAPES, shapePts, morphPath, view, $, $$, afterIntro, idleEach };
+  window.CryoMotion = { Spring, SPEC, owner, mo, go, put, reduced, fine: FINE, lang, refreshers, clamp, lerp, SHAPES, shapePts, morphPath, view, $, $$, afterIntro, idleEach };
 
   /* ---------- Mở đầu: một nhịp duy nhất khi tải trang ---------- */
   function intro() {

@@ -13,7 +13,7 @@
   const onScreen = (el) => { const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; };
   const soon = (el, fn) => (onScreen(el) ? fn() : afterIntro(fn));
   const d = document, root = d.documentElement;
-  const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const fine = typeof M.fine === 'boolean' ? M.fine : matchMedia('(hover: hover) and (pointer: fine)').matches; // một luật với site.js
   const shown = (el) => !!el && el.getClientRects().length > 0;
   const later = (fn, ms) => { let t = 0; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; };
   const io = (els, opts, fn) => {
