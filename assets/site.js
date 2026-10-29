@@ -14,7 +14,7 @@
      — tools/bust.py, để tải lại trang sau một lần đẩy bản mới là lấy bản mới). Bảng ?perf in ra để biết kết quả thuộc bản nào. */
   const BUILD = (() => { try { return new URL(d.currentScript.src).searchParams.get('v') || ''; } catch (e) { return ''; } })();
   /* Bảng đo khung hình ẩn (assets/perf.js): chỉ tải khi địa chỉ có "perf" (…/?perf hoặc …/#perf). */
-  if (/[?&#]perf\b/.test(location.search + location.hash)) { const ps = d.createElement('script'); ps.src = 'assets/perf.js?v=3703f842'; ps.async = true; d.head.appendChild(ps); }
+  if (/[?&#]perf\b/.test(location.search + location.hash)) { const ps = d.createElement('script'); ps.src = 'assets/perf.js?v=9a546aad'; ps.async = true; d.head.appendChild(ps); }
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches || root.classList.contains('no-motion');
   if (reduced) root.classList.add('no-motion');
   const refreshers = [];
@@ -34,7 +34,12 @@
   class Spring {
     constructor(v, eps, owner) { this.x = v; this.v = 0; this.t = v; this.z = 1; this.k = 1600; this.eps = eps || 0.001; this.owner = owner || null; }
     to(t, s) {
-      s = s || SPEC.effects; this.t = t; this.z = s.z; this.k = s.k;
+      s = s || SPEC.effects; this.z = s.z; this.k = s.k;
+      /* Đã đứng yên đúng đích → không làm gì. Trước đây vẫn đưa vào vòng rAF một khung rồi gọi chủ ghi lại DOM: bộ nghe
+         cuộn gọi .to(cùng đích) ở mọi sự kiện cuộn là vẽ lại phần tử đó suốt cả trang (đo #305: đường sóng Shizuku vẽ lại
+         556 lần khi cuộn qua trang dù đang khuất). */
+      if (t === this.t && this.x === t && this.v === 0 && !live.has(this)) return this;
+      this.t = t;
       if (reduced) { this.x = t; this.v = 0; this.touch(); return this; }
       live.add(this); kick(); return this;
     }
@@ -373,7 +378,12 @@
   addEventListener('scroll', onScroll, { passive: true }); onScroll();
   addEventListener('pointermove', () => { view.p = performance.now(); }, { passive: true });
 
-  /* Lenis (cuộn mượt cho con lăn chuột) nằm ngay trong trang (assets/lenis.min.js, MIT) và chỉ tải khi có chuột: trên màn
+  /* Cuộn mặc định là cuộn GỐC của trình duyệt (#305) — chạy trên luồng compositor, mượt đúng tần số quét của màn (165 Hz…)
+     kể cả lúc luồng chính đang bận vẽ hiệu ứng. Lenis dời trang TỪ LUỒNG CHÍNH mỗi khung: đo trên màn 165 Hz (bản 0e24c0a,
+     cuộn cả trang 1400 px/s), khung nào cũng phải tính lại kiểu + xếp lớp + đẩy khung → luồng chính bận ~70–90% suốt lúc
+     cuộn, khung nào quá 6 ms là cả trang khựng (và khựng khác nhau theo tốc độ cuộn — user #305). Thí nghiệm chỉ tắt
+     Lenis (bản a2431c4): luồng chính 8,6 → 3,5 s, GPU 7,5 → 4,9 s. ?lenis=1 = cảm giác cũ để so.
+     Lenis (cuộn mượt cho con lăn chuột) nằm ngay trong trang (assets/lenis.min.js, MIT) và chỉ tải khi có chuột: trên màn
      chạm nó không làm gì (Lenis không làm mượt cú vuốt). Trước #303 nó tải từ unpkg bằng thẻ defer ĐỨNG ĐẦU chuỗi script:
      cả trang (site.js, fx.js…) phải chờ một máy chủ bên ngoài trả lời rồi mới chạy — mạng điện thoại chậm là trang đứng
      trơ, quá 3,5 s thì hiện thô không hiệu ứng. */
@@ -390,9 +400,9 @@
     ['wheel', 'touchstart', 'keydown', 'pointerdown', 'scroll'].forEach((ev) => addEventListener(ev, wakeLenis, { passive: true }));
     wakeLenis();
   }
-  if (!reduced && matchMedia('(pointer: fine)').matches) {
+  if (!reduced && /[?&]lenis=1(&|$)/.test(location.search) && matchMedia('(pointer: fine)').matches) {
     if (window.Lenis) startLenis();
-    else { const ls = d.createElement('script'); ls.src = 'assets/lenis.min.js?v=412fc1b9'; ls.async = true; ls.onload = startLenis; d.head.appendChild(ls); }
+    else { const ls = d.createElement('script'); ls.src = 'assets/lenis.min.js?v=e0e556f9'; ls.async = true; ls.onload = startLenis; d.head.appendChild(ls); }
   }
   $$('a[href^="#"]').forEach((a) => a.addEventListener('click', (e) => {
     const id = a.getAttribute('href');
@@ -467,9 +477,15 @@
     const cv = d.createElement('canvas'); cv.className = 'game-cv game-live'; cv.setAttribute('aria-hidden', 'true');
     img.after(cv);
     const ctx = cv.getContext('2d');
+    /* Cỡ canvas nhớ sẵn, chỉ đọc lại khi đổi cỡ: đọc clientWidth mỗi khung (ngay sau khi lò xo vừa ghi kiểu) là ép trình
+       duyệt tính lại kiểu + bố cục giữa khung (#305). */
+    let cw = -1, ch = -1;
+    if ('ResizeObserver' in window) new ResizeObserver(() => { cw = -1; }).observe(cv);
+    else addEventListener('resize', () => { cw = -1; }, { passive: true });
     return gameClock((t) => {
       if (live && !live()) return;
-      const dpr = Math.min(2, devicePixelRatio || 1), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr);
+      if (cw < 0) { cw = cv.clientWidth; ch = cv.clientHeight; }
+      const dpr = Math.min(2, devicePixelRatio || 1), w = Math.round(cw * dpr), h = Math.round(ch * dpr);
       if (!w || !h) return;
       if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
       if (PR.draw(ctx, w, h, t)) cv.classList.add('on');
@@ -581,19 +597,33 @@
       ? (lang() === 'vi' ? 'Bộ đệm game: ' : 'Game buffer: ') + val + '%'
       : (lang() === 'vi' ? 'Toàn màn hình (ADB): ' : 'Fullscreen (ADB): ') + val + '%');
 
+    /* Kích thước/vị trí đọc từ bố cục MỘT lần rồi nhớ; đổi cỡ (ResizeObserver), đổi mức, đổi cách hạ thì đọc lại. Game vẽ
+       mỗi khung: đọc clientWidth/offsetLeft ngay sau khi lò xo vừa ghi kiểu là ép tính lại kiểu + bố cục giữa khung (#305). */
+    const G = { ok: false };
+    const geo = () => {
+      if (G.ok) return G;
+      const lp = lc.parentNode;
+      Object.assign(G, { ok: true, cw: cv.clientWidth, ch: cv.clientHeight, lw: lc.clientWidth, lx: lp.offsetLeft, ly: lp.offsetTop, lpw: lp.offsetWidth,
+        sw: scr.clientWidth || 1, sh: scr.clientHeight || 1, px: pill.offsetLeft, py: pill.offsetTop, pw: pill.offsetWidth, ph: pill.offsetHeight });
+      return G;
+    };
+    if ('ResizeObserver' in window) {
+      const ro = new ResizeObserver(() => { G.ok = false; });
+      [cv, lc, scr, pill].forEach((el) => ro.observe(el));
+    } else addEventListener('resize', () => { G.ok = false; }, { passive: true });
     function sizeCanvas() {
-      const dpr = Math.min(2, devicePixelRatio || 1);
-      const w = Math.max(1, Math.round(cv.clientWidth * dpr)), h = Math.max(1, Math.round(cv.clientHeight * dpr));
+      const dpr = Math.min(2, devicePixelRatio || 1), g = geo();
+      const w = Math.max(1, Math.round(g.cw * dpr)), h = Math.max(1, Math.round(g.ch * dpr));
       if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
-      const lw = Math.max(1, Math.round(lc.clientWidth * dpr));
+      const lw = Math.max(1, Math.round(g.lw * dpr));
       if (lc.width !== lw) { lc.width = lc.height = lw; }
     }
     function drawPill(c, lw, cssW) {
       /* Ở Toàn màn hình, cả cửa sổ nổi cũng bị vẽ ở độ phân giải thấp, nên vẽ nó vào cùng khung thấp. */
-      const k = lw / cssW, fs = (cssW / 52) * 1.05 * k, padX = fs, txt = pill.dataset.t || '';
+      const k = lw / cssW, fs = (cssW / 52) * 1.05 * k, padX = fs, txt = pill.dataset.t || '', g = geo();
       c.font = '560 ' + fs + 'px "Google Sans Flex", Roboto, sans-serif';
       /* Đặt đúng chỗ cửa sổ thật đang nằm (vẫn đo được dù đang ẩn). */
-      const x = pill.offsetLeft * k, y = pill.offsetTop * k, w = pill.offsetWidth * k, h = pill.offsetHeight * k;
+      const x = g.px * k, y = g.py * k, w = g.pw * k, h = g.ph * k;
       c.fillStyle = 'rgba(18,19,24,.86)';
       c.beginPath(); c.roundRect ? c.roundRect(x, y, w, h, h / 2) : c.rect(x, y, w, h); c.fill();
       c.fillStyle = '#3fd08f'; c.beginPath(); c.arc(x + padX + fs * 0.3, y + h / 2, fs * 0.3, 0, Math.PI * 2); c.fill();
@@ -605,20 +635,22 @@
     if (PR) PR.onReady(() => draw());
     function draw() {
       const live = PR && PR.ready() && !reduced;
-      if ((!live && (!polar || !polar.complete || !polar.naturalWidth)) || !cv.clientWidth) return;
+      if ((!live && (!polar || !polar.complete || !polar.naturalWidth)) || !geo().cw) return;
       sizeCanvas();
       const W = cv.width, H = cv.height, s = clamp(eff.x, 0.2, 1);
       const lw = Math.max(16, Math.round(W * s)), lh = Math.max(8, Math.round(H * s));
       if (off.width !== lw || off.height !== lh) { off.width = lw; off.height = lh; }
       octx.imageSmoothingEnabled = true; octx.imageSmoothingQuality = 'high';
       if (live) PR.draw(octx, lw, lh, clock.t); else octx.drawImage(polar, 0, 0, lw, lh);
-      if (mode === 'full' && on) drawPill(octx, lw, cv.clientWidth);
+      const g = geo();
+      if (mode === 'full' && on) drawPill(octx, lw, g.cw);
       ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low';
       ctx.drawImage(off, 0, 0, W, H);
-      /* Kính lúp: phóng 2,6 lần vùng ngay dưới nó, không làm mịn, để thấy từng điểm ảnh thật. */
-      const lp = lc.parentNode, sw0 = scr.clientWidth || 1, sh0 = scr.clientHeight || 1;
-      const L = lc.width, cx = (lp.offsetLeft + lp.offsetWidth / 2) / sw0, cy = (lp.offsetTop + lp.offsetHeight / 2) / sh0;
-      const half = lp.offsetWidth / 2 / sw0 / 2.6;
+      /* Kính lúp: phóng 2,6 lần vùng ngay dưới nó, không làm mịn, để thấy từng điểm ảnh thật. Kính tròn (aspect-ratio 1)
+         nên cao = rộng. */
+      const sw0 = g.sw, sh0 = g.sh;
+      const L = lc.width, cx = (g.lx + g.lpw / 2) / sw0, cy = (g.ly + g.lpw / 2) / sh0;
+      const half = g.lpw / 2 / sw0 / 2.6;
       const sx = (cx - half) * lw, sy = (cy - half * (W / H)) * lh, sw = half * 2 * lw, sh = half * 2 * (W / H) * lh;
       lctx.imageSmoothingEnabled = false;
       lctx.clearRect(0, 0, L, L);
@@ -631,7 +663,7 @@
       if (bubble) bubble.textContent = val;
       dimEl.textContent = dims(val);
       pill.dataset.t = pillText(); pillT.textContent = pill.dataset.t;
-      pill.style.display = on ? '' : 'none';
+      pill.style.display = on ? '' : 'none'; G.ok = false;
       thumb.to((val - 30) / 70, SPEC.fraction);
       eff.to(on ? val / 100 : 1, SPEC.smooth);
       const i = pBtns.findIndex((b) => +b.dataset.v === val);
@@ -649,7 +681,9 @@
     if ('ResizeObserver' in window) new ResizeObserver(draw).observe(cv);
     /* Ảnh tĩnh vẽ trước trong lúc atlas game chưa sẵn (hoặc tải hỏng); có game thì game thay ngay khung sau. */
     stillImage(draw);
-    refreshers.push(() => setVal(val));
+    /* Vẽ lại tường minh: chữ của cửa sổ nổi được vẽ CẢ vào canvas (Toàn màn hình) — lò xo đứng yên thì setVal không tự
+       gọi draw() nữa (Spring.to bỏ qua đích không đổi). */
+    refreshers.push(() => { setVal(val); draw(); });
     setVal(70);
     return {
       start() {
@@ -1376,7 +1410,12 @@
       put(b, Object.assign({ x: 0, y: 0, s: 1, r: 0 }, f, { o: 0 }));
       sc.timers.push(setTimeout(() => go(b, { x: 0, y: 0, s: 1, r: 0, o: 1 }, SPEC.stage), delay + i * 90));
     });
-    sc.timers.push(setTimeout(() => sc.demo.start(), reduced ? 0 : delay + 260));
+    /* Mô phỏng (game chạy, biểu đồ, nhật ký lệnh, bảng báo cáo trượt lên…) bắt đầu SAU khi khối cuối đã gần chạm chỗ, không
+       chồng lên lúc các khối đang bay vào và chương đang sáng (#305, user: "từng hiệu ứng lần lượt thì mượt, đùng một lúc
+       ra hết thì khựng"). Trước đây +260 ms: giữa lúc khối thứ hai, thứ ba còn đang bay. Tới giờ mà màn đã không còn hiện
+       (điện thoại: cuộn vụt qua; máy tính: chương khác đã sáng) thì thôi — không thì chạy ngầm ngoài màn. */
+    sc.timers.push(setTimeout(() => { if (deskMQ.matches ? active === sc.key : sc.vis) sc.demo.start(); },
+      reduced ? 0 : delay + Math.max(0, sc.blocks.length - 1) * 90 + 420));
   }
   function exit(sc) {
     sc.timers.forEach(clearTimeout); sc.timers = [];
@@ -1438,6 +1477,7 @@
     } else {
       slotIO = new IntersectionObserver((es) => es.forEach((e) => {
         const sc = screens[e.target.dataset.key];
+        sc.vis = e.isIntersecting;
         if (e.isIntersecting) {
           if (!sc.seen) { sc.seen = true; enter(sc, 0); } else sc.demo.start();
         } else if (sc.made) sc.made.stop();
@@ -1466,8 +1506,14 @@
     Object.values(screens).forEach((sc) => near.observe(sc.chap));
   }
   afterIntro(() => idleEach(Object.values(screens), (sc) => { void sc.demo; }));
-  /* Cả phần câu chuyện khuất khỏi màn → quầng màu sau chương thôi trôi (site.css .story.off-view). */
-  if ('IntersectionObserver' in window) new IntersectionObserver((es) => es.forEach((e) => e.target.classList.toggle('off-view', !e.isIntersecting))).observe($('.story'));
+  /* Phần tử khuất khỏi màn → hoạt ảnh CSS chạy mãi của nó tạm dừng (site.css .off-view): cả phần câu chuyện (quầng sau
+     chương), TỪNG chương (điện thoại giữ mọi chương đã sáng → năm quầng cùng trôi), đầu trang (ánh sau thẻ trong điện
+     thoại). Hoạt ảnh chạy trên compositor vẫn được tính lại kiểu ở mỗi khung luồng chính (đo #305: ánh đầu trang 584 lần
+     khi cuộn qua cả trang dù đã khuất từ lâu). */
+  if ('IntersectionObserver' in window) {
+    const offIO = new IntersectionObserver((es) => es.forEach((e) => e.target.classList.toggle('off-view', !e.isIntersecting)));
+    [$('.story'), $('.hero'), ...$$('.chap')].forEach((el) => el && offIO.observe(el));
+  }
   let rT = 0;
   addEventListener('resize', () => { clearTimeout(rT); rT = setTimeout(() => { if (active) fitScreen(screens[active]); }, 120); });
   refreshers.push(() => { if (active) fitScreen(screens[active]); });
@@ -1703,22 +1749,45 @@
        kéo dài quá hạn), chỉ sau màn mở đầu và không chen vào lúc đang cuộn (idleEach). */
     const xsAll = $$('.chap .h3 [data-x]').filter((el) => ['c', 't', 'w'].includes(el.dataset.x));
     if (!xsAll.length) return;
-    const chars = [...new Set(xsAll.map((el) => el.textContent).join('').replace(/\s/g, ''))].join('');
+    /* Chỉ chữ của thứ tiếng ĐANG xem (#305): gộp cả hai thứ tiếng thì xem tiếng Anh mà chữ Việt (ă, đ…) kéo thêm phần phông
+       latin-ext 147 KB; tải xong là đo lại toàn bộ chữ của trang (~100 ms bố cục + ~160 ms lớp, đo bản 0e24c0a: phông tải
+       muộn ở giây thứ ~3,9). Đổi tiếng thì dựng sẵn thêm cho tiếng mới. */
+    const chars = () => [...new Set(xsAll.filter((el) => { const l = el.closest('[lang]'); return !l || l.lang === lang(); })
+      .map((el) => el.textContent).join('').replace(/\s/g, ''))].join('');
     afterIntro(() => {
       const TB = table();
-      const jobs = [...new Set(xsAll.map((el) => el.dataset.x))].flatMap((s) => TB[s].map((v) => v.fv));
-      const warm = d.createElement('div'); warm.className = 'xm-warm'; warm.setAttribute('aria-hidden', 'true');
-      idleEach(jobs, (fv) => {
-        if (!warm.isConnected) d.body.appendChild(warm);
-        /* span (không phải i): <i> nghiêng mặc định → bản phông khác (nghiêng giả), không trúng bộ đệm. */
-        const el = d.createElement('span'); el.className = 'h3'; el.dataset.w = chars; el.style.fontVariationSettings = fv;
-        warm.appendChild(el); void warm.offsetWidth;
-      }, 1);
+      const fvs = [...new Set(xsAll.map((el) => el.dataset.x))].flatMap((s) => TB[s].map((v) => v.fv));
+      const warm = fontWarmer();
+      /* .h3 = đúng cỡ chữ của tên chương. */
+      const start = () => { const t = chars(); if (t) warm.add(fvs.map((fv) => ({ cls: 'h3', css: 'font-variation-settings:' + fv, t }))); };
+      start();
+      refreshers.push(() => setTimeout(start, 900));
     });
   })();
 
+  /* Hàng dựng sẵn bản phông lúc rảnh (tên chương ở trên; tiêu đề nở và chữ "Cryo" ở fx.js). Mỗi việc = một chữ ẩn mang kiểu
+     cho trước + đủ ký tự cần dựng; đọc offsetWidth là bố cục (= dựng bản phông) ngay lúc đó; MỘT việc mỗi lượt rảnh và không
+     chen lúc cuộn / rê chuột (idleEach, #303). Việc trùng (cùng kiểu + cùng ký tự) bỏ qua: đổi tiếng qua lại không làm khối
+     chữ ẩn phình mãi (review #305). span, không phải i: <i> nghiêng mặc định → bản phông khác (nghiêng giả), không trúng bộ đệm. */
+  function fontWarmer() {
+    const box = d.createElement('div'); box.className = 'xm-warm'; box.setAttribute('aria-hidden', 'true');
+    const seen = new Set();
+    return {
+      add(list) {
+        const fresh = list.filter((j) => { const k = (j.cls || '') + '|' + j.css + '|' + j.t; if (seen.has(k)) return false; seen.add(k); return true; });
+        idleEach(fresh, (j) => {
+          if (!box.isConnected) d.body.appendChild(box);
+          const el = d.createElement('span');
+          if (j.cls) el.className = j.cls;
+          el.style.cssText = j.css; el.dataset.w = j.t;
+          box.appendChild(el); void box.offsetWidth;
+        }, 1);
+      },
+    };
+  }
+
   /* Lớp hiệu ứng fx.js dùng chung lò xo, hình khối và trạng thái ngôn ngữ với trang. */
-  window.CryoMotion = { Spring, SPEC, owner, mo, go, put, reduced, fine: FINE, comp: COMP, build: BUILD, lang, refreshers, clamp, lerp, SHAPES, shapePts, morphPath, view, $, $$, afterIntro, idleEach };
+  window.CryoMotion = { Spring, SPEC, owner, mo, go, put, reduced, fine: FINE, comp: COMP, build: BUILD, lang, refreshers, clamp, lerp, SHAPES, shapePts, morphPath, view, $, $$, afterIntro, idleEach, fontWarmer };
 
   /* ---------- Mở đầu: một nhịp duy nhất khi tải trang ---------- */
   function intro() {

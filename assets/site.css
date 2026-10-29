@@ -1,6 +1,18 @@
 /* Cryo — trang chủ. Màu là bảng màu Material 3 tối sinh từ cùng màu gốc với app (SchemeTonalSpot),
    chuyển động dùng đúng hằng số lò xo trong ui/theme/Motion.kt của app. */
 
+/* Năm ký hiệu trong chữ của mô phỏng (→ ✓ ❄ ⚡ ⏳, chép nguyên văn từ app) vẽ bằng phông ký hiệu của máy. Google Sans Flex
+   chỉ có chúng trong phần "math" (225 KB) và "symbols" (158 KB): phần math tải GIỮA LÚC CUỘN khi nhật ký lệnh hiện "→",
+   tải xong là trình duyệt đo lại toàn bộ chữ của trang (đo #305: khựng 270–550 ms ở chương Báo cáo). Máy không có phông nào
+   dưới đây thì tự rơi về Google Sans Flex như cũ. */
+@font-face {
+  font-family: 'Cryo Sym';
+  src: local('Segoe UI Symbol'), local('SegoeUISymbol'), local('Apple Symbols'), local('Noto Sans Symbols 2'),
+    local('NotoSansSymbols2-Regular'), local('Noto Sans Symbols'), local('NotoSansSymbols-Regular-Subsetted'),
+    local('NotoSansSymbols-Regular-Subsetted2'), local('Noto Sans Math'), local('DejaVu Sans');
+  unicode-range: U+2192, U+23F3, U+26A1, U+2713, U+2744;
+}
+
 :root {
   --primary: #b7c4ff; --on-primary: #1e2d61; --primary-c: #354479; --on-primary-c: #dce1ff;
   --secondary: #c2c5dd; --secondary-c: #424659; --on-secondary-c: #dee1f9;
@@ -18,7 +30,7 @@
 
   --gutter: clamp(16px, 4vw, 48px);
   --maxw: 1240px;
-  --font: 'Google Sans Flex', 'Google Sans', Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font: 'Cryo Sym', 'Google Sans Flex', 'Google Sans', Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
 
   /* Màu cố định của app (không đổi theo hình nền): mức đóng băng L1–L4. */
   --l1-bg: #1f4a3c; --l1-fg: #4fd09f; --l2-bg: #3b3f52; --l2-fg: #c2c5dd;
@@ -162,17 +174,25 @@ html[lang="vi"] :not(html)[lang="en"], html[lang="en"] :not(html)[lang="vi"] { d
 /* ---------- Đầu trang ---------- */
 .top { position: fixed; z-index: 50; inset: 0 0 auto 0; padding: 10px var(--gutter); pointer-events: none; }
 .top-bar {
+  position: relative; z-index: 0;
   pointer-events: auto; max-width: var(--maxw); margin-inline: auto; display: flex; align-items: center; gap: 16px;
-  height: 60px; padding: 0 10px 0 14px; border-radius: 999px; background: transparent;
-  transition: background-color 300ms ease, box-shadow 300ms ease, backdrop-filter 300ms ease, max-width var(--t-sheet) var(--ease-sheet);
+  height: 60px; padding: 0 10px 0 14px; border-radius: 999px;
+  transition: max-width var(--t-sheet) var(--ease-sheet);
 }
-/* Cuộn xuống thì thanh trên co lại thành viên thuốc gọn hơn (lò xo bảng). */
-@media (min-width: 1100px) { .top.scrolled .top-bar { max-width: 1060px; } }
-.top.scrolled .top-bar {
+/* Kính mờ của thanh nằm ở lớp riêng, bán kính làm mờ CỐ ĐỊNH, chỉ hiện dần bằng opacity (#305). Bản cũ chuyển tiếp chính
+   backdrop-filter (none → blur 20px) 300 ms: Chrome không chạy được chuyển tiếp đó trên compositor — mỗi khung tính lại
+   bán kính + vẽ lại trên luồng chính, đúng lúc vừa bắt đầu cuộn khỏi đầu trang (đo: 40 khung bị bỏ trong 0,4 s đầu tiên
+   của cú cuộn; cách này 15, như không có kính). Nhìn y hệt: nền, kính mờ và bóng cùng hiện trong 300 ms. */
+.top-bar::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
   background: color-mix(in oklab, var(--surface-c) 78%, transparent);
   -webkit-backdrop-filter: blur(20px) saturate(1.3); backdrop-filter: blur(20px) saturate(1.3);
   box-shadow: 0 1px 0 color-mix(in oklab, var(--on-surface) 6%, transparent) inset, 0 12px 32px -18px rgba(0,0,0,.6);
+  opacity: 0; transition: opacity 300ms ease;
 }
+/* Cuộn xuống thì thanh trên co lại thành viên thuốc gọn hơn (lò xo bảng). */
+@media (min-width: 1100px) { .top.scrolled .top-bar { max-width: 1060px; } }
+.top.scrolled .top-bar::before { opacity: 1; }
 .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 650; font-size: 19px; letter-spacing: -.01em; font-variation-settings: 'ROND' 100; }
 .brand img { border-radius: 10px; }
 .top-nav { display: flex; gap: 4px; margin-left: 12px; }
@@ -367,7 +387,8 @@ html[lang="vi"] :not(html)[lang="en"], html[lang="en"] :not(html)[lang="vi"] { d
 /* `translate` (-50%) áp SAU transform nên tổng dịch vẫn là (6%, -46%) như cũ. Nhịp bậc: xem hsGlow. */
 @keyframes chapGlow { 0% { transform: translate(0%, 0%) scale(1) rotate(0deg); } 12.5% { transform: translate(0.187%, 0.124%) scale(1.002) rotate(0.249deg); } 25% { transform: translate(0.775%, 0.517%) scale(1.01) rotate(1.033deg); } 37.5% { transform: translate(1.757%, 1.171%) scale(1.023) rotate(2.342deg); } 50% { transform: translate(3%, 2%) scale(1.04) rotate(4deg); } 62.5% { transform: translate(4.243%, 2.829%) scale(1.057) rotate(5.658deg); } 75% { transform: translate(5.225%, 3.483%) scale(1.07) rotate(6.967deg); } 87.5% { transform: translate(5.813%, 3.876%) scale(1.078) rotate(7.751deg); } 100% { transform: translate(6%, 4%) scale(1.08) rotate(8deg); } }
 /* Câu chuyện đã cuộn khuất (máy tính: chương cuối vẫn "đang sáng") → quầng thôi trôi. */
-.story.off-view .chap::before { animation-play-state: paused; }
+.story.off-view .chap::before, .chap.off-view::before { animation-play-state: paused; }
+.hero.off-view .hs-glow { animation-play-state: paused; }
 .cmk { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
 .cm-shape { width: 52px; height: 52px; }
 .cm-shape path { transition: fill 420ms ease; }
@@ -1255,6 +1276,24 @@ html.cur-on, html.cur-on * { cursor: none !important; }
 @media (max-width: 760px) { .cm-card { grid-template-columns: 1fr; } .cm-card .btn { justify-self: start; } .o9 { --s: 170px; right: -60px; top: -70px; } }
 
 /* ---------- Trạng thái ban đầu của chuyển động (chỉ khi JS chạy) ---------- */
+/* Nền hiện dần và LẦN LƯỢT (#305, user: "khi mới vô, thành phần ở nền hiện lên đầu tiên một cách tức thì → khựng"). Chữ đầu
+   trang chờ phông (≤ 0,9 s) nên trước đây nền sáng bừng ngay khung đầu, khối 3D bật ra lúc fx.js vẽ xong, rồi mới tới chữ.
+   Nay: ánh nền sáng dần từ khung đầu (đèn bật lên trong lúc chờ phông); khi trang mở (.booted) quầng sau điện thoại và lưới
+   dựng chữ hiện dần, khối 3D nảy vào lần lượt SAU khi chữ đã bắt đầu nở. Chỉ opacity/scale → chạy trên compositor;
+   animation chỉ giữ `backwards` nên xong là gỡ hẳn, không để lại lớp hoạt ảnh. */
+.js:not(.no-motion) .amb { animation: ambIn 1.8s cubic-bezier(.2, 0, 0, 1) backwards; }
+@keyframes ambIn { from { opacity: 0; } }
+.js:not(.no-motion):not(.booted) .hero::before, .js:not(.no-motion):not(.booted) .hero::after { opacity: 0; }
+.booted .hero::before { transition: opacity 1.4s cubic-bezier(.2, 0, 0, 1) .2s; }
+.booted .hero::after { transition: opacity 1.8s ease .55s; }
+.js:not(.no-motion):not(.booted) .hero .orb { opacity: 0; }
+.js:not(.no-motion):not(.booted) .hero .orb canvas { scale: .55; }
+.booted .hero .orb { transition: opacity .7s ease var(--od, .5s); }
+.booted .hero .orb canvas { transition: scale 1.1s var(--ease-spatial) var(--od, .5s); }
+.hero .o1 { --od: .5s; } .hero .o3 { --od: .66s; } .hero .o2 { --od: .82s; } .hero .o4 { --od: .98s; }
+/* Khung điện thoại rỗng cũng chờ (trước đây nằm đen sẵn ~1,3 s trước khi nội dung bay vào): nảy lên ngay trước các khối. */
+.js:not(.no-motion):not(.booted) .hero-phone { opacity: 0; scale: .94; }
+.booted .hero-phone { transition: opacity .5s ease .1s, scale .9s var(--ease-spatial) .1s; }
 .js:not(.no-motion) .hero-h .hl, .js:not(.no-motion) .hero-in { opacity: 0; }
 .js:not(.no-motion) .hero-phone [data-b] { opacity: 0; }
 .js:not(.no-motion) .slot [data-b] { opacity: 0; }

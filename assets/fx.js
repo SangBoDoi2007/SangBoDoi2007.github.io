@@ -605,6 +605,69 @@
     }
   }
 
+  /* Dựng sẵn các bản phông mà chữ đi qua lúc "nở" (#305). Mỗi chữ cái nở từ hẹp-mảnh tới dáng gốc qua ~25–55 nấc trục;
+     nấc nào trình duyệt chưa gặp ở đúng cỡ chữ đó là phải dựng một bản phông mới ngay trong khung (đo #305: tiêu đề mục nở
+     = 70–120 ms bố cục dồn vào lúc mục vừa hiện, đúng lúc chương/sân khấu cũng đang vào; dựng sẵn → 4–20 ms). Lúc rảnh sau
+     màn mở đầu, mỗi nấc một chữ ẩn cùng cỡ + cùng ký tự (hàng fontWarmer chung với tên chương ở site.js) → lúc nở chỉ dùng
+     lại. Đọc chữ thẳng từ HTML (tiêu đề chỉ được tách lúc tới gần), chỉ thứ tiếng đang hiện. Danh sách nấc mô phỏng đúng
+     phép làm tròn có trễ của letterKit; lò xo nảy quá 1 một chút nên quét tới 1,04 rồi về. */
+  const bloomFvs = (S, sw, sd) => {
+    const out = new Set(); let w = 0, wd = 0;
+    const visit = (a) => {
+      const rw = clamp(lerp(S.z[0], S.b[0], a), 100, 1000), rd = clamp(lerp(S.z[1], S.b[1], a), 25, 151);
+      if (!w || Math.abs(rw - w) >= sw * 0.75) w = clamp(S.b[0] + Math.round((rw - S.b[0]) / sw) * sw, 100, 1000);
+      if (!wd || Math.abs(rd - wd) >= sd * 0.75) wd = clamp(+(S.b[1] + Math.round((rd - S.b[1]) / sd) * sd).toFixed(2), 25, 151);
+      out.add(fvOf(w, wd, Math.round(S.b[2]), S.r));
+    };
+    for (let a = 0; a <= 1.04; a += 0.002) visit(a);
+    for (let a = 1.04; a >= 0.99; a -= 0.002) visit(a);
+    return [...out];
+  };
+  (function warmBlooms() {
+    if (reduced || !M.fontWarmer) return;
+    const warm = M.fontWarmer();
+    /* el = khối chữ (phần [lang] của tiêu đề, hoặc chữ "Cryo"); chữ theo kiểu: '' = thường, c/t/w = chữ nhấn data-x. */
+    const groupsOf = (el) => {
+      const g = new Map();
+      const walk = (node, x) => node.childNodes.forEach((n) => {
+        if (n.nodeType === 3) g.set(x, (g.get(x) || '') + n.textContent);
+        else if (n.nodeType === 1) walk(n, (n.dataset && n.dataset.x) || x);
+      });
+      walk(el, '');
+      return g;
+    };
+    const plan = () => {
+      const map = new Map();
+      const add = (el, opt, groups) => {
+        const cs = getComputedStyle(el), fs = cs.fontSize, fw = cs.fontWeight;
+        groups.forEach((t, x) => {
+          const S = styleOf(x, opt), sw = S.x ? XSW : (opt.sw || 10), sd = S.x ? XSD : (opt.sd || 1);
+          bloomFvs(S, sw, sd).forEach((fv) => {
+            const id = fs + '|' + fw + '|' + fv, o = map.get(id);
+            if (o) o.t += t; else map.set(id, { fs, fw, fv, t });
+          });
+        });
+      };
+      $$('.h2').forEach((h) => {
+        if (h.cryoSplit) {
+          /* Đã tách: chữ cái nằm trong bộ kit; chỉ các khối chưa nở. */
+          headKs.filter((x) => x.h === h && !x.done && shown(x.k.vis)).forEach((x) => {
+            const g = new Map(); x.kit.forEach((L) => { const key = L.st.x || ''; g.set(key, (g.get(key) || '') + L.c.textContent); });
+            add(x.k.el, H2, g);
+          });
+          return;
+        }
+        const parts = $$('[lang]', h);
+        (parts.length ? parts : [h]).forEach((p) => { if (shown(p)) add(p, H2, groupsOf(p)); });
+      });
+      if (finEl && !finEl.cryoSplit && shown(finEl)) add(finEl, FIN, groupsOf(finEl));
+      warm.add([...map.values()].map((j) => ({ css: 'font-size:' + j.fs + ';font-weight:' + j.fw + ';font-variation-settings:' + j.fv,
+        t: [...new Set(j.t.replace(/\s/g, ''))].join('') })).filter((j) => j.t));
+    };
+    afterIntro(() => setTimeout(plan, 600));
+    M.refreshers.push(() => setTimeout(plan, 1600));
+  })();
+
   /* Đổi ngôn ngữ / đổi cỡ: khoá lại dòng cho thứ tiếng đang hiện, đo lại chữ cái. */
   /* Tiêu đề đang nở thì bỏ qua (đo lúc chữ đang hẹp là sai) và đánh dấu để khoá lại ngay khi nở xong. */
   let relockPending = false;
