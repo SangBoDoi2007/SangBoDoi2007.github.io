@@ -1048,8 +1048,8 @@
       phase = 0;
       render();
     }
-    /* Kéo cửa sổ: thả ra thì bám vào mép trái hoặc phải gần nhất (app nhớ vị trí theo mép). Chạm (không kéo) vào hàng đầu
-       thì thu gọn / mở rộng như app; nút bên trong thì bấm như nút. */
+    /* Kéo cửa sổ: thả ra thì bám vào mép trái hoặc phải gần nhất (app nhớ vị trí theo mép). Chạm (không kéo) vào pill
+       (khi thu gọn) hoặc hàng đầu (khi mở rộng) thì thu gọn / mở rộng; nút bên trong thì bấm như nút. */
     const pos = owner(() => { ov.style.left = (px.x * 100).toFixed(3) + '%'; ov.style.top = (py.x * 100).toFixed(3) + '%'; });
     const px = new Spring(0.03, 0.0005, pos), py = new Spring(0.26, 0.0005, pos);
     let drag = null;
@@ -1059,13 +1059,13 @@
       /* Không chặn mặc định thì Chrome coi là kéo-thả gốc và huỷ con trỏ ngay nhịp di chuyển đầu. */
       e.preventDefault();
       const r = scr.getBoundingClientRect(), o = ov.getBoundingClientRect();
-      drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, moved: false, onHead: !!e.target.closest('.ov-head'),
+      drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, moved: false, canToggle: !open || !!e.target.closest('.ov-head'),
         ox: (e.clientX - o.left) / r.width, oy: (e.clientY - o.top) / r.height, w: o.width / r.width, h: o.height / r.height };
-      ov.setPointerCapture(e.pointerId);
+      try { ov.setPointerCapture(e.pointerId); } catch (_) {}
     });
     ov.addEventListener('pointermove', (e) => {
       if (!drag || e.pointerId !== drag.id) return;
-      if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 6) return;
+      if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 10) return;
       drag.moved = true; ov.classList.add('drag');
       const r = scr.getBoundingClientRect();
       px.set(clamp((e.clientX - r.left) / r.width - drag.ox, 0.01, Math.max(0.01, 0.99 - drag.w)));
@@ -1074,7 +1074,8 @@
     const end = (e) => {
       if (!drag) return;
       const g = drag; drag = null; ov.classList.remove('drag');
-      if (!g.moved) { if (g.onHead && e.type === 'pointerup') toggle(); return; }
+      try { if (ov.hasPointerCapture(g.id)) ov.releasePointerCapture(g.id); } catch (_) {}
+      if (!g.moved) { if (g.canToggle && e.type === 'pointerup') toggle(); return; }
       px.to(px.x + g.w / 2 < 0.5 ? 0.03 : 0.97 - g.w, SPEC.spatial);
     };
     ov.addEventListener('pointerup', end); ov.addEventListener('pointercancel', end);

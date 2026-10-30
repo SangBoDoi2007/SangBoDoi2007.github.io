@@ -634,9 +634,10 @@ html:not(.js) .slot .screen { display: flex; flex-direction: column; align-items
   box-shadow: inset 0 0 0 calc(1 * var(--dp)) color-mix(in oklab, var(--outline) 60%, transparent);
   cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; line-height: 1.2;
 }
+.ov:not(.open) { cursor: pointer; }
 .ov.drag { cursor: grabbing; }
 .ov-head { display: flex; align-items: center; justify-content: center; white-space: nowrap; }
-.ov.open .ov-head { justify-content: flex-start; }
+.ov.open .ov-head { justify-content: flex-start; cursor: pointer; }
 .ov-dot, .ov-sdot { flex: none; width: calc(6 * var(--dp)); height: calc(6 * var(--dp)); border-radius: 50%; background: var(--primary); margin-right: calc(6 * var(--dp)); }
 .ov-m { display: inline-flex; align-items: flex-end; }
 .ov-v { font-size: calc(16 * var(--dp)); font-weight: 700; font-variant-numeric: tabular-nums; }
