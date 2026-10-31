@@ -20,7 +20,7 @@
   const OFF = [
     ['amb', 'Ánh nền (3 quầng màu + hạt)', '.amb{display:none!important}'],
     ['blur', 'Thanh đầu trang kính mờ', '.top-bar{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}'],
-    ['deco', 'Quầng sáng + lưới sau chữ', '.hero::before,.hero::after,.chap::before,.stage::before,.hs-glow,.pro-aura{display:none!important}'],
+    ['deco', 'Quầng sáng + lưới sau chữ', '.hero::before,.hero::after,.chap::before,.stage::before,.hs-aura,.hs-spark,.res-pix,.pro-aura{display:none!important}'],
     ['orbs', 'Khối 3D', '.orbs{display:none!important}'],
     ['nums', 'Số chương cỡ lớn', '.chap-num,.chap-bg{display:none!important}'],
     ['anim', 'Mọi hoạt ảnh CSS', '*,*::before,*::after{animation-play-state:paused!important}'],

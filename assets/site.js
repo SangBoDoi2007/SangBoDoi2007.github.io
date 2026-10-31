@@ -14,7 +14,7 @@
      — tools/bust.py, để tải lại trang sau một lần đẩy bản mới là lấy bản mới). Bảng ?perf in ra để biết kết quả thuộc bản nào. */
   const BUILD = (() => { try { return new URL(d.currentScript.src).searchParams.get('v') || ''; } catch (e) { return ''; } })();
   /* Bảng đo khung hình ẩn (assets/perf.js): chỉ tải khi địa chỉ có "perf" (…/?perf hoặc …/#perf). */
-  if (/[?&#]perf\b/.test(location.search + location.hash)) { const ps = d.createElement('script'); ps.src = 'assets/perf.js?v=9a546aad'; ps.async = true; d.head.appendChild(ps); }
+  if (/[?&#]perf\b/.test(location.search + location.hash)) { const ps = d.createElement('script'); ps.src = 'assets/perf.js?v=f762dd8f'; ps.async = true; d.head.appendChild(ps); }
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches || root.classList.contains('no-motion');
   if (reduced) root.classList.add('no-motion');
   const refreshers = [];
@@ -300,10 +300,13 @@
 
   /* ---------- Màu theo hình nền ---------- */
   const themeMeta = $('meta[name="theme-color"]');
+  /* Canvas tô màu chủ đề bằng mã (pixel hoá thẻ Render scale) đọc lại màu khi đổi bảng màu. */
+  const schemeHooks = [];
   function applyScheme(s) {
     if (s === 'ice') root.removeAttribute('data-scheme'); else root.setAttribute('data-scheme', s);
     $$('.swatches button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.scheme === s)));
     if (themeMeta) themeMeta.content = getComputedStyle(root).getPropertyValue('--surface').trim() || '#121318';
+    schemeHooks.forEach((f) => f());
   }
   $$('.swatches button').forEach((b) => b.addEventListener('click', () => {
     const s = b.dataset.scheme;
@@ -316,6 +319,329 @@
     d.startViewTransition(() => applyScheme(s));
   }));
   applyScheme(root.getAttribute('data-scheme') || 'ice');
+
+  /* ---------- Hai hiệu ứng chép từ app (#311): pixel hoá thẻ Render scale, hào quang biểu tượng game ----------
+     User: "tái hiện được mấy cái hiệu ứng này như trong app được không" (gửi ảnh thẻ Không gian chơi game + thẻ Tỉ lệ dựng
+     hình của app cạnh bản web). Dựng bằng mã chứ không quay video: video không theo được 5 bảng màu, hai thứ tiếng, và thẻ
+     thật của app có ô số FPS (luật trang Play: không số FPS trên ảnh/mô phỏng). */
+
+  /* Nhịp nền 30 khung/giây như AmbientFrames của app: rAF chỉ vẽ khi tới hạn (màn 165 Hz vẽ ~1/5 số khung). */
+  function ambient(paint) {
+    let raf = 0, due = 0, on = false;
+    const tick = (now) => {
+      raf = on ? requestAnimationFrame(tick) : 0;
+      if (!on || now < due) return;
+      due = Math.max(due + 1000 / 30, now - 8);
+      paint(now / 1000);
+    };
+    return {
+      get on() { return on; },
+      run(v) { v = !!v && !reduced; if (v === on) return; on = v; if (on && !raf) { due = 0; raf = requestAnimationFrame(tick); } },
+    };
+  }
+  /* Đường cong cubic-bezier của CSS / Compose CubicBezierEasing (chia đôi tìm t theo x). */
+  function bezier(x1, y1, x2, y2) {
+    const B = (p1, p2, t) => 3 * (1 - t) * (1 - t) * t * p1 + 3 * (1 - t) * t * t * p2 + t * t * t;
+    return (x) => {
+      if (x <= 0) return 0; if (x >= 1) return 1;
+      let lo = 0, hi = 1;
+      for (let i = 0; i < 24; i++) { const m = (lo + hi) / 2; if (B(x1, x2, m) < x) lo = m; else hi = m; }
+      return B(y1, y2, (lo + hi) / 2);
+    };
+  }
+  const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
+  /* Màu: lerp(Color, Color) của Compose nội suy trong OKLab — làm y như thế để dải màu khớp app. */
+  const hexRgb = (s) => { const m = /^#([0-9a-f]{6})$/i.exec((s || '').trim()); if (!m) return null; const n = parseInt(m[1], 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+  const toLin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+  const toGam = (c) => 255 * (c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055);
+  function rgbLab(c) {
+    const r = toLin(c[0]), g = toLin(c[1]), b = toLin(c[2]);
+    const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+    const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+    const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+    return [0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s, 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+      0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s];
+  }
+  function labRgb(L) {
+    const l = (L[0] + 0.3963377774 * L[1] + 0.2158037573 * L[2]) ** 3;
+    const m = (L[0] - 0.1055613458 * L[1] - 0.0638541728 * L[2]) ** 3;
+    const s = (L[0] - 0.0894841775 * L[1] - 1.2914855480 * L[2]) ** 3;
+    return [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+      -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s].map((v) => Math.round(clamp(toGam(clamp(v, 0, 1)), 0, 255)));
+  }
+  const mixC = (a, b, t) => { const A = rgbLab(a), B = rgbLab(b); return labRgb(A.map((v, i) => v + (B[i] - v) * t)); };
+  const rgbCss = (c) => 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')';
+  const lumOf = (c) => 0.2126 * toLin(c[0]) + 0.7152 * toLin(c[1]) + 0.0722 * toLin(c[2]);
+  const WHITE = [255, 255, 255];
+
+  /* ---- Pixel hoá thẻ "Tỉ lệ dựng hình" ⇐ ui/dashboard/ScalePixelPreview.kt (PixelStreamField, user chốt #310) ----
+     Cùng hằng số, cùng hàm băm và nhiễu → cùng bức tranh: MỌI ô cùng cạnh = 4 dp / mức đang chọn, số hàng nguyên khít bề
+     cao; THÂN màu chủ đề primary ↔ inversePrimary mềm như mây, tự biến đổi tại chỗ (nhiễu Perlin 3D, thời gian là chiều
+     thứ ba) và trôi ra giữa, mỗi ô lấy màu đúng một điểm ở tâm; MÉP là sóng dạt bờ (3 lớp lệch nhịp, bọt, vệt ướt, hạt rắc
+     bám lưỡi sóng); ô sau chữ mờ đi; màn xuất hiện một lần. 30 khung/giây chỉ khi thẻ ≥ 50% trên màn; giảm chuyển động →
+     đứng yên ở giây 3,1 như app. */
+  const PX = { FINE: 4, GAP: 1.2, UNIT: 40, SEA: .34, WMIN: .04, WVAR: .22, LAG: .6, SPREAD: .7, PERIODS: [4.3, 5.4, 6.2], RISE: .3,
+    FOAM: .025, SREACH: .22, SHZ: 2.5, SSHARE: .85, GRAIN: .15, GHZ: 1.6, PSCALE: 1.5, CEDGE: .12, CFULL: .22, LOW: -.37,
+    OUT: .5, STRETCH: .7, EVOLVE: .22, DIM: .65, TFADE: 10, REST: 3.1, LUT: 256 };
+  /* Băm 3 số nguyên → [0, 1) đúng từng bit như bản Kotlin (Int tràn = Math.imul). */
+  const pxHash = (a, b, s) => {
+    let h = (Math.imul(a, 374761393) + Math.imul(b, 668265263) + Math.imul(s, 1274126177)) | 0;
+    h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16;
+    return (h & 0xFFFFFF) / 16777216;
+  };
+  const fade5 = (t) => t * t * t * (t * (t * 6 - 15) + 10);
+  function grad3(ix, iy, iz, s, dx, dy, dz) {
+    switch ((pxHash(ix, iy, s + Math.imul(iz, 7919)) * 12) | 0) {
+      case 0: return dx + dy; case 1: return -dx + dy; case 2: return dx - dy; case 3: return -dx - dy;
+      case 4: return dx + dz; case 5: return -dx + dz; case 6: return dx - dz; case 7: return -dx - dz;
+      case 8: return dy + dz; case 9: return -dy + dz; case 10: return dy - dz; default: return -dy - dz;
+    }
+  }
+  function noise3(x, y, z, s) {
+    const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z), fx = x - ix, fy = y - iy, fz = z - iz;
+    const u = fade5(fx), v = fade5(fy), w = fade5(fz);
+    const x00 = lerp(grad3(ix, iy, iz, s, fx, fy, fz), grad3(ix + 1, iy, iz, s, fx - 1, fy, fz), u);
+    const x10 = lerp(grad3(ix, iy + 1, iz, s, fx, fy - 1, fz), grad3(ix + 1, iy + 1, iz, s, fx - 1, fy - 1, fz), u);
+    const x01 = lerp(grad3(ix, iy, iz + 1, s, fx, fy, fz - 1), grad3(ix + 1, iy, iz + 1, s, fx - 1, fy, fz - 1), u);
+    const x11 = lerp(grad3(ix, iy + 1, iz + 1, s, fx, fy - 1, fz - 1), grad3(ix + 1, iy + 1, iz + 1, s, fx - 1, fy - 1, fz - 1), u);
+    return lerp(lerp(x00, x10, v), lerp(x01, x11, v), w);
+  }
+  function fbm3(x, y, z, s) {
+    let sum = 0, amp = 0.6;
+    for (let o = 0; o < 3; o++) {
+      sum += amp * noise3(x, y, z, s + o);
+      const nx = 1.7 * x - 1.1 * y; y = 1.1 * x + 1.7 * y; x = nx; z *= 1.9; amp *= 0.5;
+    }
+    return sum * 1.1;
+  }
+  const dot2 = (i, j, s, dx, dy) => { const a = pxHash(i, j, s) * 6.2831855; return Math.cos(a) * dx + Math.sin(a) * dy; };
+  function noise2(x, y, s) {
+    const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy, sx = fade5(fx), sy = fade5(fy);
+    const a = dot2(ix, iy, s, fx, fy), b = dot2(ix + 1, iy, s, fx - 1, fy), c = dot2(ix, iy + 1, s, fx, fy - 1), e = dot2(ix + 1, iy + 1, s, fx - 1, fy - 1);
+    const top = a + (b - a) * sx, bot = c + (e - c) * sx;
+    return top + (bot - top) * sy;
+  }
+  /* pixelPaintTones của app + bảng tra màu dựng MỘT lần (lerp OKLab mỗi ô là thứ đắt — app đo #310: luồng chính 14 → 40%). */
+  function pixelTones(p, ip, cont) {
+    const L = (t) => mixC(p, ip, t);
+    const T = lumOf(cont) > 0.4
+      ? { stops: [p, L(0.25), L(0.45)], cloud: L(0.85), glint: mixC(ip, WHITE, 0.45), scout: L(0.35) }
+      : { stops: [L(0.8), L(0.62), L(0.42)], cloud: mixC(p, WHITE, 0.35), glint: mixC(WHITE, cont, 0.15), scout: mixC(p, WHITE, 0.3) };
+    const ramp = (v) => {
+      const x = v * (T.stops.length - 1), i = Math.min(Math.floor(x), T.stops.length - 2);
+      return mixC(T.stops[i], T.stops[i + 1], smooth(0, 1, x - i));
+    };
+    T.lut = []; T.str = [];
+    for (let i = 0; i < PX.LUT; i++) {
+      const n = PX.LOW + (PX.CFULL - PX.LOW) * i / (PX.LUT - 1);
+      const c = mixC(ramp(clamp((n - PX.LOW) / (PX.CFULL - PX.LOW), 0, 1)), T.cloud, smooth(PX.CEDGE, PX.CFULL, n));
+      T.lut.push(c); T.str.push(rgbCss(c));
+    }
+    T.wetS = rgbCss(mixC(T.stops[1], T.glint, 0.25)); T.scoutS = rgbCss(T.scout); T.foam = new Map();
+    return T;
+  }
+  function pixelField(box, levelOf) {
+    const cv = d.createElement('canvas'); cv.className = 'res-pix'; cv.setAttribute('aria-hidden', 'true');
+    box.prepend(cv);
+    const c = cv.getContext('2d'), kids = Array.from(box.children).filter((k) => k !== cv), ease = bezier(0.25, 0.6, 0.2, 1);
+    let W = 0, H = 0, dpr = 1, dpx = 1, textEnd = 0, tones = null, t = PX.REST, last = 0, enter = reduced ? 1 : 0, t0 = -1;
+    const colors = () => {
+      const cs = getComputedStyle(box), p = hexRgb(cs.getPropertyValue('--primary')), cont = hexRgb(cs.getPropertyValue('--primary-c'));
+      const ip = hexRgb(cs.getPropertyValue('--inv-primary')) || (p && cont ? mixC(p, cont, 0.6) : null);
+      tones = p && cont && ip ? pixelTones(p, ip, cont) : null;
+    };
+    const measure = () => {
+      dpr = Math.min(2, devicePixelRatio || 1);
+      W = Math.round(box.clientWidth * dpr); H = Math.round(box.clientHeight * dpr);
+      if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+      /* 1 dp của app = cỡ chữ nhãn (.9em, như titleSmall 14 sp của thẻ thật) / 14. */
+      dpx = parseFloat(getComputedStyle(box).fontSize) * 0.9 / 14 * dpr;
+      textEnd = kids.reduce((m, k) => Math.max(m, k.offsetLeft + k.offsetWidth), 0) * dpr;
+    };
+    function draw() {
+      if (!W || !H || !tones) return;
+      c.clearRect(0, 0, W, H);
+      const rows = Math.max(1, Math.round(H / (PX.FINE / clamp(levelOf(), 0.3, 1) * dpx)));
+      const cell = H / rows, unit = PX.UNIT * dpx, gap = Math.min(PX.GAP * dpx, cell * 0.25), paintUnit = unit * PX.PSCALE;
+      const cols = Math.floor(W * (PX.SEA + PX.WMIN + PX.WVAR + 0.1) / cell) + 1, tFade = PX.TFADE * dpx, T = tones;
+      for (let r = 0; r < rows; r++) {
+        const y = r * cell, cy = y + cell / 2, yy = cy / unit;
+        /* Sóng dạt bờ ở độ cao này: đợt vươn xa nhất lúc này + đợt đang rút (vệt ướt). */
+        let reach = 0, wet = 0, wetFade = 0;
+        for (let k = 0; k < 3; k++) {
+          const lag = PX.LAG * noise2(yy * 0.5 + k * 13, k * 7.3, 70 + k);
+          const cycle = t / PX.PERIODS[k] + k * 0.37 + lag, wave = Math.floor(cycle), p = cycle - wave;
+          const swell = noise2(yy * 0.7 + wave * 3.1, wave * 1.7 + k * 5, 80 + k);
+          const amp = clamp(PX.WMIN + PX.WVAR * (0.5 + PX.SPREAD * swell), 0, PX.WMIN + PX.WVAR);
+          const shape = p < PX.RISE ? 1 - (1 - p / PX.RISE) ** 2 : 1 - smooth(PX.RISE, 1, p);
+          if (amp * shape > reach) reach = amp * shape;
+          if (p >= PX.RISE && amp > wet) { wet = amp; wetFade = 1 - (p - PX.RISE) / (1 - PX.RISE); }
+        }
+        reach += 0.06 * noise3(yy * 0.9, 3, t * 0.55, 90) + 0.035 * noise3(yy * 2.4, 5, t * 1.2, 91);
+        for (let col = 0; col < cols; col++) {
+          const fromEdge = col * cell, cx = fromEdge + cell / 2, dice = pxHash(col, r, 31);
+          const edge = enter * (PX.SEA + reach) - cx / W - 0.035 * dice, wetEdge = enter * (PX.SEA + wet) - cx / W;
+          if (-edge > PX.SREACH && (wetEdge <= 0 || wetFade <= 0)) continue;
+          const k = t * PX.GHZ + dice * 7, ki = Math.floor(k), a = pxHash(col, r, ki);
+          const grain = a + (pxHash(col, r, ki + 1) - a) * smooth(0, 1, k - ki) - 0.5;
+          let fill, alpha;
+          if (edge > 0) {
+            const n = fbm3(cx / paintUnit * PX.STRETCH - t * PX.OUT, cy / paintUnit, t * PX.EVOLVE, 61) + PX.GRAIN * 0.5 * grain;
+            const i = clamp(Math.round((n - PX.LOW) / (PX.CFULL - PX.LOW) * (PX.LUT - 1)), 0, PX.LUT - 1);
+            /* Bọt trắng ở rìa sóng: dải sát mép + vài bọt lấm tấm ngay sau đó. */
+            const foam = (1 - smooth(0, PX.FOAM, edge)) + (edge < PX.FOAM * 2.5 && grain > 0.3 ? 0.5 : 0);
+            if (foam > 0) {
+              /* Màu bọt: nấc 1/32 của độ pha, nhớ theo (màu thân, nấc) — trộn OKLab + dựng chuỗi mỗi ô mỗi khung là thứ đắt. */
+              const q = Math.round(Math.min(0.75 * foam, 0.85) * 32), key = i * 33 + q;
+              fill = T.foam.get(key);
+              if (!fill) { fill = rgbCss(mixC(T.lut[i], T.glint, q / 32)); T.foam.set(key, fill); }
+            } else fill = T.str[i];
+            alpha = 0.6 + 0.35 * smooth(0, 0.06, edge);
+          } else {
+            /* Hạt rắc trước lưỡi sóng (bám cả lúc rút) đè lên vệt ướt chỗ sóng vừa rút. */
+            let scout = 0;
+            if (-edge <= PX.SREACH) {
+              const sk = t * PX.SHZ * (0.55 + pxHash(col, r, 57) * 1.1) + dice * 11, si = Math.floor(sk), near = 1 + edge / PX.SREACH;
+              if (pxHash(col, r, si + 77) <= PX.SSHARE * near * near) {
+                scout = enter * (0.45 + 0.55 * pxHash(col, r, si + 131)) * Math.sin((sk - si) * Math.PI) * (0.35 + 0.65 * near);
+              }
+            }
+            const wa = wetEdge > 0 && wetFade > 0 ? 0.32 * wetFade * clamp(0.6 + 0.8 * grain, 0, 1) : 0;
+            if (scout >= wa) { fill = T.scoutS; alpha = scout; } else { fill = T.wetS; alpha = wa; }
+          }
+          if (textEnd > 0) alpha *= 1 - PX.DIM * smooth(-tFade, tFade, textEnd - (W - cx));
+          if (alpha < 0.02) continue;
+          c.globalAlpha = Math.min(1, alpha); c.fillStyle = fill;
+          c.fillRect(W - fromEdge - cell + gap / 2, y + gap / 2, cell - gap, cell - gap);
+        }
+      }
+      c.globalAlpha = 1;
+    }
+    const loop = ambient((now) => {
+      if (last) t += Math.min(0.1, now - last);
+      last = now;
+      if (enter < 1) { if (t0 < 0) t0 = now; enter = ease((now - t0) / 1.5); }
+      draw();
+    });
+    const run = (v) => { loop.run(v); if (!loop.on) last = 0; };
+    colors(); measure();
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver((es) => { run(es[es.length - 1].intersectionRatio >= 0.5); }, { threshold: [0, 0.5] }).observe(box);
+    } else run(true);
+    if ('ResizeObserver' in window) new ResizeObserver(() => { measure(); if (!loop.on) draw(); }).observe(box);
+    schemeHooks.push(() => { colors(); if (!loop.on) draw(); });
+    refreshers.push(() => { measure(); if (!loop.on) draw(); });
+    draw();
+    return { redraw() { if (!loop.on) draw(); } };
+  }
+
+  /* ---- Hào quang biểu tượng game ở thẻ Không gian chơi game ⇐ ui/components/IconAura.kt ----
+     Bản web theo đường vẽ MÁY CŨ của app (AuroraLobes, Android < 13): sáu khối màu mềm quanh biểu tượng, mỗi khối một
+     gradient tròn kéo dài theo hướng toả, chuyển động đúng AuraMotion.place với bộ số APP (#276: tốc độ 1,45, lượn .5,
+     nghiêng 1,5, cỡ 1,0, nhiễu mượt ngẫu nhiên không lặp — AuraNoise), thở 0,8–1,0 (pulse), bừng ra từ biểu tượng lúc hiện
+     (750 ms, nở 80 → 100%). Chồng SrcOver như AuroraLobes (bản đầu cộng sáng 'lighter' → lõi quanh biểu tượng cháy trắng)
+     trên thẻ gần đen. Polar Run một màu → sáu khối xanh đều quanh biểu tượng (IconGlow: "xanh vòng quanh"), ba sắc; nền tối
+     màu ĐẬM để chữ trắng đè lên vẫn đọc được (bản đầu L .63 làm chìm tên game). Kim tuyến chữ thập: 48 hạt rải
+     tới 4,47 cạnh biểu tượng, trôi ra, loé (bộ user chốt #278). Bản shader AGSL đầy đủ (chảy ra, viền, nhoè) không chép. */
+  const AU = { SPEED: 1.45, SWAY: 0.5, LEAN: 1.5, DIST: 0.78, DSW: 0.3, SIZE: 1.0014, SSW: 0.22, STRETCH: 1.35, WIDTH: 0.85,
+    FLICKER: 0.15, PERIOD: 3.2, PSPREAD: 2, PPER: 3.2, GAIN: 0.62, DOWN: 4, REACH: 4.47, SPARKS: 48 };
+  const auV = (i) => { let h = Math.imul(i, 0x27d4eb2d); h ^= h >>> 15; h = Math.imul(h, 0x2c1b3c6d); h ^= h >>> 12; return (h & 0xFFFF) / 32767.5 - 1; };
+  /* AuraNoise: Catmull-Rom qua giá trị băm ở mỗi mốc nguyên, nén tanh về −1..1; [giá trị, đạo hàm]. */
+  const auRaw = (x) => {
+    const i = Math.floor(x), f = x - i, a = auV(i - 1), b = auV(i), c = auV(i + 1), e = auV(i + 2);
+    const k1 = c - a, k2 = 2 * a - 5 * b + 4 * c - e, k3 = -a + 3 * b - 3 * c + e;
+    return [0.5 * (2 * b + f * (k1 + f * (k2 + f * k3))), 0.5 * (k1 + f * (2 * k2 + 3 * f * k3))];
+  };
+  const AU_NORM = Math.tanh(2);
+  const auWave = (x) => Math.tanh(1.6 * auRaw(x)[0]) / AU_NORM;
+  const auSlope = (x) => { const r = auRaw(x), th = Math.tanh(1.6 * r[0]); return 1.6 * (1 - th * th) / AU_NORM * r[1] / (2 * Math.PI); };
+  function hubAura(space) {
+    const icon = space && $('.hs-game img', space);
+    if (!icon) return;
+    const gl = d.createElement('canvas'), sp = d.createElement('canvas');
+    gl.className = 'hs-aura'; sp.className = 'hs-spark';
+    gl.setAttribute('aria-hidden', 'true'); sp.setAttribute('aria-hidden', 'true');
+    space.prepend(gl, sp);
+    const g = gl.getContext('2d'), s = sp.getContext('2d'), ignite = bezier(0.16, 1, 0.3, 1);
+    /* Hạt giống cố định → mỗi lần mở trang cùng một bộ nhịp (như Random(11) của IconGlow). */
+    let seed = 11;
+    const rnd = () => { seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed); x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+    const blobs = [];
+    for (let j = 0; j < 6; j++) {
+      const shade = ((j % 3) - 1) * 0.5, col = labRgb([0.5 + 0.08 * shade, -0.025, -0.165]);
+      const grad = g.createRadialGradient(0, 0, 0, 0, 0, 1), rgba = (a) => 'rgba(' + col.join(',') + ',' + a + ')';
+      grad.addColorStop(0, rgba(1)); grad.addColorStop(0.4, rgba(0.6)); grad.addColorStop(0.75, rgba(0.18)); grad.addColorStop(1, rgba(0));
+      blobs.push({ anchor: -Math.PI / 2 + (j - 2.5) * Math.PI / 3, grad,
+        phase: [0, 1, 2, 3].map(() => rnd() * 2 * Math.PI), period: [0, 1, 2, 3].map(() => AU.PERIOD + AU.PSPREAD * rnd()) });
+    }
+    const glow = g.createRadialGradient(0, 0, 0, 0, 0, 1);
+    glow.addColorStop(0, 'rgba(40,90,210,.5)'); glow.addColorStop(0.45, 'rgba(32,70,180,.22)'); glow.addColorStop(1, 'rgba(25,55,150,0)');
+    const sparks = Array.from({ length: AU.SPARKS }, () => ({ a: rnd() * 2 * Math.PI, d: rnd(), v: 0.05 + rnd() * 0.08, ph: rnd() * 2 * Math.PI, hz: 0.5 + rnd() * 0.7, sz: 0.025 + rnd() * 0.035 }));
+    let w = 0, h = 0, cx = 0, cy = 0, ic = 0, sd = 1, t = 2, last = 0, shown = reduced ? 1 : 0, t0 = -1;
+    const measure = () => {
+      w = space.clientWidth; h = space.clientHeight;
+      let x = 0, y = 0;
+      for (let n = icon; n && n !== space; n = n.offsetParent) { x += n.offsetLeft; y += n.offsetTop; }
+      ic = icon.offsetWidth; cx = x + ic / 2; cy = y + icon.offsetHeight / 2;
+      const aw = Math.max(1, Math.ceil(w / AU.DOWN)), ah = Math.max(1, Math.ceil(h / AU.DOWN));
+      if (gl.width !== aw || gl.height !== ah) { gl.width = aw; gl.height = ah; }
+      /* Hạt mảnh, mềm: 1,25× là đủ nét; đủ dpr của điện thoại (2,6) thì mỗi khung tải lên gấp ~4 lần số điểm ảnh. */
+      sd = Math.min(1.25, devicePixelRatio || 1);
+      const sw = Math.round(w * sd), sh = Math.round(h * sd);
+      if (sp.width !== sw || sp.height !== sh) { sp.width = sw; sp.height = sh; }
+    };
+    const P = [0, 0, 0, 0], D = [0, 0, 0];
+    function place(b) {
+      const x = (k) => t * AU.SPEED / b.period[k] + b.phase[k] * 5.3 + k * 17.1;
+      const d0 = auSlope(x(0)), swing = auWave(x(0)), lean = d0 / Math.sqrt(1 + d0 * d0);
+      const th = b.anchor + AU.SWAY * swing, dist = ic * (AU.DIST + AU.DSW * auWave(x(1)));
+      const sigma = ic * (AU.SIZE + AU.SSW * auWave(x(2))), axis = th + AU.LEAN * lean;
+      P[0] = dist * Math.cos(th); P[1] = dist * Math.sin(th); P[2] = Math.cos(axis); P[3] = Math.sin(axis);
+      D[0] = sigma * AU.STRETCH; D[1] = sigma * AU.WIDTH; D[2] = (1 - AU.FLICKER) + AU.FLICKER * auWave(x(3));
+    }
+    function draw() {
+      if (!w || !ic) return;
+      const k = 1 / AU.DOWN, bloom = 0.8 + 0.2 * shown, pulse = 0.8 + 0.2 * (auWave(t * AU.SPEED / AU.PPER + 101.3) + 1) / 2;
+      g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, gl.width, gl.height);
+      /* Quầng nền thẻ (CARD_GLOW của bản chốt): ánh sáng chung toả xa, thở cùng nhịp. */
+      g.setTransform(k * bloom * ic * 4.4, 0, 0, k * bloom * ic * 4.4, cx * k, cy * k);
+      g.globalAlpha = clamp(shown * pulse, 0, 1); g.fillStyle = glow;
+      g.beginPath(); g.arc(0, 0, 1, 0, 2 * Math.PI); g.fill();
+      for (const b of blobs) {
+        place(b);
+        g.setTransform(k * bloom, 0, 0, k * bloom, cx * k, cy * k);
+        g.translate(P[0], P[1]); g.rotate(Math.atan2(P[3], P[2])); g.scale(D[0] * 2.2, D[1] * 2.2);
+        g.globalAlpha = clamp(shown * D[2] * pulse * AU.GAIN, 0, 1); g.fillStyle = b.grad;
+        g.beginPath(); g.arc(0, 0, 1, 0, 2 * Math.PI); g.fill();
+      }
+      g.globalAlpha = 1;
+      /* Kim tuyến: chữ thập mảnh, rải 0,7–4,47 cạnh biểu tượng, trôi ra rồi sinh lại gần, mỗi hạt loé theo nhịp riêng. */
+      s.setTransform(sd, 0, 0, sd, 0, 0); s.clearRect(0, 0, w, h);
+      s.lineCap = 'round'; s.lineWidth = 0.9;
+      for (const q of sparks) {
+        const span = AU.REACH - 0.7, dd = 0.7 + ((q.d * span + q.v * t * 1.5) % span);
+        const tw = Math.max(0, Math.sin(t * q.hz * 2 * Math.PI * 1.25 + q.ph)), a = shown * smooth(0.7, 1.2, dd) * (1 - smooth(3.6, AU.REACH, dd)) * tw * tw * tw;
+        if (a < 0.03) continue;
+        const x = cx + Math.cos(q.a) * dd * ic, y = cy + Math.sin(q.a) * dd * ic, r = q.sz * ic * (0.45 + 0.55 * tw);
+        if (x < 0 || y < 0 || x > w || y > h) continue;
+        s.strokeStyle = 'rgba(225,235,255,' + (0.85 * a).toFixed(3) + ')';
+        s.beginPath(); s.moveTo(x - r, y); s.lineTo(x + r, y); s.moveTo(x, y - r); s.lineTo(x, y + r); s.stroke();
+      }
+    }
+    const loop = ambient((now) => {
+      if (last) t += Math.min(0.1, now - last);
+      last = now;
+      if (shown < 1) { if (t0 < 0) t0 = now; shown = ignite((now - t0) / 0.75); }
+      draw();
+    });
+    measure(); gl.classList.add('on');
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver((es) => { loop.run(es[es.length - 1].isIntersecting); if (!loop.on) last = 0; }).observe(space);
+    } else loop.run(true);
+    if ('ResizeObserver' in window) new ResizeObserver(() => { measure(); if (!loop.on) draw(); }).observe(space);
+    draw();
+  }
+  hubAura($('.hub-space'));
 
   /* ---------- Đầu trang & cuộn ---------- */
   const top = $('.top');
@@ -531,7 +857,7 @@
     const numEl = $('.res-num', sc), dimEl = $('.res-dim', sc), presets = $('.res-presets', sc), bubble = $('.sl-val b', sc);
     const pBtns = $$('button', presets), sw = $('[data-sw="res-on"]', sc);
     const off = d.createElement('canvas'), octx = off.getContext('2d');
-    let val = 70, on = true, mode = 'buffer', shown = false, touched = false;
+    let val = 70, on = true, mode = 'buffer', shown = false, touched = false, pix = null;
 
     /* Thanh trượt M3 Expressive: rãnh sau tay cầm tính từ --p trong CSS, chấm dừng ẩn khi tay cầm chạm cuối.
        Rãnh đã chọn vẽ bằng SVG: đứng yên là dải dày phẳng như M3; ĐANG GIỮ/KÉO thì dải mảnh lại và uốn thành sóng sin đều
@@ -579,8 +905,11 @@
       slider.style.setProperty('--p', p.toFixed(4));
       slider.classList.toggle('at-end', p > 0.985);
       if (!waveRaf) drawTrack();
+      if (pix) pix.redraw();
     });
     const thumb = new Spring(0.571, 0.0005, sl);
+    /* Ô pixel to/nhỏ theo VỊ TRÍ thanh trượt (draft của app), không đợi thả tay. */
+    pix = pixelField(card.querySelector('.res-box'), () => 0.3 + 0.7 * clamp(thumb.x, 0, 1));
     const amp = new Spring(0, 0.002, owner(() => { if (!waveRaf) drawTrack(); }));
     const hold = (on) => {
       held = on && !reduced;

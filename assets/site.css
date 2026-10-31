@@ -14,7 +14,7 @@
 }
 
 :root {
-  --primary: #b7c4ff; --on-primary: #1e2d61; --primary-c: #354479; --on-primary-c: #dce1ff;
+  --primary: #b7c4ff; --on-primary: #1e2d61; --inv-primary: #4d5c92; --primary-c: #354479; --on-primary-c: #dce1ff;
   --secondary: #c2c5dd; --secondary-c: #424659; --on-secondary-c: #dee1f9;
   --tertiary: #e3bada; --tertiary-c: #5b3d57;
   --surface: #121318; --surface-lowest: #0d0e13; --surface-low: #1a1b21; --surface-c: #1e1f25;
@@ -37,28 +37,28 @@
   --l3-bg: #134553; --l3-fg: #3cc6e0; --l4-bg: #5a1f2b; --l4-fg: #ff6b86;
 }
 :root[data-scheme="moss"] {
-  --primary: #8cd5b4; --on-primary: #003827; --primary-c: #005139; --on-primary-c: #a7f2cf;
+  --primary: #8cd5b4; --on-primary: #003827; --inv-primary: #1d6b4f; --primary-c: #005139; --on-primary-c: #a7f2cf;
   --secondary: #b3ccbe; --secondary-c: #354b41; --on-secondary-c: #cfe9da; --tertiary: #a6ccdf; --tertiary-c: #254b5b;
   --surface: #0f1512; --surface-lowest: #0a0f0c; --surface-low: #171d1a; --surface-c: #1b211e; --surface-high: #252b28;
   --surface-highest: #303633; --surface-bright: #353b37; --on-surface: #dee4de; --on-surface-v: #bfc9c2;
   --outline: #8a938d; --outline-v: #404944; --inverse-surface: #dee4de; --inverse-on-surface: #2c322e;
 }
 :root[data-scheme="lagoon"] {
-  --primary: #84d2e6; --on-primary: #003640; --primary-c: #004e5c; --on-primary-c: #aaedff;
+  --primary: #84d2e6; --on-primary: #003640; --inv-primary: #006879; --primary-c: #004e5c; --on-primary-c: #aaedff;
   --secondary: #b2cbd2; --secondary-c: #334a51; --on-secondary-c: #cee7ee; --tertiary: #bec5eb; --tertiary-c: #3e4565;
   --surface: #0f1416; --surface-lowest: #090f11; --surface-low: #171c1e; --surface-c: #1b2122; --surface-high: #252b2d;
   --surface-highest: #303637; --surface-bright: #343a3c; --on-surface: #dee3e5; --on-surface-v: #bfc8cb;
   --outline: #899295; --outline-v: #3f484b; --inverse-surface: #dee3e5; --inverse-on-surface: #2c3133;
 }
 :root[data-scheme="amber"] {
-  --primary: #faba73; --on-primary: #482900; --primary-c: #673d00; --on-primary-c: #ffddbb;
+  --primary: #faba73; --on-primary: #482900; --inv-primary: #845415; --primary-c: #673d00; --on-primary-c: #ffddbb;
   --secondary: #e0c1a3; --secondary-c: #58432c; --on-secondary-c: #feddbd; --tertiary: #bdcc9c; --tertiary-c: #3f4b26;
   --surface: #18120c; --surface-lowest: #130d07; --surface-low: #211a14; --surface-c: #251e17; --surface-high: #302921;
   --surface-highest: #3b332c; --surface-bright: #403830; --on-surface: #eee0d5; --on-surface-v: #d4c4b5;
   --outline: #9d8e81; --outline-v: #50453a; --inverse-surface: #eee0d5; --inverse-on-surface: #372f27;
 }
 :root[data-scheme="rose"] {
-  --primary: #ffb1c3; --on-primary: #551d2e; --primary-c: #713344; --on-primary-c: #ffd9e0;
+  --primary: #ffb1c3; --on-primary: #551d2e; --inv-primary: #8d4a5c; --primary-c: #713344; --on-primary-c: #ffd9e0;
   --secondary: #e4bdc4; --secondary-c: #5b3f45; --on-secondary-c: #ffd9e0; --tertiary: #edbe92; --tertiary-c: #60401e;
   --surface: #191113; --surface-lowest: #140c0e; --surface-low: #22191b; --surface-c: #261d1f; --surface-high: #312829;
   --surface-highest: #3c3234; --surface-bright: #413738; --on-surface: #efdee1; --on-surface-v: #d6c2c5;
@@ -287,33 +287,32 @@ html[lang="vi"] :not(html)[lang="en"], html[lang="en"] :not(html)[lang="vi"] { d
 .hub-quota { margin-left: auto; display: inline-flex; align-items: center; gap: .3em; padding: .55em .9em; border-radius: 999px; background: var(--surface-high); font-weight: 600; font-size: .9em; }
 .hub-quota .ms { font-size: 1.3em; color: var(--primary); }
 .hub-theme { font-size: 1.5em; color: var(--on-surface-v); margin-left: .2em; }
+/* Thẻ Không gian chơi game như app (#311, bộ "chốt luôn" #276): SÂN KHẤU TRUNG TÍNH — thẻ gần đen, không ngả màu chủ đề —
+   để hào quang của biểu tượng game (canvas .hs-aura, site.js hubAura) là nguồn màu duy nhất; nút Chơi trung tính sáng, hắt
+   màu hào quang ở phía gần biểu tượng ("kính màu" .8). */
 .hub-space {
-  position: relative; margin: 0 1em; padding: 1.2em 1.2em 1em; border-radius: 1.8em; overflow: hidden;
-  background: linear-gradient(170deg, color-mix(in oklab, var(--primary-c) 92%, var(--primary) 8%), color-mix(in oklab, var(--primary-c) 70%, var(--surface)));
-  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 18%, transparent);
+  position: relative; margin: 0 1em; padding: 1.2em 1.2em 1em; border-radius: 1.8em; overflow: hidden; isolation: isolate;
+  background: #0c0d11; --on-primary-c: #e6e6ec;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
 }
-.hs-glow { position: absolute; inset: -20% -10% auto -30%; height: 75%; opacity: .55; animation: hsGlow 9s steps(23) infinite alternate; }
-/* Làm mờ nằm ở lớp con ĐỨNG YÊN so với khối đang trôi (#303): mờ được vẽ một lần vào ảnh của lớp, bộ dựng hình chỉ dời ảnh
-   đó. Đặt filter ngay trên phần tử đang chạy hoạt ảnh thì GPU phải làm mờ lại mỗi khung. Kết quả như nhau (làm mờ không
-   đổi khi dời/phóng cả khối). */
-.hs-glow::before { content: ""; position: absolute; inset: 0; background: radial-gradient(closest-side, color-mix(in oklab, var(--primary) 55%, transparent), transparent); filter: blur(14px); }
-/* Trôi chậm theo NHỊP BẬC (#303): ~10 lần/giây (quầng nền, quầng chương) hoặc ~20 (quầng thẻ, khối 3D) thay vì mỗi khung.
-   Mỗi bậc dời dưới ~1 điểm ảnh của một vệt màu mềm — mắt không phân biệt được — nhưng bộ dựng hình chỉ phải vẽ lại khi giá
-   trị đổi: đo (điện thoại giả lập) quầng nền chạy liên tục bắt GPU vẽ lại CẢ màn 60–120 lần/giây kể cả lúc đứng yên; theo
-   bậc 10 lần/giây → số khung phải vẽ giảm ~6 lần. Đường cong ease-in-out giữ nguyên: khung hình lấy mẫu đường cong ở 9–11
-   mốc (nối thẳng giữa các mốc), mỗi đoạn chạy steps(). Sinh bằng tính toán, sửa thì sinh lại cả khối. */
-@keyframes hsGlow { 0% { transform: translate(-6%, 0%) scale(1); } 12.5% { transform: translate(-5.502%, 0.249%) scale(1.005); } 25% { transform: translate(-3.933%, 1.033%) scale(1.019); } 37.5% { transform: translate(-1.316%, 2.342%) scale(1.044); } 50% { transform: translate(2%, 4%) scale(1.075); } 62.5% { transform: translate(5.316%, 5.658%) scale(1.106); } 75% { transform: translate(7.933%, 6.967%) scale(1.131); } 87.5% { transform: translate(9.502%, 7.751%) scale(1.145); } 100% { transform: translate(10%, 8%) scale(1.15); } }
+/* Hào quang vẽ ở 1/4 độ phân giải (như AuraKnob.DOWNSAMPLE 4 của app) rồi trình duyệt phóng lên lọc song tuyến: ánh sáng
+   rất mềm nên không mất nét, mà mỗi khung chỉ tô 1/16 số điểm ảnh. Kim tuyến (.hs-spark) vẽ đủ nét ở lớp riêng. */
+.hs-aura, .hs-spark { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+.hs-aura { opacity: 0; transition: opacity 600ms ease; }
+.hs-aura.on { opacity: 1; }
 .hs-head, .hs-game, .hs-play, .hs-add, .hs-shz { position: relative; }
 .hs-head { display: flex; justify-content: space-between; align-items: center; font-size: .78em; }
 .hs-eyebrow { display: inline-flex; align-items: center; gap: .6em; letter-spacing: .16em; font-weight: 650; color: color-mix(in oklab, var(--on-primary-c) 80%, transparent); }
-.hs-eyebrow i { width: .55em; height: .55em; border-radius: 50%; background: var(--primary); }
+.hs-eyebrow i { width: .55em; height: .55em; border-radius: 50%; background: color-mix(in oklab, var(--on-primary-c) 70%, transparent); }
 .hs-manage { display: inline-flex; align-items: center; font-weight: 650; font-size: 1.15em; color: var(--on-primary-c); }
 .hs-manage .ms { font-size: 1.3em; }
 .hs-game { display: flex; align-items: center; gap: .9em; margin: 1.1em 0 1em; }
 .hs-game img { width: 4.4em; height: 4.4em; border-radius: 50%; box-shadow: 0 .4em 1.2em -.4em rgba(0,0,0,.5); }
 .hs-game b { display: block; font-size: 1.45em; font-weight: 600; line-height: 1.15; }
 .hs-game small { display: block; font-size: .86em; color: color-mix(in oklab, var(--on-primary-c) 78%, transparent); margin-top: .2em; }
-.hs-play { display: flex; align-items: center; gap: .7em; padding: .85em 1.1em; border-radius: 999px; background: color-mix(in oklab, var(--primary) 75%, var(--on-primary-c)); color: var(--on-primary); font-weight: 600; font-size: 1.1em; box-shadow: 0 .6em 1.6em -.6em color-mix(in oklab, var(--primary) 60%, transparent); }
+.hs-play { display: flex; align-items: center; gap: .7em; padding: .85em 1.1em; border-radius: 999px; color: #1b1c22; font-weight: 600; font-size: 1.1em;
+  background: linear-gradient(100deg, color-mix(in oklab, #6fa6f5 42%, #e9eaef) 0%, color-mix(in oklab, #6fa6f5 14%, #e9eaef) 45%, #e9eaef 75%);
+  box-shadow: 0 .6em 1.6em -.6em rgba(80,140,240,.45), inset 0 0 0 1px rgba(255,255,255,.35); }
 .hs-play .ms:last-child { margin-left: auto; }
 .hs-add { display: inline-flex; flex-direction: column; align-items: center; gap: .3em; margin: 1em 0 0 .3em; font-size: .85em; font-weight: 600; color: var(--on-primary-c); }
 .hs-addtile { display: grid; place-items: center; width: 3.6em; height: 3.6em; border-radius: 1em; box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--on-primary-c) 35%, transparent); }
@@ -388,7 +387,6 @@ html[lang="vi"] :not(html)[lang="en"], html[lang="en"] :not(html)[lang="vi"] { d
 @keyframes chapGlow { 0% { transform: translate(0%, 0%) scale(1) rotate(0deg); } 12.5% { transform: translate(0.187%, 0.124%) scale(1.002) rotate(0.249deg); } 25% { transform: translate(0.775%, 0.517%) scale(1.01) rotate(1.033deg); } 37.5% { transform: translate(1.757%, 1.171%) scale(1.023) rotate(2.342deg); } 50% { transform: translate(3%, 2%) scale(1.04) rotate(4deg); } 62.5% { transform: translate(4.243%, 2.829%) scale(1.057) rotate(5.658deg); } 75% { transform: translate(5.225%, 3.483%) scale(1.07) rotate(6.967deg); } 87.5% { transform: translate(5.813%, 3.876%) scale(1.078) rotate(7.751deg); } 100% { transform: translate(6%, 4%) scale(1.08) rotate(8deg); } }
 /* Câu chuyện đã cuộn khuất (máy tính: chương cuối vẫn "đang sáng") → quầng thôi trôi. */
 .story.off-view .chap::before, .chap.off-view::before { animation-play-state: paused; }
-.hero.off-view .hs-glow { animation-play-state: paused; }
 .cmk { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
 .cm-shape { width: 52px; height: 52px; }
 .cm-shape path { transition: fill 420ms ease; }
@@ -521,7 +519,10 @@ html:not(.js) .slot .screen { display: flex; flex-direction: column; align-items
 .a-sw[aria-checked="true"] i::after { opacity: 1; transform: none; }
 
 /* Thẻ độ phân giải */
-.res-box { display: flex; flex-direction: column; padding: 1.1em 1.25em; border-radius: 1.5em; background: var(--primary-c); color: var(--on-primary-c); transition: opacity 240ms ease; }
+.res-box { position: relative; isolation: isolate; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; padding: 1.1em 1.25em; border-radius: 1.5em; background: var(--primary-c); color: var(--on-primary-c); transition: opacity 240ms ease; }
+/* Mảng pixel của app (#311, site.js pixelField ⇐ ScalePixelPreview.kt): dưới chữ, trên nền thẻ. Chữ co theo nội dung
+   (align-items: flex-start) để đo được khối chữ chiếm tới đâu — ô nằm sau chữ mờ đi như app. */
+.res-pix { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
 .res-lbl { font-size: .9em; font-weight: 560; }
 .res-val { font-size: 3.4em; line-height: 1.05; font-weight: 400; letter-spacing: -.02em; margin: .08em 0; font-variant-numeric: tabular-nums; }
 .res-px { font-size: .9em; opacity: .9; font-variant-numeric: tabular-nums; }
@@ -1256,7 +1257,7 @@ html.cur-on, html.cur-on * { cursor: none !important; }
   position: absolute; z-index: -2; inset: -70%; pointer-events: none; opacity: .5;
   animation: proSpin 20s linear infinite; animation-play-state: paused;
 }
-/* Làm mờ ở lớp con đứng yên (#303, như .hs-glow::before): xoay cả khối không đổi kết quả làm mờ, nên mờ 46px được vẽ một
+/* Làm mờ ở lớp con đứng yên (#303, như quầng thẻ hub cũ trước #311): xoay cả khối không đổi kết quả làm mờ, nên mờ 46px được vẽ một
    lần thay vì GPU làm lại trên cả vùng cực quang mỗi khung trong lúc nó xoay. */
 .pro-aura::before {
   content: ""; position: absolute; inset: 0; filter: blur(46px);
@@ -1315,5 +1316,5 @@ html.cur-on, html.cur-on * { cursor: none !important; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 1ms !important; animation-duration: 1ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
-  .hs-glow, .amb i, .orb canvas, .kin-loop { animation: none; }
+  .amb i, .orb canvas, .kin-loop { animation: none; }
 }
