@@ -592,6 +592,117 @@
     /* Đồng hồ game đang chạy thì nó vẽ mỗi khung rồi — lò xo tỉ lệ không vẽ thêm lần nữa. */
     let clockOn = false;
     const eff = new Spring(0.7, 0.0008, owner(() => { if (!clockOn) draw(); }));
+
+    /* Kính lúp kiểu chú thích (#311). User: ô kính đặt cứng giữa trời "hay zoom vào hư vô nhiều quá có thấy gì đâu". Nay
+       vòng nhỏ đánh dấu CHỖ SOI — mặc định bám theo người chạy (thứ nhiều nét viền nhất màn) — còn kính lớn đứng ở khoảng
+       trống bên cạnh, nối bằng hai tiếp tuyến, nên chỗ đang soi vẫn thấy ở màn thật (kính đặt ngay trên nó thì che mất).
+       Đổi chỗ soi: chuột bấm/kéo ở đâu trên màn game cũng được; màn chạm thì kéo vòng hoặc kéo kính (phần còn lại của màn
+       vẫn cuộn trang như cũ), chạm một cái là vòng trượt tới đó. Thả gần người chạy thì vòng bám theo lại.
+       tX/tY: lúc bám = độ lệch so với người chạy (tắt dần về 0 khi vừa bám → vòng trượt êm vào), lúc đứng yên = toạ độ.
+       Mọi toạ độ là tỉ lệ của màn game (0..1). */
+    const ZOOM = 2.6, loupe = lc.parentNode, STILL = { x: 0.27, y: 0.73, y0: 0.73 };
+    const hit = d.createElement('div'); hit.className = 'lp-hit'; hit.setAttribute('aria-hidden', 'true');
+    loupe.before(hit); scr.classList.add('lp-zone');
+    const lpo = owner(() => { if (!clockOn) draw(); });
+    const tX = new Spring(0, 0.0005, lpo), tY = new Spring(0, 0.0005, lpo), lX = new Spring(0, 0.0005, lpo), lY = new Spring(0, 0.0005, lpo);
+    let follow = true, manual = false, placed = false, sideX = 1, sideY = -1, grab = null, ptype = 'mouse', run = STILL;
+    let lpKey = '', hitKey = '', hitSz = 0, drawing = false;
+    const tgt = () => (follow ? { x: run.x + tX.x, y: run.y + tY.x } : { x: tX.x, y: tY.x });
+    /* Kính đứng bên phía còn nhiều chỗ của vòng, ưu tiên lệch LÊN (trời trống; nửa dưới màn có thể bị thẻ điều khiển đè —
+       điện thoại: thẻ phủ ~16% đáy màn, máy tính: góc dưới phải), chỉ xuống khi vòng ở sát mép trên. Ngưỡng có khoảng trễ để
+       kéo vòng qua lại không làm kính nhảy qua nhảy lại. Cách ngang ≥ R + r nên kính không bao giờ đè lên vòng. */
+    function place(b, g) {
+      const R = g.lpw / 2, rx = R / g.sw, ry = R / g.sh;
+      if (b.x < 0.45) sideX = 1; else if (b.x > 0.55) sideX = -1;
+      if (b.y > 0.48) sideY = -1; else if (b.y < 0.38) sideY = 1;
+      const x = clamp(b.x + sideX * R * (1.35 + 1 / ZOOM) / g.sw, rx + 0.02, 1 - rx - 0.02);
+      let maxY = 1 - ry - 0.03;
+      if (g.cardT < 1 && x + rx > g.cardL) maxY = Math.max(ry + 0.03, Math.min(maxY, g.cardT - ry - 0.03));
+      const y = clamp(b.y + sideY * 0.3, ry + 0.03, maxY);
+      if (!placed) { placed = true; lX.set(x); lY.set(y); } else { lX.to(x, SPEC.m3Spatial); lY.to(y, SPEC.m3Spatial); }
+    }
+    const frac = (e) => { const r = scr.getBoundingClientRect(); return { x: (e.clientX - r.left) / (r.width || 1), y: (e.clientY - r.top) / (r.height || 1) }; };
+    const inside = (p) => ({ x: clamp(p.x, 0.02, 0.98), y: clamp(p.y, 0.03, 0.97) });
+    const unfollow = () => { if (!follow) return; const t = tgt(); follow = false; tX.set(t.x); tY.set(t.y); };
+    const aim = (p, spec) => { unfollow(); p = inside(p); if (spec) { tX.to(p.x, spec); tY.to(p.y, spec); } else { tX.set(p.x); tY.set(p.y); } };
+    /* Thả trong ~1,2 ô quanh người chạy (ô = 1/7,6 bề cao màn, như polar.js) → bám lại. */
+    function latch() {
+      if (follow) return;
+      const g = geo(), dx = (tX.t - run.x) * g.sw / g.sh, dy = tY.t - run.y;
+      if (Math.hypot(dx, dy) > 1.2 / 7.6) return;
+      follow = true;
+      tX.set(tX.x - run.x); tY.set(tY.x - run.y); tX.to(0, SPEC.m3Spatial); tY.to(0, SPEC.m3Spatial);
+    }
+    const down = (e, kind) => {
+      if (e.button > 0 || grab) return;
+      /* Không chặn mặc định thì Chrome coi là kéo-thả gốc và huỷ con trỏ ngay nhịp di chuyển đầu. */
+      e.preventDefault();
+      grab = { id: e.pointerId, kind, el: e.currentTarget, x0: e.clientX, y0: e.clientY, moved: false };
+      if (kind === 'lens') { const t = tgt(), p = frac(e); grab.dx = lX.x - t.x; grab.dy = lY.x - t.y; grab.ox = p.x - lX.x; grab.oy = p.y - lY.x; }
+      else { manual = false; aim(frac(e), SPEC.m3FastSpatial); }
+      try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
+      scr.classList.add('lp-drag');
+    };
+    scr.addEventListener('pointerdown', (e) => { ptype = e.pointerType; }, true);
+    loupe.addEventListener('pointerdown', (e) => { e.stopPropagation(); down(e, 'lens'); });
+    hit.addEventListener('pointerdown', (e) => { e.stopPropagation(); down(e, 'ring'); });
+    scr.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'touch') down(e, 'ring'); });
+    loupe.addEventListener('dragstart', (e) => e.preventDefault());
+    scr.addEventListener('pointermove', (e) => {
+      if (!grab || e.pointerId !== grab.id) return;
+      if (!grab.moved && grab.kind === 'lens' && Math.hypot(e.clientX - grab.x0, e.clientY - grab.y0) < 6) return;
+      grab.moved = true;
+      const p = frac(e);
+      if (grab.kind !== 'lens') { aim(p, SPEC.m3FastSpatial); return; }
+      /* Kéo kính: kính dính theo tay, vòng đi cùng như một khối; thả ra kính ở nguyên chỗ đó (tới khi kéo vòng lần sau). */
+      const g = geo(), rx = g.lpw / 2 / g.sw, ry = g.lpw / 2 / g.sh;
+      const x = clamp(p.x - grab.ox, rx + 0.01, 1 - rx - 0.01), y = clamp(p.y - grab.oy, ry + 0.01, 1 - ry - 0.01);
+      manual = true; lX.set(x); lY.set(y);
+      aim({ x: x - grab.dx, y: y - grab.dy });
+    });
+    const up = (e) => {
+      if (!grab || e.pointerId !== grab.id) return;
+      const g0 = grab; grab = null; scr.classList.remove('lp-drag');
+      try { if (g0.el.hasPointerCapture(g0.id)) g0.el.releasePointerCapture(g0.id); } catch (_) {}
+      if (g0.kind !== 'lens' || g0.moved) latch();
+    };
+    scr.addEventListener('pointerup', up); scr.addEventListener('pointercancel', up);
+    /* Màn chạm: chạm một cái (không phải vuốt cuộn trang — vuốt thì trình duyệt không bắn click) → vòng trượt tới đó. */
+    scr.addEventListener('click', (e) => {
+      if (ptype !== 'touch' || e.target.closest('.loupe, .lp-hit')) return;
+      manual = false; aim(frac(e), SPEC.m3Spatial); latch();
+    });
+    /* Vẽ vòng soi + hai tiếp tuyến lên canvas game (W × H điểm ảnh), đặt kính và chỗ nắm cho ngón tay. */
+    function lens(T, g, W, H) {
+      if (!manual && !(grab && grab.kind === 'lens')) place(follow ? { x: run.x, y: run.y0 } : { x: tX.t, y: tY.t }, g);
+      const k = W / (g.cw || 1), R = g.lpw / 2;
+      const key = (lX.x * g.sw - R).toFixed(1) + 'px ' + (lY.x * g.sh - R).toFixed(1) + 'px';
+      if (key !== lpKey) { lpKey = key; loupe.style.translate = key; }
+      if (!scr.classList.contains('lp-on')) scr.classList.add('lp-on');
+      const hs = Math.round(Math.max(44, 2 * R / ZOOM + 16));
+      if (hs !== hitSz) { hitSz = hs; hit.style.width = hit.style.height = hs + 'px'; }
+      const hk = (T.x * g.sw - hs / 2).toFixed(1) + 'px ' + (T.y * g.sh - hs / 2).toFixed(1) + 'px';
+      if (hk !== hitKey) { hitKey = hk; hit.style.translate = hk; }
+      /* Tiếp tuyến ngoài của hai đường tròn (vòng r1, mép ngoài viền trắng của kính r2): điểm chạm ở góc θ ± acos((r1−r2)/d)
+         trên cả hai. Vòng lọt hẳn vào trong kính (kính kéo tay đè lên) thì không có tiếp tuyến — chỉ vẽ vòng. */
+      const r1 = (R / ZOOM) * k, r2 = (R + 0.25 * g.em) * k, x1 = T.x * W, y1 = T.y * H, x2 = lX.x * W, y2 = lY.x * H;
+      const dx = x2 - x1, dy = y2 - y1, dd = Math.hypot(dx, dy);
+      ctx.save();
+      ctx.beginPath();
+      if (dd > r2 - r1 + 0.5) {
+        const th = Math.atan2(dy, dx), al = Math.acos(clamp((r1 - r2) / dd, -1, 1));
+        for (const s of [1, -1]) {
+          const ph = th + s * al, c = Math.cos(ph), n = Math.sin(ph);
+          ctx.moveTo(x1 + r1 * c, y1 + r1 * n); ctx.lineTo(x2 + r2 * c, y2 + r2 * n);
+        }
+      }
+      ctx.moveTo(x1 + r1, y1); ctx.arc(x1, y1, r1, 0, Math.PI * 2);
+      /* Nét trắng có viền tối mờ: đọc được cả trên trời xanh lẫn trên tuyết trắng. */
+      ctx.lineJoin = ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(16,24,52,.3)'; ctx.lineWidth = 3.4 * k; ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,.96)'; ctx.lineWidth = 1.6 * k; ctx.stroke();
+      ctx.restore();
+    }
     const dims = (v) => Math.round(1260 * v / 100) + ' × ' + Math.round(2800 * v / 100);
     const pillText = () => (mode === 'buffer'
       ? (lang() === 'vi' ? 'Bộ đệm game: ' : 'Game buffer: ') + val + '%'
@@ -602,14 +713,17 @@
     const G = { ok: false };
     const geo = () => {
       if (G.ok) return G;
-      const lp = lc.parentNode;
-      Object.assign(G, { ok: true, cw: cv.clientWidth, ch: cv.clientHeight, lw: lc.clientWidth, lx: lp.offsetLeft, ly: lp.offsetTop, lpw: lp.offsetWidth,
+      /* Chỗ thẻ điều khiển đè lên màn game (tỉ lệ màn): đọc theo bố cục (offset*), không theo khung đang bay vào. */
+      const at = (el) => { let x = 0, y = 0; for (let n = el; n; n = n.offsetParent) { x += n.offsetLeft; y += n.offsetTop; } return { x, y }; };
+      const ps = at(scr), pc = at(card), sw1 = scr.clientWidth || 1, sh1 = scr.clientHeight || 1;
+      Object.assign(G, { ok: true, cw: cv.clientWidth, ch: cv.clientHeight, lw: lc.clientWidth, lpw: loupe.offsetWidth,
+        em: parseFloat(getComputedStyle(scr).fontSize) || 10, cardL: (pc.x - ps.x) / sw1, cardT: (pc.y - ps.y) / sh1,
         sw: scr.clientWidth || 1, sh: scr.clientHeight || 1, px: pill.offsetLeft, py: pill.offsetTop, pw: pill.offsetWidth, ph: pill.offsetHeight });
       return G;
     };
     if ('ResizeObserver' in window) {
       const ro = new ResizeObserver(() => { G.ok = false; });
-      [cv, lc, scr, pill].forEach((el) => ro.observe(el));
+      [cv, lc, scr, pill, card].forEach((el) => ro.observe(el));
     } else addEventListener('resize', () => { G.ok = false; }, { passive: true });
     function sizeCanvas() {
       const dpr = Math.min(2, devicePixelRatio || 1), g = geo();
@@ -633,7 +747,15 @@
        hạ: game dựng hình ở ít điểm ảnh hơn, hệ thống phóng lên đầy màn. Chưa có polar.js thì dùng ảnh tĩnh như cũ. */
     const clock = gameClock(() => draw(), cv);
     if (PR) PR.onReady(() => draw());
+    /* Đặt kính lần đầu (lX.set) hay lò xo ở chế độ giảm chuyển động (to() = nhảy thẳng tới đích) gọi chủ của lò xo ngay
+       trong lúc đang vẽ → không vẽ lồng một khung nữa (vòng soi sẽ bị tô hai lần). `drawing` khai ở khối kính lúp: PR.onReady
+       gọi draw() ngay dòng trên khi atlas đã tải. */
     function draw() {
+      if (drawing) return;
+      drawing = true;
+      try { frame(); } finally { drawing = false; }
+    }
+    function frame() {
       const live = PR && PR.ready() && !reduced;
       if ((!live && (!polar || !polar.complete || !polar.naturalWidth)) || !geo().cw) return;
       sizeCanvas();
@@ -646,12 +768,13 @@
       if (mode === 'full' && on) drawPill(octx, lw, g.cw);
       ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low';
       ctx.drawImage(off, 0, 0, W, H);
-      /* Kính lúp: phóng 2,6 lần vùng ngay dưới nó, không làm mịn, để thấy từng điểm ảnh thật. Kính tròn (aspect-ratio 1)
-         nên cao = rộng. */
-      const sw0 = g.sw, sh0 = g.sh;
-      const L = lc.width, cx = (g.lx + g.lpw / 2) / sw0, cy = (g.ly + g.lpw / 2) / sh0;
-      const half = g.lpw / 2 / sw0 / 2.6;
-      const sx = (cx - half) * lw, sy = (cy - half * (W / H)) * lh, sw = half * 2 * lw, sh = half * 2 * (W / H) * lh;
+      /* Kính lúp: phóng 2,6 lần vùng trong vòng soi, không làm mịn, để thấy từng điểm ảnh thật. Kính tròn (aspect-ratio 1)
+         nên cao = rộng. Người chạy tính trên khung thấp (lw × lh) — đúng khung game được vẽ vào. */
+      run = live && PR.runner ? PR.runner(lw, lh, clock.t) : STILL;
+      const T = tgt();
+      lens(T, g, W, H);
+      const L = lc.width, half = g.lpw / 2 / g.sw / ZOOM;
+      const sx = (T.x - half) * lw, sy = (T.y - half * (W / H)) * lh, sw = half * 2 * lw, sh = half * 2 * (W / H) * lh;
       lctx.imageSmoothingEnabled = false;
       lctx.clearRect(0, 0, L, L);
       lctx.drawImage(off, sx, sy, sw, sh, 0, 0, L, L);

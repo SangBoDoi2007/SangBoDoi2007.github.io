@@ -248,8 +248,18 @@
     c.strokeStyle = 'rgba(255,255,255,' + (235 / 255).toFixed(3) + ')'; c.lineWidth = 1.4 * u; c.stroke();
   }
 
+  /* Giữa thân người chạy (từ mũ tới chân, ~1,48 ô của khung 2 ô) lúc t, theo tỉ lệ khung w × h — cùng phép tính với draw()
+     để kính lúp của trang bám đúng người chạy. y0 = lúc đứng trên mặt đất (không tính cú nhảy). */
+  function runner(w, h, t, o) {
+    const playerX = o && o.px != null ? o.px : 0.27;
+    const tile = Math.round(h / 7.6), groundY = Math.round(h - 1.3 * tile);
+    const lift = jumpHeight(mod(t * SPEED + w * playerX / tile, PERIOD));
+    return { x: playerX, y: (groundY - (lift + 0.74) * tile) / h, y0: (groundY - 0.74 * tile) / h };
+  }
+
   window.PolarRun = {
     draw,
+    runner,
     ready: () => !!src,
     onReady(fn) { if (src) fn(); else waiters.push(fn); },
   };

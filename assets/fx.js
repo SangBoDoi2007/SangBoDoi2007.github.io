@@ -1028,9 +1028,10 @@
       if (e.pointerType !== 'touch' || !e.isPrimary) return;
       cancel();
       const t = e.target && e.target.closest ? e.target.closest(HIT) : null;
-      /* Thanh trượt và cửa sổ nổi kéo được có phản hồi riêng (tay cầm, sóng, kéo theo ngón): bỏ qua. */
+      /* Thanh trượt, cửa sổ nổi kéo được và màn game có kính lúp có phản hồi riêng (tay cầm, sóng, kéo theo ngón, vòng
+         soi trượt tới chỗ chạm): bỏ qua. */
       if (t && t.matches('input[type="range"]')) return;
-      if (e.target.closest && e.target.closest('.ov, .a-slider')) return;
+      if (e.target.closest && e.target.closest('.ov, .a-slider, .lp-zone')) return;
       /* Tên chương / tiêu đề vừa chưa tách (màn chạm không tách sẵn): tách ngay bây giờ rồi dò lại chữ dưới ngón. */
       let node = e.target;
       const cand = !t && node.closest && node.closest(SWELL_H);
