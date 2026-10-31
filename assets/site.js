@@ -373,6 +373,10 @@
   const rgbCss = (c) => 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')';
   const lumOf = (c) => 0.2126 * toLin(c[0]) + 0.7152 * toLin(c[1]) + 0.0722 * toLin(c[2]);
   const WHITE = [255, 255, 255];
+  /* Vị trí bố cục của el (offset*, không tính transform đang bay vào) cộng dồn tới tổ tiên `stop` (null = cả trang). */
+  const offsetIn = (el, stop) => { let x = 0, y = 0; for (let n = el; n && n !== stop; n = n.offsetParent) { x += n.offsetLeft; y += n.offsetTop; } return { x, y }; };
+  /* Phông web tải xong sau khi canvas đã đo chữ/biểu tượng (bề rộng chữ đổi mà hộp không đổi cỡ → ResizeObserver im). */
+  const afterFonts = (f) => { if (d.fonts && d.fonts.ready) d.fonts.ready.then(f, () => {}); };
 
   /* ---- Pixel hoá thẻ "Tỉ lệ dựng hình" ⇐ ui/dashboard/ScalePixelPreview.kt (PixelStreamField, user chốt #310) ----
      Cùng hằng số, cùng hàm băm và nhiễu → cùng bức tranh: MỌI ô cùng cạnh = 4 dp / mức đang chọn, số hàng nguyên khít bề
@@ -529,6 +533,7 @@
       new IntersectionObserver((es) => { run(es[es.length - 1].intersectionRatio >= 0.5); }, { threshold: [0, 0.5] }).observe(box);
     } else run(true);
     if ('ResizeObserver' in window) new ResizeObserver(() => { measure(); if (!loop.on) draw(); }).observe(box);
+    afterFonts(() => { measure(); if (!loop.on) draw(); });
     schemeHooks.push(() => { colors(); if (!loop.on) draw(); });
     refreshers.push(() => { measure(); if (!loop.on) draw(); });
     draw();
@@ -580,8 +585,7 @@
     let w = 0, h = 0, cx = 0, cy = 0, ic = 0, sd = 1, t = 2, last = 0, shown = reduced ? 1 : 0, t0 = -1;
     const measure = () => {
       w = space.clientWidth; h = space.clientHeight;
-      let x = 0, y = 0;
-      for (let n = icon; n && n !== space; n = n.offsetParent) { x += n.offsetLeft; y += n.offsetTop; }
+      const { x, y } = offsetIn(icon, space);
       ic = icon.offsetWidth; cx = x + ic / 2; cy = y + icon.offsetHeight / 2;
       const aw = Math.max(1, Math.ceil(w / AU.DOWN)), ah = Math.max(1, Math.ceil(h / AU.DOWN));
       if (gl.width !== aw || gl.height !== ah) { gl.width = aw; gl.height = ah; }
@@ -639,6 +643,9 @@
       new IntersectionObserver((es) => { loop.run(es[es.length - 1].isIntersecting); if (!loop.on) last = 0; }).observe(space);
     } else loop.run(true);
     if ('ResizeObserver' in window) new ResizeObserver(() => { measure(); if (!loop.on) draw(); }).observe(space);
+    /* Đổi tiếng / phông tải xong có thể dời biểu tượng mà thẻ không đổi cỡ. */
+    const again = () => { measure(); if (!loop.on) draw(); };
+    afterFonts(again); refreshers.push(again);
     draw();
   }
   hubAura($('.hub-space'));
@@ -1043,8 +1050,7 @@
     const geo = () => {
       if (G.ok) return G;
       /* Chỗ thẻ điều khiển đè lên màn game (tỉ lệ màn): đọc theo bố cục (offset*), không theo khung đang bay vào. */
-      const at = (el) => { let x = 0, y = 0; for (let n = el; n; n = n.offsetParent) { x += n.offsetLeft; y += n.offsetTop; } return { x, y }; };
-      const ps = at(scr), pc = at(card), sw1 = scr.clientWidth || 1, sh1 = scr.clientHeight || 1;
+      const ps = offsetIn(scr, null), pc = offsetIn(card, null), sw1 = scr.clientWidth || 1, sh1 = scr.clientHeight || 1;
       Object.assign(G, { ok: true, cw: cv.clientWidth, ch: cv.clientHeight, lw: lc.clientWidth, lpw: loupe.offsetWidth,
         em: parseFloat(getComputedStyle(scr).fontSize) || 10, cardL: (pc.x - ps.x) / sw1, cardT: (pc.y - ps.y) / sh1,
         sw: scr.clientWidth || 1, sh: scr.clientHeight || 1, px: pill.offsetLeft, py: pill.offsetTop, pw: pill.offsetWidth, ph: pill.offsetHeight });
@@ -1053,7 +1059,10 @@
     if ('ResizeObserver' in window) {
       const ro = new ResizeObserver(() => { G.ok = false; });
       [cv, lc, scr, pill, card].forEach((el) => ro.observe(el));
-    } else addEventListener('resize', () => { G.ok = false; }, { passive: true });
+    }
+    /* Thẻ có thể đổi CHỖ so với màn game (qua mốc bố cục) mà không đổi cỡ → ResizeObserver im; phông tải xong dời chữ pill. */
+    addEventListener('resize', () => { G.ok = false; }, { passive: true });
+    afterFonts(() => { G.ok = false; });
     function sizeCanvas() {
       const dpr = Math.min(2, devicePixelRatio || 1), g = geo();
       const w = Math.max(1, Math.round(g.cw * dpr)), h = Math.max(1, Math.round(g.ch * dpr));
