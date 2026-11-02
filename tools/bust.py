@@ -6,7 +6,7 @@ thể chạy site.js cũ — #303: user kiểm "bản sửa" mà có thể vẫn
 mới → trình duyệt buộc tải tệp mới; tệp không đổi giữ nguyên dấu, vẫn dùng bộ nhớ đệm.
 
 Hai loại chỗ trỏ:
-- thuộc tính href="assets/…" / src="assets/…" trong index.html, privacy.html;
+- thuộc tính href="assets/…" / src="assets/…" trong index.html, privacy.html (+ ảnh chia sẻ content="https://…/assets/…");
 - chuỗi 'assets/…' trong assets/*.js (tệp nạp bằng mã: perf.js, lenis.min.js, ảnh của Polar Run).
 Mã JS làm trước (sửa site.js là đổi dấu của chính site.js), rồi mới tới trang. Cùng một tệp ở mọi chỗ mang cùng dấu, nên
 ảnh vừa nằm trong HTML vừa được mã nạp lại vẫn chỉ tải một lần.
@@ -24,6 +24,9 @@ PAGES = ["index.html", "privacy.html"]
 EXT = r"(?:css|js|webp|png|jpg|jpeg|svg|gif|woff2?)"
 ATTR = re.compile(r'((?:href|src)=")(assets/[\w./-]+?\.' + EXT + r')(?:\?v=[0-9a-f]*)?(")')
 QUOTED = re.compile(r"""(['"])(assets/[\w./-]+?\.""" + EXT + r""")(?:\?v=[0-9a-f]*)?(\1)""")
+# Ảnh chia sẻ (og:image…) phải là địa chỉ tuyệt đối. Facebook/Messenger/Zalo lưu ảnh xem trước theo ĐỊA CHỈ hàng tuần —
+# đổi nội dung mà giữ địa chỉ thì link dán ra vẫn hiện ảnh cũ (đổi logo #317). Dấu theo nội dung = địa chỉ mới.
+ABS = re.compile(r'(content="https://sangbodoi2007\.github\.io/)(assets/[\w./-]+?\.' + EXT + r')(?:\?v=[0-9a-f]*)?(")')
 
 
 def stamp(rel: str, mem: dict) -> str:
@@ -64,7 +67,7 @@ def main() -> int:
             break
     for rel in PAGES:
         if rel in orig:
-            mem[rel] = restamp(orig[rel], ATTR, mem, missing)
+            mem[rel] = restamp(restamp(orig[rel], ATTR, mem, missing), ABS, mem, missing)
     if missing:
         print("Không thấy tệp:", ", ".join(sorted(set(missing))))
         return 1
